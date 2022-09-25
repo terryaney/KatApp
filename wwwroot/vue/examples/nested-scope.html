@@ -1,0 +1,21 @@
+<script type="module">
+    import { createApp } from 'https://unpkg.com/petite-vue?module'
+
+    const app = createApp({
+        Template,
+		data: {
+			list: ["A", "B", "C"]
+		}
+    });
+
+    app.mount("#parent");
+</script>
+
+<div id="parent" v-scope>
+    <button type="button" @click="data.list = ['X','Y']">Change Data</button>
+    <ul>
+        <li v-for="k in data.list">
+            {{k}}
+        </li>
+    </ul>
+</div>

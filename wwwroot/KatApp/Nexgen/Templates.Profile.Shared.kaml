@@ -1,0 +1,381 @@
+<template id="profile-summary">
+	<div class="card h-100">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Summary</h5>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div rbl-tid="key-value-1col" data-selector="summary" data-ce="default"></div>
+		</div>
+	</div>
+</template>
+
+<template id="profile-address" default-ce="default">
+	<div class="card profileAddress h-100">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Address</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a rbl-navigate="Common.UpdateProfile" rbl-display="allowEditProfileAddress"><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<h6 class="card-subtitle text-muted">Primary Address</h6>
+			<p>
+				<span rbl-value="address1"></span><br />
+				<span rbl-value="address2"></span><br />
+				<span rbl-value="address3"></span>
+			</p>
+			<div rbl-display="rbl-value.address1-alt!=" style="display: none;">
+				<h6 class="card-subtitle text-muted">Alternate Address</h6>
+				<p>
+					<span rbl-value="address1-alt"></span><br />
+					<span rbl-value="address2-alt"></span><br />
+					<span rbl-value="address3-alt"></span>
+				</p>
+			</div>
+		</div>
+	</div>
+</template>
+
+
+<template id="profile-contact" default-ce="default">
+	<div class="card profileAddress h-100">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Contact</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a rbl-navigate="Common.UpdateProfile" rbl-display="allowEditProfileContact"><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div rbl-tid="key-value-1col" data-selector="contact" data-ce="{ce}"></div>
+		</div>
+	</div>
+</template>
+
+<template id="profile-communications">
+	<div class="card profileBank mb-0">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Preferred Communications</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a rbl-navigate="Common.UpdateProfile" rbl-display="allowEditCommunications"><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div class="row m-3">
+				<div class="col-2 col-md-1 card-img-container p-0 mr-2 mr-md-0 align-self-start">
+					<i class="fs-1 fa-solid fa-home"></i>
+				</div>
+				<div class="col-10 col-md-3 col-sm-5 px-0">
+					<h6>Mail:</h6>
+					<div class="text-bold" rbl-value="address1-preferred">None on file</div>
+					<div class="text-bold" rbl-value="address2-preferred"></div>
+					<div class="text-bold" rbl-value="address3-preferred"></div>
+				</div>
+
+				<div class="col-2 col-md-1 card-img-container p-0 mr-2 mr-md-0 align-self-start">
+					<i class="fs-1 fa-solid fa-at"></i>
+				</div>
+				<div class="col-10 col-md-3 col-sm-5 px-0">
+					<h6>Email:</h6>
+					<div class="text-bold" rbl-value="email-preferred">None on file</div>
+				</div>
+
+				<div class="col-2 col-md-1 card-img-container px-0 mr-2 mr-md-0 mt-2 mt-md-0">
+					<i class="fs-1 fa-solid fa-mobile-screen-button"></i>
+				</div>
+				<div class="col-10 col-md-3 col-sm-5 px-0 mt-2 mt-md-0">
+					<h6>Phone:</h6>
+					<div class="text-bold" rbl-value="phone-preferred">None on file</div>
+				</div>
+			</div>
+			<h6><i class="fa-solid fa-badge-check"></i> Preferred Delivery Method: <span rbl-value="delivery-preferred"></span></h6>
+		</div>
+	</div>
+</template>
+
+<template id="profile-banking">
+	<div class="card profileBank mb-0">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Banking</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+
+			<div class="row mb-2 border-bottom">
+				<div class="col pb-2"><h6 class="card-subtitle text-muted">Nickname</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Type</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Account Number</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Institution</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Routing Number</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">In Use/Used</h6></div>
+			</div>
+			<div class="row mb-2">
+				<div class="col">Main Account</div>
+				<div class="col">Checking</div>
+				<div class="col">*****6789</div>
+				<div class="col">Maple Bank</div>
+				<div class="col">987654321</div>
+				<div class="col"><a href="#">COBRA coverage</a></div>
+			</div>
+			<div class="row mb-2">
+				<div class="col">FamilyFunds</div>
+				<div class="col">Savings</div>
+				<div class="col">*****4733</div>
+				<div class="col">Maple Bank</div>
+				<div class="col">987654321</div>
+				<div class="col">Loan Deposit</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+<template id="profile-beneficiaries">
+	<div class="card mb-0">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Beneficiaries on File</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a rbl-navigate="Common.Beneficiary"><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div class="row text-muted mx-2">
+				<div class="col-5">Beneficiary Name</div>
+				<div class="col-4">Relation</div>
+				<div class="col-3">TIN/SSN</div>
+			</div>
+			<div class="list-group fw-bold">
+				<div rbl-source="beneficiaries">
+					<div class="list-group-item" rbl-tid="inline">
+						<div class="row">
+							<div class="col-5">{name}</div>
+							<div class="col-4">{relation}</div>
+							<div class="col-3">{taxId}</div>
+						</div>
+					</div>
+					<div rbl-tid="empty">
+						<div class="alert alert-warning">
+							No Beneficiaries on file.
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+<template id="profile-family">
+	<div class="card profileBank mb-0">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Family Members</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<!--<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>-->
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div class="row mb-2 border-bottom">
+				<div class="col pb-2"><h6 class="card-subtitle text-muted"></h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">SSN</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Coverage</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Verification</h6></div>
+				<div class="col-1 familyChange">
+				</div>
+			</div>
+			<div class="row mb-2">
+				<div class="col">Pat Smith</div>
+				<div class="col">XXX-XX-1111</div>
+				<div class="col">Medical, Dental, Vision</div>
+				<div class="col">Maple Bank</div>
+				<div class="col-1 familyChange align-self-center">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+
+			</div>
+			<div class="row mb-2">
+				<div class="col">Sam Smith</div>
+				<div class="col">XXX-XX-2222</div>
+				<div class="col"></div>
+				<div class="col"></div>
+				<div class="col-1 familyChange align-self-center">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+			<div class="row mb-2">
+				<div class="col">Cameron Smith</div>
+				<div class="col"><i>SSN - Missing</i></div>
+				<div class="col">Medical, Dental</div>
+				<div class="col"></div>
+				<div class="col-1 familyChange align-self-center">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+
+
+		</div>
+	</div>
+</template>
+
+<template id="profile-access">
+	<div class="card profileBank mb-0">
+		<div class="card-header">
+			<div class="row align-items-center">
+				<div class="col col-md-9">
+					<h5>Spouse/Domestic Partner Access</h5>
+				</div>
+				<div class="col col-md-3 d-flex justify-content-end tools">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+			</div>
+		</div>
+		<div class="card-body">
+			<div class="row mb-2 border-bottom">
+				<div class="col pb-2"><h6 class="card-subtitle text-muted">Spouse/Domestic Partner</h6></div>
+				<div class="col"><h6 class="card-subtitle text-muted">Access Level</h6></div>
+				<div class="col-1 familyChange">
+				</div>
+			</div>
+			<div class="row mb-2">
+				<div class="col">Pat Smith</div>
+				<div class="col">Full Site Access</div>
+				<div class="col-1 familyChange align-self-center">
+					<a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+				</div>
+
+			</div>
+		</div>
+	</div>
+</template>
+
+<template id="mobile-app">
+	<a href="#" class="card adMobileApp mb-0">
+		<img src="images/adMobileApp.png" class="card-img-top" alt="Register for Mobile App">
+		<div class="card-body">
+			<h5 class="card-title">Register for the Mobile App</h5>
+		</div>
+	</a>
+</template>
+
+<template id="profile-image-toolbar">
+	<script>
+		(function () {
+			$.fn.KatApp.templateOn("onCalculation.RBLe", function (event, calculationResults, calculationOptions, application) {
+				application.select(".profile-image .profile-pic:not([data-default-set])").each(function () {
+					setDefaultImage($(this), application);
+				});
+				application.select(".profile-image input.file-upload").off('change.RBLe').on('change.RBLe', function () {
+					readURL(this);
+				});
+				application.select(".profile-image .upload-button").off('click.RBLe').on('click.RBLe', function () {
+					$(".file-upload", $(this).closest("[data-image-identifier]")).click();
+				});
+
+				application.select(".profile-image .save-profile-pic").off('click.RBLe').on('click.RBLe', function (e) {
+					e.preventDefault();
+					saveProfilePicture(application);
+				});
+
+				application.select(".profile-image .delete-profile-pic").off('click.RBLe').on('click.RBLe', function (e) {
+					e.preventDefault();
+					deleteProfilePicture(application);
+				});
+			});
+		})();
+		//# sourceURL=Templates.Shared.Profile.Image.kaml
+	</script>
+	<style>
+		.thisClass .profile-pic {
+			display: inline-block;
+		}
+
+		.thisClass .file-upload {
+			display: none;
+		}
+
+		.thisClass .upload-button {
+			font-size: 1.2em;
+		}
+
+			.thisClass .upload-button:hover {
+				transition: all .3s cubic-bezier(.175, .885, .32, 1.275);
+				color: #999;
+			}
+
+		.thisClass a.save-profile-pic {
+			display: none;
+		}
+
+		.thisClass .pending a.save-profile-pic {
+			display: block;
+		}
+	</style>
+
+	<div class="profile-image" data-image-identifier="{image-identifier}" data-initials="{initials}">
+		<div class="position-relative">
+			<img class="profile-pic rounded-circle border border-5 p-1">
+			<a class="position-absolute" style="top:0%;left:100%">
+				<i class="fa fa-camera upload-button"></i>
+			</a>
+			<a class="save-profile-pic position-absolute" style="bottom:0%;left:100%">
+				<i class="fa fa-floppy-disk"></i>
+			</a>
+		</div>
+		<div class="text-center" rbl-display="v:{label}!=">{label}</div>
+		<div class="profile-actions m-1 text-center">
+			<a class="delete-profile-pic"><i class="fa-regular fa-trash-can"></i></a>
+		</div>
+		<input class="file-upload" type="file" accept="image/*" />
+	</div>
+</template>
+
+<template id="profile-image-only" default-initials="" default-size="100">
+	<script>
+		(function () {
+			$.fn.KatApp.templateOn("onCalculation.RBLe", function (event, calculationResults, calculationOptions, application) {
+				application.select(".profile-image .profile-pic:not([data-default-set])").each(function () {
+					setDefaultImage($(this), application);
+				});
+			});
+		})();
+		//# sourceURL=Templates.Shared.Profile.Image.Only.kaml
+	</script>
+	<style>
+		.thisClass .profile-pic {
+			display: inline-block;
+		}
+	</style>
+
+	<div class="profile-image" data-image-identifier="{image-identifier}" data-initials="{initials}" data-size="{size}">
+		<div class="position-relative d-flex justify-content-center">
+			<img class="profile-pic rounded-circle border border-5 p-1" style="width:{size}px;height:{size}px">
+		</div>
+		<div class="text-center" rbl-if="v:{label}!=">{label}</div>
+	</div>
+</template>

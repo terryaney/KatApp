@@ -1,0 +1,5 @@
+node_modules
+Scripts/*.js
+Scripts/*.map
+wwwroot/js/jquery.*
+wwwroot/js/KatApp.*

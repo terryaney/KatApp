@@ -1,0 +1,246 @@
+<!-- New DB Dashboard -->
+<template id="dashboard-definedBenefit">
+    <div class="card h-100">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col col-10">
+                    <h5>Pension Benefits</h5>
+                </div>
+                <div class="col col-2 d-flex justify-content-end tools">
+
+                    <div class="d-none">
+                        <a class="btn" rbl-display="accruedBenefit-alerts" data-bs-toggle="collapse" href="#accruedBenefit_collapseAlerts" role="button" aria-expanded="false" aria-controls="accruedBenefit_collapseAlerts"><i class="fa-solid fa-triangle-exclamation" title="Alerts"></i></a>
+                        <a tabindex="0" class="btn" title="Popover title" data-bs-toggle="popover" data-bs-trigger="click" data-bs-content="And here's some amazing content. It's very engaging. Right?"><i class="fa-light fa-circle-info" title="Helpful Info"></i></a>
+                    </div>
+                    <div class="btn-group moreMenu">
+                        <a class="btn p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-ellipsis" title="More"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg-end" rbl-tid="card-more" rbl-ce="BRD" rbl-source="contentContextLinks.topic.accrued"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div rbl-source="DBDashboardPension">
+                <div rbl-tid="inline">
+                    <div class="title {show-title}">{title}</div>
+                    <div class="row ml-2">
+                        <div class="col-9">{label}</div>
+                        <div class="col-3 fw-bold text-end">{value}</div>
+                    </div>
+                    <div class="{show-divider} border-top border-dark"></div>
+                </div>
+            </div>
+            <div class="alert alert-warning mt-2" rbl-display="minDistributionMsg">If you have a Cash Balance benefit, you must commence your benefit by April 1st of the year following the year in which you turn age 70.5.</div>
+            <!-- <div class="mt-4" rbl-tid="channel-alerts" data-filtervalue="definedBenefit"></div> -->
+        </div>
+        <div class="card-footer">
+            <div class="row">
+                <div class="col-12">
+                    <a rbl-navigate="Channel.Pension" class="btn btn-primary w-50">Pension Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- currently on channle page for retiree  -->
+<template id="retiree-pension-list">
+    <div class="card h-100">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col-12 col-lg-9">
+                    <h5>Pension Payments</h5>
+                </div>
+            </div>
+        </div>
+        <div class="card-body ms-3">
+            <div rbl-ce="PensionPayment" rbl-source="dbPayable">
+                <div class="row py-4" rbl-tid="inline">
+                    <!-- <div class="col-1 col-sm-auto"><a href="#null"><i class="fa-light fa-circle-info"></i></a></div> -->
+                    <div class="col-12 col-sm-6 mb-2"> 
+                        <div class="fw-bold">{planName}</div>
+                        <div class="text-muted">{pmtForm}</div>
+                        <div><i class="fa-light fa-bank"></i> {name} <a rbl-navigate="Common.UpdateBank" data-input-pension-payable-id="{indexPayable}">Change</a></div>
+                    </div>
+                    <div class="col-10 col-sm-4 text-center">
+                        <div class="fs-4 fw-bold">{benefitAmt}</div>
+                        <div class="text-muted">{pmtFreq} Starting <b>{dateStart}</b></div>
+                    </div>
+                    <div class="col-2 text-center">
+                        <a rbl-navigate="Pension.PaymentDetails" data-input-pension-payable-id="{indexPayable}"><i class="fas fa-chevron-right fa-3x text-muted"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- currently on home page  -->
+<template id="retiree-pension-info">
+    <div class="card h-100">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col col-md-9">
+                    <h5>Pension Payments</h5>
+                </div>
+                <!--<div class="col col-md-3 d-flex justify-content-end tools">
+                  <a href="#" class=""><i class="fa-light fa-pen-to-square" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Edit" aria-label="Edit"></i></a>
+                </div>-->
+            </div>
+        </div>
+        <div class="card-body">
+            <div rbl-ce="PensionPayment" rbl-source="dbPayable">
+                <div class="row mt-2" rbl-tid="inline">
+                    <div class="col-12 col-md-6">{planName}</div>
+                    <div class="col-12 col-md-3 text-end">{benefitAmt}</div>
+                    <div class="col-12 col-md-3">{pmtFreq}</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-6">
+                    <a class="btn btn-primary w-100" rbl-navigate="Pension.RetireePensionInfo">Pension Details</a>                    
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- New RP Dashboard -->
+<template id="dashboard-retirementPlanning">
+    <div class="card h-100 shadow-sm">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <h5 class="col-12 col-md-9">Retirement Planning</h5>
+                <div class="col-12 col-md-3 d-flex justify-content-end">
+
+                    <div class="btn-group moreMenu">
+                        <a class="btn p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa-solid fa-ellipsis" title="More"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-lg-end" rbl-tid="card-more" rbl-ce="BRD" rbl-source="configContextLinks.topic.modeling"></ul>
+                        <ul class="dropdown-menu dropdown-menu-lg-end" rbl-tid="card-more" rbl-ce="BRD" rbl-source="configContextLinks.topic.accrued"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div rbl-tid="channel-alerts" data-alert-source="retirementPlanning"></div>
+
+            <div class="row">
+                <div class="col-12 col-md-5"><div class="chart activityGauge"></div></div>
+                <div class="col-12 col-md-7 pt-3">
+                    You are <span class="fw-bold" style="font-size: 150%" rbl-value="probReachGoal"></span> likely to have funds that cover your retirement goals.
+                </div>
+                <div class="col-12 pt-3">
+                    <div class="alert alert-primary alertAction">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h4 class="alert-heading mb-1 d-flex align-content-center"><i class="far fa-lightbulb-on me-2"></i> Suggestion</h4>
+                        </div>
+                        <p class="mb-1"></p>
+                        <small>Before you make your decision to retire spend some time on the <a rbl-navigate="Channel.Sharkfin">Retirement Planning tool</a> and see how your money will last in retirement.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- / card-body -->
+    <script>
+		$.fn.KatApp.templateOn("onConfigureUICalculation.RBLe", function (event, calculationResults, options, application) {
+			var renderTo = application.select("div.activityGauge");
+
+            if (renderTo.length == 0) return;
+
+            var pct =
+                application.getResultValue("rbl-value", "probReachGoal", "value") ||
+                application.getResultValue("ejs-output", "probReachGoal", "value") || "0";
+
+            pct = pct.replace("%", "");
+
+            // ACTIVITY GAUGE (RETIREMENT PULSE)
+            Highcharts.chart({
+                chart: {
+                    reflow: true,
+                    height: "100%",
+                    renderTo: renderTo[0],
+                    type: 'solidgauge',
+                    marginTop: 0,
+                    backgroundColor: "transparent",
+                    style: {
+                        fontFamily: 'Arial'
+                    }
+                },
+                title: {
+                    text: ''
+                },
+                credits: false,
+                exporting: {
+                    enabled: false
+                },
+                tooltip: {
+                    enabled: false
+                },
+                pane: {
+                    startAngle: 0,
+                    endAngle: 360,
+                    background: [{
+                        outerRadius: '110%',
+                        innerRadius: '90%',
+                        backgroundColor: Highcharts.Color(Highcharts.getOptions().colors[0]).setOpacity(0.3).get(),
+                        borderWidth: 0
+                    }]
+                },
+                yAxis: {
+                    min: 0,
+                    max: 100,
+                    lineWidth: 0,
+                    tickPositions: []
+                },
+                plotOptions: {
+                    solidgauge: {
+                        borderWidth: '10px',
+                        dataLabels: {
+                            enabled: true,
+                            y: -40,
+                            borderWidth: 0,
+                            backgroundColor: 'none',
+                            useHTML: true,
+                            shadow: false,
+                            style: {
+                                fontSize: '12px'
+                            },
+                            formatter: function () {
+                                return '<div style="width:100%;text-align:center;"><span style="font-size:1.2em;font-weight:bold;color:darkgray;display:none;">' + this.point.series.name + '</span><br/><span style="font-size:2.5em;color:' + Highcharts.getOptions().colors[0] + ';font-weight:bold;">' + Highcharts.numberFormat(this.y, 0) + '%</span><br/><span style="font-size:1em;color:#7CB5EB">';
+                            }
+                        },
+                        linecap: 'round',
+                        stickyTracking: true
+                    }
+                },
+                series: [{
+                    name: '',
+                    borderColor: Highcharts.getOptions().colors[0],
+                    data: [{
+                        color: Highcharts.getOptions().colors[0],
+                        radius: '100%',
+                        innerRadius: '100%',
+                        y: pct.replace("%", "") * 1
+                    }]
+                }],
+                lang: {
+                    noData: "No data to display"
+                },
+                noData: {
+                    style: {
+                        fontWeight: 'bold',
+                        fontSize: '15px',
+                        color: '#333333'
+                    }
+                }
+            });
+        });
+        //# sourceURL=Templates.Common.retirementPlanning.kaml
+    </script>
+</template>

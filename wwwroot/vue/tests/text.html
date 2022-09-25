@@ -1,0 +1,10 @@
+<script type="module">
+  import { createApp } from 'https://unpkg.com/petite-vue?module'
+  createApp().mount()
+</script>
+
+<div v-scope="{ count: 1 }">
+  <p v-text="count"></p>
+  <button @click="count++">increase</button>
+</div>
+

@@ -1,0 +1,72 @@
+<script type="module">
+    import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
+
+    function Template(id, model) {
+        const _name = model.name;
+        return {
+            $template: id,
+            get name() {
+                return model.name;
+            }
+        }
+    }
+
+    const app = createApp({
+        Template,
+		data: {
+			list: ["A", "B", "C"]
+		}
+    });
+
+    app.mount();
+</script>
+
+<div v-scope>
+    <button type="button" @click="data.list = ['X','Y']">Change Data</button>
+    <ul>
+        <li v-for="k in data.list">
+            {{k}}
+        </li>
+    </ul>
+    <template id="myTemplate">
+        <div>Template Val: {{name}}</div>
+        <input type="text" :name="name" value="" />
+    </template>
+    <p><b>Normal Template Call</b></p>
+    <div v-scope="Template('#myTemplate',{name: 'Normal'})"></div>
+
+    <br />
+    <p><b>v-for Template Call (get)</b></p>
+    <div v-for="k in data.list" :key="k">
+        <div v-scope="Template('#myTemplate' + k, {get name() {return 'For-' + k; }})"></div>
+    </div>
+    <template id="myTemplateA">
+        <div>Template A Val: {{name}}</div>
+    </template>
+    <template id="myTemplateB">
+        <div>Template B Val: {{name}}</div>
+    </template>
+    <template id="myTemplateC">
+        <div>Template C Val: {{name}}</div>
+    </template>
+    <template id="myTemplateX">
+        <div>Template X Val: {{name}}</div>
+    </template>
+    <template id="myTemplateY">
+        <div>Template Y Val: {{name}}</div>
+    </template>
+
+    <br />
+    <p><b>v-for Template Call (prop)</b></p>
+    <div v-for="k in data.list" :key="k">
+        <div v-scope="Template('#myTemplate',{ name: 'For-' + k })"></div>
+    </div>
+
+    <br />
+    <p><b>v-for Nested Scope</b></p>
+    <div v-scope="{ data: { list: ['L', 'M', 'N'] } }">
+        <div v-for="k in data.list" :key="k">
+            <div v-scope="Template('#myTemplate',{ name: 'For-' + k })"></div>
+        </div>
+    </div>
+</div>
