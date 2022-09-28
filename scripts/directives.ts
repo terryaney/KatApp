@@ -3,7 +3,7 @@
 	getDefinition(application: KatApp): Directive<Element> | AsyncDirective<Element>;
 }
 
-// v-ka-input, v-ka-input-group, v-ka-template - pre-processed into 'scope'
+// v-ka-input, v-ka-input-group, v-ka-template, button/a.v-ka-needs-calc - pre-processed into 'scope'
 
 class Directives {
 	public static initializeCoreDirectives(vueApp: PetiteVueApp, application: KatApp): void {
@@ -72,7 +72,7 @@ class DirectiveKaApi implements IKaDirective {
 				e.preventDefault();
 
 				if (scope.confirm != undefined) {
-					const confirmResponse = await application.showModalAsync(scope.confirm);
+					const confirmResponse = await application.showModalAsync(scope.confirm, $(e.currentTarget as HTMLElement));
 
 					if (!confirmResponse.confirmed) {
 						return;
@@ -133,7 +133,7 @@ class DirectiveKaNavigate implements IKaDirective {
 				e.preventDefault();
 
 				if (scope.confirm != undefined) {
-					const confirmResponse = await application.showModalAsync(scope.confirm);
+					const confirmResponse = await application.showModalAsync(scope.confirm, $(e.currentTarget as HTMLElement));
 
 					if (!confirmResponse.confirmed) {
 						return;
@@ -199,10 +199,8 @@ class DirectiveKaModal implements IKaDirective {
 
 				try {
 					const response = await application.showModalAsync(
-						Utils.extend<IModalOptions>(
-							Utils.clone(scope, (k, v) => ["confirmed", "cancelled", "catch"].indexOf(k) > -1 ? undefined : v),
-							{ triggerLink: triggerLink }
-						)
+						Utils.clone(scope, (k, v) => ["confirmed", "cancelled", "catch"].indexOf(k) > -1 ? undefined : v),
+						triggerLink
 					);
 
 					if (response.confirmed) {

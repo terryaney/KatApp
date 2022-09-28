@@ -94,14 +94,4 @@
 			console.log(String.formatTokens("{displayDate} Application {id}: {message}", { displayDate, id: application?.options.currentPage ?? application?.id, message }));
 		}
 	}
-
-	public static getInputValue(el: HTMLInputElement): string | undefined {
-		// TODO: Need to handle all types of inputs here
-		if (el.getAttribute("type") == "checkbox") {
-			return el.checked ? "1" : "0";
-		}
-		else {
-			return el.value;
-		}
-	}
 }

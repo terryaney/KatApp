@@ -24,27 +24,39 @@ class InputComponent {
 	}
 	*/
 
-	public static mounted(application: KatApp, calcTimer: number | undefined, name: string, input: HTMLInputElement, defaultValue: (name: string ) => string | undefined, noCalc: (name: string) => boolean, events: undefined | IStringIndexer<((e: Event, application: KatApp) => void)> ) {
+	// My impl of Vue's cacheStringFunction
+	private static stringCache: Record<string, string> = Object.create(null);
+
+	private static cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
+		return ((str: string) => {
+			const hit = this.stringCache[str]
+			return hit || (this.stringCache[str] = fn(str))
+		}) as any;
+	}
+
+	public static mounted(application: KatApp, name: string, input: HTMLInputElement, defaultValue: (name: string ) => string | undefined, noCalc: (name: string) => boolean, events: undefined | IStringIndexer<((e: Event, application: KatApp) => void)> ) {
 		input.setAttribute("name", name);
 		input.classList.add(name);
 
-		const value = defaultValue(name);
-		if (application.state.inputs[name] == undefined && value) {
+		const type = input.getAttribute("type");
+
+		// If just attaching v-ka-input to 'raw' input that already has markup values, grab the values to assign during mount
+		const radioValue = type == "radio" && input.hasAttribute("checked") ? input.getAttribute("value") : undefined;
+		const checkValue = type == "checkbox" ? (input.hasAttribute("checked") ? "1" : "0" ) : undefined;
+		const textValue = type == "text" ? input.getAttribute("value") : undefined;
+
+		let value = defaultValue(name) ?? checkValue ?? radioValue ?? textValue;
+		if (application.state.inputs[name] == undefined && value != undefined) {
 			application.state.inputs[name] = value;
 		}
 
-		const type = input.getAttribute("type");
+		value = application.state.inputs[name];
+		if (value != undefined) {
+			// If just attaching v-ka-input to a raw input, they might not be using :value="value", so when mounted, just assign it...
+			application.setInputValue(name, value);
+		}
 
-		const triggerCalculateAsync = async () => {
-			// If you type in input and stop typing, it triggers calc...but then calc sets uiBlocked
-			// which usually sets an input to 'disabled' and then triggers the 'change' event since
-			// the element was in an 'edited' state...
-			if (application.isCalculating) return;
-
-			if (calcTimer) {
-				clearTimeout(calcTimer);
-			}
-
+		const inputEventAsync = async ( calculate: boolean ) => {
 			if (!noCalc(name)) {
 				// Don't trigger calc if rbl-nocalc/rbl-exclude class as well
 				if (
@@ -52,40 +64,129 @@ class InputComponent {
 					application.closest(input, ".rbl-nocalc").length == 0 &&
 					application.closest(input, ".rbl-exclude").length == 0
 				) {
-					application.state.inputs.iInputTrigger = name;
-					await application.calculateAsync();
+
+					if (calculate) {
+						application.state.inputs.iInputTrigger = name;
+						await application.calculateAsync();
+					}
+					else {
+						application.state.needsCalculation = true;
+					}
 				}
 			}
 		}
 
-		// If they type and tab out before timer would expire, this would trigger so we do our calculation
+		input.addEventListener("change", async () => {
+			return await inputEventAsync(true);
+		});
+
 		if (type != "checkbox" && input.tagName != "SELECT") {
-			input.addEventListener('change', async (e: Event) => {
-			application.state.uiDirty = true;
-				return await triggerCalculateAsync();
+			// input event fires when the value of an <input>, <select>, or <textarea> element has been changed (keypress or mouse).
+			input.addEventListener("input", async () => {
+				application.state.inputs[name] = application.getInputValue(name);
+				return await inputEventAsync(false);
+			});
+			input.addEventListener("blur", () => {
+				// In case they typed in input but ended up at same value, 'change' will not trigger, so need to clear this
+				if (!application.isCalculating) {
+					application.state.needsCalculation = false;
+				}
 			});
 		}
 
-		// input event fires when the value of an <input>, <select>, or <textarea> element has been changed.
-		input.addEventListener('input', async (e: Event) => {
-			if (calcTimer) {
-				clearTimeout(calcTimer);
-			}
-
-			const inputValue = Utils.getInputValue(e.currentTarget! as HTMLInputElement);
-			application.state.inputs[name] = inputValue;
-			application.state.uiDirty = true;
-
-			calcTimer = setTimeout(async () => {
-				return await triggerCalculateAsync();
-			}, 750);
-		});
-
 		if (events != undefined) {
+			// Would love to use VUE's v-on code as base, but no access, so I have to duplicate bunch here.
+			// Cant' just put @ event handlers into templates b/c someone might call them without handlers attached.  Also,
+			// if you assigned the events to inline code, you don't have access to 'application'
+
+			/*
+			** Doesn't work, application not defined (although I do pass in second param of application so could use it there) **
+			<div v-ka-input="{name:'iFirst', events: { 'input': async () => await application.calculateAsync() } }"></div>
+
+			** Below works **
+			application.update( {
+				handlers: {
+					firstNameClick: async e => {
+						await application.calculateAsync();
+					}
+				}
+			})
+			<div v-ka-input="{name:'iFirst', events: { 'input': handlers.firstNameClick } }"></div> <-- Doesn't work b/c application not defined
+			*/
+
+			// So think following is best compromise
 			for (const propertyName in events) {
-				input.addEventListener(propertyName, (e: Event) => events[propertyName](e, application));
+				let arg = propertyName.split(".")[0];
+				const modifiers = this.getModifiers(propertyName);
+
+				if (modifiers) {
+					const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'];
+
+					type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
+
+					const modifierGuards: Record<string, (e: Event, modifiers: Record<string, true>) => void | boolean> = {
+						stop: (e) => e.stopPropagation(),
+						prevent: (e) => e.preventDefault(),
+						self: (e) => e.target !== e.currentTarget,
+						ctrl: (e) => !(e as KeyedEvent).ctrlKey,
+						shift: (e) => !(e as KeyedEvent).shiftKey,
+						alt: (e) => !(e as KeyedEvent).altKey,
+						meta: (e) => !(e as KeyedEvent).metaKey,
+						left: (e) => 'button' in e && (e as MouseEvent).button !== 0,
+						middle: (e) => 'button' in e && (e as MouseEvent).button !== 1,
+						right: (e) => 'button' in e && (e as MouseEvent).button !== 2,
+						exact: (e, modifiers) =>
+							systemModifiers.some((m) => (e as any)[`${m}Key`] && !modifiers[m])
+					};
+
+					// map modifiers
+					if (arg === 'click') {
+						if (modifiers.right) arg = 'contextmenu'
+						if (modifiers.middle) arg = 'mouseup'
+					}
+
+					const hyphenate = this.cacheStringFunction((str: string) => {
+						const hyphenateRE = /\B([A-Z])/g;
+						return str.replace(hyphenateRE, '-$1').toLowerCase();
+					});
+
+					input.addEventListener(
+						arg,
+						(e: Event) => {
+							if ('key' in e && !(hyphenate((e as KeyboardEvent).key) in modifiers)) {
+								return;
+							}
+
+							for (const key in modifiers) {
+								const guard = modifierGuards[key];
+								if (guard && guard(e, modifiers)) {
+									return;
+								}
+							}
+
+							return events[propertyName](e, application);
+						},
+						modifiers);
+				}
+				else {
+					input.addEventListener(propertyName, (e: Event) => events[propertyName](e, application));
+				}
 			}
 		}
+	}
+
+	private static getModifiers(property: string): IStringIndexer<true> | undefined {
+		if (property.indexOf(".") == -1) return undefined;
+
+		const modifiers: IStringIndexer<true> = {};
+		const propParts = property.split(".");
+		propParts.shift()
+
+		for (const m in propParts) {
+			modifiers[propParts[m]] = true;
+		}
+
+		return modifiers;
 	}
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer {
@@ -103,8 +204,6 @@ class InputComponent {
 			}
 		}
 
-		let calcTimer: number | undefined;
-
 		const base = {
 			get display() { return application.state.rbl.value("rbl-display", name, undefined, undefined, calcEngine, tab) != "0"; },
 			get noCalc() { return application.state.rbl.value("rbl-skip", name, undefined, undefined, calcEngine, tab) == "1"; },
@@ -114,7 +213,7 @@ class InputComponent {
 			get warning() { return application.state.warnings.find(v => v["@id"] == name)?.text; }
 		};
 
-		const defaultValue = (name: string) => props.value;
+		const defaultValue = (name: string) => application.state.inputs[name] ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
 		
 		return {
@@ -148,8 +247,19 @@ class InputComponent {
 			get display() { return props.isDisplay?.(this.base) ?? this.base.display; },
 			get noCalc() { return noCalc( name ) },
 			get label() { return application.state.rbl.value("rbl-value", "l" + name, undefined, undefined, calcEngine, tab) ?? props.label ?? ""; },
-			get helpTitle() { return application.state.rbl.value("rbl-value", "h" + name + "Title", undefined, undefined, calcEngine, tab) ?? props.helpTitle ?? ""; },
-			get helpContent() { return application.state.rbl.value("rbl-value", "h" + name, undefined, undefined, calcEngine, tab) ?? props.helpContent; },
+			get placeHolder() { return application.state.rbl.value("rbl-value", "ph" + name, undefined, undefined, calcEngine, tab) ?? props.placeHolder; },
+			get help() {
+				return {
+					content: application.state.rbl.value("rbl-value", "h" + name, undefined, undefined, calcEngine, tab) ?? props.help?.content,
+					title: application.state.rbl.value("rbl-value", "h" + name + "Title", undefined, undefined, calcEngine, tab) ?? props.help?.title ?? "",
+					width: props?.help?.width ?? ""
+				};
+			},
+			get css() {
+				return {
+					input: props?.css?.input ?? ""
+				};
+			},
 			get error() { return this.base.error; },
 			get warning() { return this.base.warning; },
 			get list() {
@@ -157,9 +267,11 @@ class InputComponent {
 				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : [];
 			},
 			get hideLabel() { return props.hideLabel ?? false; },
+			get prefix() { return props.prefix; },
+			get suffix() { return props.suffix; },
 
 			// unmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
-			mounted: (input: HTMLInputElement) => InputComponent.mounted( application, calcTimer, name, input, defaultValue, noCalc, props.events )
+			mounted: (input: HTMLInputElement) => InputComponent.mounted( application, name, input, defaultValue, noCalc, props.events )
 		};
 	}
 }
@@ -179,12 +291,14 @@ class TemplateMultipleInputComponent {
 		const names = props.names as string[];
 		const values = props.values != undefined ? props.values as string[] : names.map(n => undefined);
 		const labels = props.labels != undefined ? props.labels as string[] : names.map(n => undefined);
-		const helpTitles = props.helpTitles != undefined ? props.helpTitles as string[] : names.map(n => undefined);
-		const helpContents = props.helpContents != undefined ? props.helpContents as string[] : names.map(n => undefined);
+		const prefixes = props.prefixes != undefined ? props.prefixes as string[] : names.map(n => undefined);
+		const suffixes = props.suffixes != undefined ? props.suffixes as string[] : names.map(n => undefined);
+		const placeHolders = props.placeHolders != undefined ? props.placeHolders as string[] : names.map(n => '');		
+		const helps = props.helps != undefined ? props.helps as IKaInputHelp[] : names.map(n => undefined);
+		const css = props.css != undefined ? props.css as IKaInputCss[] : names.map(n => undefined);
+		
 		const calcEngine = props.ce;
 		const tab = props.tab;
-
-		let calcTimer: number | undefined;
 
 		const base = {
 			display: function (index: number) { return application.state.rbl.value("rbl-display", names[index], undefined, undefined, calcEngine, tab) != "0"; },
@@ -201,7 +315,7 @@ class TemplateMultipleInputComponent {
 		}
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
-			return values[index];
+			return application.state.inputs[names[index]] ?? values[index];
 		}
 
 		return {
@@ -226,8 +340,19 @@ class TemplateMultipleInputComponent {
 			display: function (index: number) { return props.isDisplay?.(this.base) ?? this.base.display(index); },
 			noCalc: function (index: number) { return noCalc(names[index]); },
 			label: function (index: number) { return application.state.rbl.value("rbl-value", "l" + names[index], undefined, undefined, calcEngine, tab) ?? labels[index] ?? ""; },
-			helpTitle: function (index: number) { return application.state.rbl.value("rbl-value", "h" + names[index] + "Title", undefined, undefined, calcEngine, tab) ?? helpTitles[index] ?? ""; },
-			helpContent: function (index: number) { return application.state.rbl.value("rbl-value", "h" + names[index], undefined, undefined, calcEngine, tab) ?? helpContents[index]; },
+			placeHolder: function (index: number) { return application.state.rbl.value("rbl-value", "ph" + names[index], undefined, undefined, calcEngine, tab) ?? placeHolders[index]; },			
+			help: function (index: number) {
+				return {
+					content: application.state.rbl.value("rbl-value", "h" + names[index], undefined, undefined, calcEngine, tab) ?? helps[index]?.content,
+					title: application.state.rbl.value("rbl-value", "h" + names[index] + "Title", undefined, undefined, calcEngine, tab) ?? helps[index]?.title ?? "",
+					width: helps[index]?.width || ""
+				};
+			},
+			css: function (index: number ) {
+				return {
+					input: css[index]?.input ?? ""
+				};
+			},
 			error: function (index: number) { return this.base.error(index); },
 			warning: function (index: number) { return this.base.warning(index); },
 			list: function (index: number) {
@@ -235,6 +360,8 @@ class TemplateMultipleInputComponent {
 				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : [];
 			},
 			get hideLabel() { return props.hideLabel ?? false; },
+			prefix: function (index: number) { return prefixes[index]; },
+			suffix: function (index: number) { return suffixes[index]; },
 
 			// unmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
 			mounted: (input: HTMLInputElement) => {
@@ -244,7 +371,7 @@ class TemplateMultipleInputComponent {
 					throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 				}
 
-				InputComponent.mounted(application, calcTimer, name, input, defaultValue, noCalc, props.events);
+				InputComponent.mounted(application, name, input, defaultValue, noCalc, props.events);
 			}
 		};
 	}

@@ -42,6 +42,7 @@
 					const target = $(e.target);
 					const tipId = "#" + target.attr("aria-describedby");
 					const tip = $(tipId);
+					tip.removeClass("error warning");
 					if (target.hasClass("error")) {
 						tip.addClass("error");
 					}
@@ -100,6 +101,15 @@
 				const tipElement = $(tip);
 				const isTooltip = tipElement.attr("data-bs-toggle") == "tooltip";
 
+				// When helptip <a/> for checkboxes were moved inside <label/>, attempting to click the help icon simply toggled
+				// the radio/check.  This stops that toggle and lets the help icon simply trigger it's own click to show or hide the help.
+				if (tipElement.parent()[0].tagName == "LABEL" && tipElement.parent().parent().find("input[type=checkbox]").length > 0) {
+					tipElement.on('click', function (e) {
+						e.stopPropagation();
+						return false;
+					});
+				}
+
 				let placement = tipElement.data('bs-placement') || "top";
 				const trigger = tipElement.data('bs-trigger') || "hover";
 				const container = tipElement.data('bs-container') || "body";
@@ -153,15 +163,5 @@
 				}
 			})
 			.attr("ka-init", "true");
-
-		// When helptip <a/> for checkboxes were  moved inside <label/>, attempting to click the help icon simply toggled
-		// the radio/check.  This stops that toggle and lets the help icon simply trigger it's own click to show or hide the help.
-		application.select('.checkbox label a[data-bs-toggle], .abc-checkbox label a[data-bs-toggle]', container)
-			.not("[ka-init-tip='true']")
-			.on('click', function (e) {
-				e.stopPropagation();
-				return false;
-			})
-			.attr("ka-init-tip", "true");
 	}
 }

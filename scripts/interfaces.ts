@@ -18,9 +18,10 @@ interface IKatApp {
 
 interface IApplicationData {
 	kaId: string;
+	application: IKatApp;
 	options: IKatAppOptions;
 	uiBlocked: boolean;
-	uiDirty: boolean; // true when any input value is changed
+	needsCalculation: boolean; // True when input not 'skipped' has been edited but has not triggered a calculation yet
 
 	model?: any;
 
@@ -38,6 +39,7 @@ interface IApplicationData {
 		source: (table: string, calcEngine?: string, tab?: string) => Array<IStringIndexer<string>>;
 		exists: (table: string, calcEngine?: string, tab?: string) => boolean;
 		value: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined;
+		boolean: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => boolean;
 
 		pushTo: (tabDef: ITabDef, table: string, rows: IStringIndexer<string> | Array<IStringIndexer<string>>, calcEngine?: string, tab?: string) => void;
 	}
@@ -131,13 +133,12 @@ interface IModalAppOptions extends IModalOptions {
 	triggerLink?: JQuery;
 }
 
-interface IModalOptions extends IBaseModalOptions {
-	content?: string
+interface IModalOptions {
 	view?: string;
+	content?: string;
+	contentSelector?: string;
 	calculateOnConfirm?: ICalculationInputs | boolean;
-}
 
-interface IBaseModalOptions {
 	labels?: {
 		title?: string;
 		cancel?: string;
@@ -200,12 +201,12 @@ class ApiError extends Error {
 // Directive Options
 interface IKaNavigateOptions {
 	view: string;
-	confirm?: IBaseModalOptions;
+	confirm?: IModalOptions;
 	inputs?: ICalculationInputs;
 	ceInputs?: string;
 	persistInputs?: boolean;
 }
-interface IKaModalOptions extends IBaseModalOptions {
+interface IKaModalOptions extends IModalOptions {
 	view: string;
 	confirmed?: (response: any | undefined, application: KatApp) => void;
 	cancelled?: (response: any | undefined, application: KatApp) => void;
@@ -216,7 +217,7 @@ interface IKaApiOptions extends IApiOptions {
 	endpoint: string;
 	then?: (response: IStringAnyIndexer | undefined, application: KatApp) => void;
 	catch?: (e: any | undefined, application: KatApp) => void;
-	confirm?: IBaseModalOptions;
+	confirm?: IModalOptions;
 }
 interface IKaAppOptions {
 	selector?: string;
@@ -229,9 +230,12 @@ interface IKaInputOptions {
 	type?: string;
 	value?: string;
 	label?: string;
+	placeHolder?: string;
 	hideLabel?: boolean;
-	helpTitle?: string;
-	helpContent?: string;
+	help?: IKaInputHelp;
+	css?: IKaInputCss;
+	prefix?: string;
+	suffix?: string;
 
 	ce?: string;
 	tab?: string;
@@ -251,15 +255,28 @@ interface IKaInputOptionsBase {
 	disabled: boolean;
 }
 
+interface IKaInputHelp {
+	title?: string;
+	content?: string;
+	width?: number;
+}
+interface IKaInputCss {
+	input?: string;
+}
+
 interface IKaInputGroupOptions {
 	names: string[];
 	type: string;
 
 	values?: string[];
 	labels?: string[];
+	placeHolders?: string[];
 	hideLabel?: boolean;
-	helpTitles?: string[];
-	helpContents?: string[];
+	helps?: IKaInputHelp[]
+	css?: IKaInputCss[];
+
+	prefixes?: string[];
+	suffixes?: string[];
 
 	ce?: string;
 	tab?: string;

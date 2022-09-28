@@ -1,27 +1,36 @@
 ﻿// TODO: Nexgen Convert
 //	1. Global
-//		1. Do I need to mount before first calc?  Better if run calc first then mount
-//		1. Cheat sheet, calling template with and without source
-//		1. Templates - make a v-ka-template that preprocesses to v-scope syntax
-//		1. toFunction - don't support this
-//		1. events ... look for '.modifier' like vue, keypress.enter , etc.
-//		1. clear out errors on apiAsync
-//		1. v-ka-input - pre-process and change from v-ka-input="iPhoneNumber" to v-scope="input({name: 'iPhoneNumber'})"
-//			1. What else does v-ka-input do? during pre-process assign same attributes that mount does
-//			1. What is accepted as input to v-ka-input attribute ... in line with input() component?
-//		1. Convert all profiles to sep katapps
-//			1. Make sure to 'mount' katapp so that if element removed it removes katapp
-//		1. HelpTips
-//			1. Get select, textarea, and checkbox with error/warnings to test
-//			1. application.select('.checkbox label a[data-bs-toggle], .abc-checkbox label a[data-bs-toggle]', container) - > this can probably be inside main loop instead of another select
-//		1. When to calculate? after keypress, if move mouse? on delay timer (current implementation)?, on blur?
-//		1. Document CLEAR.KEY for api
+//		1. profile api fields - need to tack on apiid so that when api runs again, can remove (in case second result doesn't have field first result had)
+//		1. Need to get 'application' inside default scope of any of my stuff - so put on state object
 //		1. Need onKatAppNotification?  Or just onHostNotification? - QnA/MakePayment
+//		1. Local server
+//			1. Templates seem wrong?
+//			1. Modal pulls normal markup
 //
 //	1. Nexgen.js
 //		1. Added a global Savanna helper...but think for Vue I just code a custom v-ka-savanna directive and add during .update() method?
 //		1. input.removeClass("is-invalid") - put that in core code to remove ? Or maybe remove validations from state ?
 //		1. validationsEventHandler - This isn't enabled yet, might not be needed? If templates and what not just use properties of state.validations
+//
+//	1. Life Cycles:
+//		1. Create App Life-Cycle
+//			1. onInitialized( e: Event, application: KatApp )
+//			1. onModalAppInitialized( e: Event, modalApplication: KatApp, hostApplication: KatApp )
+//			1. onNestedAppInitialized( e: Event, nestedApplication: KatApp, hostApplication: KatApp )
+//			1. onMounted( e: Event, application: KatApp )
+//			1. Then do ConfigureUI calculation if any CEs are 'enabled'
+//		1. Calculation Life-Cycle
+//			1. onUpdateCalculationOptions( e: Event, options: IGetSubmitApiOptions, application: KatApp )
+//			1. onCalculateStart( e: Event, options: IGetSubmitApiOptions, application: KatApp ): boolean
+//			1. onInputsCache( e: Event, cachedInputs: ICalculationInputs, application: KatApp )
+//			1. onResultsProcessing( e: Event, results: ITabDef[], inputs: ICalculationInputs, options: IGetSubmitApiOptions, application: KatApp)
+//			1. onConfigureUICalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp ) *only triggered if iConfigureUI=1
+//			1. onCalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp )
+//			1. onCalculationErrors( e: Event, key: string, error: Error, application: KatApp ) *triggered any time an error occurs
+//			1. onCalculateEnd( e: Event, application: KatApp )
+//		1. Api Life-Cycle
+//			1. onUpdateApiOptions( e: Event, endpoint: string, options: IGetSubmitApiOptions, application: KatApp )
+//			1. onApiStart( e: Event, endpoint: string, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
 //
 //	1. Converting Views
 //		1. rbl-config
@@ -35,33 +44,32 @@
 //				1. Delete any handlers not in use
 //				1. Change application.updateOptions to application.update
 //
+//		1. Common Miscellaneous Fixes
+//			1. skipRBLe class -> rbl-nocalc
+//			1. thisClass (and any variants of it inside style)-> thisApplication
+//			1. Hidden inputs (for state) need to use update({options: {inputs:{}}})
+//				.update({
+//					options: {
+//						inputs: {
+//							iAgeCommStart: "1",
+//							iAlertType: "home",
+//							iScenario: 1
+//						}
+//					}
+//			1. Common markup/template items
+//				1. <div class="ui-blocker"></div> -> <div v-if="uiBlocked" class="ui-blocker"></div>
+//				1. <div class="row" v-ka-template="validation-summary"></div>
+//			1. Any inputs not using a template, put v-ka-input="name" on the input
+//				1. Before:
+//
 //		1. javascript handlers (via @/v-on syntax)
 //			1. Can't use $(this) to get current element clicked, need to use $(e.currentTarget)
 //
-//		1. Event handlers:
-//			1. All are .ka namespace now instead of .RBLe
-//			1. Create App Life-Cycle
-//				1. onInitialized( e: Event, application: KatApp )
-//				1. onModalAppInitialized( e: Event, modalApplication: KatApp, hostApplication: KatApp )
-//				1. onNestedAppInitialized( e: Event, nestedApplication: KatApp, hostApplication: KatApp )
-//				1. onMounted( e: Event, application: KatApp )
-//				1. Then do ConfigureUI calculation if any CEs are 'enabled'
-//			1. Calculation Life-Cycle
-//				1. onUpdateCalculationOptions( e: Event, options: IGetSubmitApiOptions, application: KatApp )
-//				1. onCalculateStart( e: Event, options: IGetSubmitApiOptions, application: KatApp ): boolean
-//				1. onInputsCache( e: Event, cachedInputs: ICalculationInputs, application: KatApp )
-//				1. onResultsProcessing( e: Event, results: ITabDef[], inputs: ICalculationInputs, options: IGetSubmitApiOptions, application: KatApp)
-//				1. onConfigureUICalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp ) *only triggered if iConfigureUI=1
-//				1. onCalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp )
-//				1. onCalculationErrors( e: Event, key: string, error: Error, application: KatApp ) *triggered any time an error occurs
-//				1. onCalculateEnd( e: Event, application: KatApp )
-//			1. Api Life-Cycle
-//				1. onUpdateApiOptions( e: Event, endpoint: string, options: IGetSubmitApiOptions, application: KatApp )
-//				1. onApiStart( e: Event, endpoint: string, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
+//		1. Event handlers - all handlers are .ka instead of .RBLe
 //
 //		1. Templates
 //			1. All `rbl-template tid` should be `template id`
-//			1. Calling template without rbl-source, <div rbl-tid="ad-doc-center"></div> -> <div v-scope="template('ad-doc-center')"></div>
+//			1. Calling template without rbl-source, <div rbl-tid="ad-doc-center"></div> -> <div v-ka-template="ad-doc-center"></div>
 //			1. If template is used with a 'source', then needs to have v-for="r in rows" inside template
 //				<template id="benefit-cards">
 //					<div class="col benefit-type" v-for="r in rows">
@@ -85,10 +93,56 @@
 //						}
 //					}">Navigate to Privacy with confirm?</a>
 //
+//			1. rbl-action-link
+//				Before:
+//					.on("onActionResult.RBLe", function (e, endPoint, resultData, application, currentOptions, actionLink) {
+//						var action = (actionLink == undefined) ? application.state.manualInputs.iAction : actionLink.data("input-action");
+//						if (action == "delete-hsa-contribution") {
+//							application.state.manualInputs.iAction = action;
+//							application.state.manualInputs.iTransactionStatus = "SUCCESS";
+//							application.calculate();
+//						}
+//					})
+//					.on("onActionFailed.RBLe", function (e, endPoint, exception, application, currentOptions, actionLink) {
+//						if (action == "delete-hsa-contribution") {
+//							application.state.manualInputs.iTransactionStatus = "FAIL";
+//						}
+//					})
+//
+//					<a rbl-action-link="command-list/process"
+//					   rbl-action-confirm-label-cancel="No"
+//					   rbl-action-confirm-label-continue="Yes"
+//					   rbl-action-confirm-selector=".delete-confirm"
+//					   data-input-record-locator="{transId}"
+//					   data-input-action="delete-hsa-contribution">
+//						<i class="fa-regular fa-trash-can"></i>
+//					</a>
+//
+//				After: (then/catch could point to 'handlers' as well)
+//					<a rbl-display="v:{canDelete}=Y" v-ka-api="{
+//					   endpoint: 'command-list/process',
+//					   calculationInputs: {
+//							iRecordLocator: '{transId}',
+//							iAction: 'delete-hsa-contribution'
+//					   },
+//					   confirm: {
+//							labels: { continue: 'Yes', cancel: 'No' }
+//					   },
+//					   then: async ( response, application ) => {
+//							application.state.inputs.iAction = 'delete-hsa-contribution';
+//							application.state.inputs.iTransactionStatus = "SUCCESS";
+//							await application.calculateAsync();
+//						},
+//						catch: ( response, application ) => {
+//							application.state.inputs.iTransactionStatus = "FAIL";
+//						}
+//					}"><i class="fa-regular fa-trash-can"></i></a>
+//
 //			1. rbl-if / rbl-display
 //				1. <span rbl-if="v:{coveredCount}=0"> -> <span v-if="row.coveredCount == 0"> (use == instead of =)
 //				1. <span rbl-display="v:{coveredCount}>0">You</span> -> <span v-if="row.coveredCount > 0">You</span>
 //				1. rbl-if="exists(payments)" -> v-if="rbl.exists('payments')"
+//				1. <div rbl-display="!showElectionForm"> / <div rbl-display="showElectionForm"> -> <div v-if="!rbl.boolean('showElectionForm')"> / <div v-if="rbl.boolean('showElectionForm')">
 //
 //			1. rbl-attr - just use :attr
 //				1. rbl-attr="href:helpfulInfo.index.{index}['tel:' + row.providerPhone.replace(/-/g, '')]" ->
@@ -102,7 +156,7 @@
 //
 //					After:
 //					<div class="row row-cols-3">
-//						<template v-scope="template('benefit-cards', rbl.source('configBenefitInfo', 'BRD'))">
+//						<template v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
 //
 //				1. rbl-source with content to be used when no table returned...
 //					Before:
@@ -112,7 +166,7 @@
 //					After:
 //					<div class="row row-cols-3">
 //						<div v-if="rbl.source('configBenefitInfo', 'BRD').length == 0" class="alert alert-info">No Benefit Contact Info</div>
-//						<template v-scope="template('benefit-cards', rbl.source('configBenefitInfo', 'BRD'))">
+//						<template v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
 //
 //				1. rbl-source with content to be used with rbl-prepend
 //					Before:
@@ -121,7 +175,7 @@
 //
 //					After:
 //					<div class="row row-cols-3">
-//						<template v-scope="template('benefit-cards', rbl.source('configBenefitInfo', 'BRD'))">
+//						<div v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
 //						<div class="col">
 //
 //				1. rbl-source where you need a correct heirarchy of bootstrap classes (.col directly under .row), note scope inside template is just the 'row' so don't need 'prefix' before property names
@@ -134,8 +188,9 @@
 //						</rbl-template>
 //
 //					After:
+//						<div class="row row-cols-3">
 //						<div class="col benefit-type" v-for="r in rbl.source('configBenefitInfo', 'BRD')">
-//							<template v-scope="template('benefit-cards', r)"></template>
+//							<div v-ka-template="{ name: 'benefit-cards', source: r }"></template>
 //						</div>
 //
 //						<template id="benefit-cards">
@@ -180,7 +235,7 @@
 //						</div>
 //
 //					After (take item outside of v-for but use same source for check)
-//						<div class="col" v-if="rbl.exists('configBenefitCategories')">
+//						<div class="col" v-if="!rbl.exists('configBenefitCategories')">
 //							<div class="alert alert-info">No previous elections or coverages on file.</div>
 //						</div>
 //						<div class="col" v-for="row in rbl-source('configBenefitCategories')">
@@ -190,28 +245,15 @@
 //				1. Calling rbl-source/rbl-tid where the tid expects a parent scope but it is hard coded...
 //					Usually (notice-type1 expects a scope variable named 'type'):
 //						<div v-for="type in rbl.source('typeMessage')">
-//							<div v-scope="template('notice-type1', rbl.source('messages', 'Messages').filter( r => r.type == type.type ))"></div>
+//							<div v-ka-template="{ name: 'notice-type1', source: rbl.source('messages', 'Messages').filter( r => r.type == type.type ) }"></div>
 //						</div>
 //
 //					Before (template values were passed in via data-* instead of 'type' variable):
 //						<div rbl-ce="Messages" rbl-source="messages[row['@id'] == 'hw-action-enroll' ]" rbl-tid="notice-type1" data-alerttype="danger" data-icon="fa-triangle-exclamation"  data-header="{text}"></div>
 //
 //					After: (note that I set a type and rows property, but the rows has to be get row() {} to make it reactive, b/c it renders when page is rendered *before* calc results so rbl.source.filter is empty...don't fully understand why I need getter yet)
-//						<div v-scope="template('notice-type1', { type: { icon: 'fa-triangle-exclamation', text: '', alertType: 'danger' }, get rows() { return rbl.source('messages', 'Messages').filter( r => r['@id'] == 'hw-action-enroll' ); } })"></div>
+//						<div v-ka-template="{ name: 'notice-type1', source: { type: { icon: 'fa-triangle-exclamation', text: '', alertType: 'danger' }, get rows() { return rbl.source('messages', 'Messages').filter( r => r['@id'] == 'hw-action-enroll' ); } } }"></div>
 //
-//		1. Fix legacy issues...
-//			1. skipRBLe -> rbl-nocalc
-//			1. Hidden inputs (for state) need to use update({options: {inputs:{}}})
-//				.update({
-//					options: {
-//						inputs: {
-//							iAgeCommStart: "1",
-//							iAlertType: "home",
-//							iScenario: 1
-//						}
-//					}
-//			1. <div class="ui-blocker"></div> -> <div v-if="uiBlocked" class="ui-blocker"></div>
-//		1. <div class="row" v-scope="template('validation-summary')"></div>
 //		1. apiActions
 //			1. onAction* - different parameters
 //			1. onUpdateEndpointOptions - called instead of onUpdateCalculationOptions - pain in but or just use one event?
@@ -318,11 +360,10 @@ class KatApp implements IKatApp {
 	}
 
 	public id: string;
+	public isCalculating: boolean;
 	public lastCalculation?: ILastCalculation;
 	public options: IKatAppOptions;
 	public state: IApplicationData;
-
-	public isCalculating: boolean;
 
 	private vueApp?: PetiteVueApp;
 	private viewTemplates?: string[];
@@ -419,10 +460,12 @@ class KatApp implements IKatApp {
 
 		const state = {
 			kaId: this.id,
+
+			application: this,
 			options: this.options,
 
 			uiBlocked: false,
-			uiDirty: false,
+			needsCalculation: false,
 
 			model: undefined,
 
@@ -444,12 +487,7 @@ class KatApp implements IKatApp {
 				}
 				else if (el.tagName == "STYLE") {
 					const thisClassCss = ".katapp-" + this.id;
-					el.outerHTML =
-						el.outerHTML
-							.replace(/{thisClass}/g, thisClassCss)
-							.replace(/\.thisClass/g, thisClassCss)
-							.replace(/thisClass/g, thisClassCss)
-							.replace(/thisVueClass/g, thisClassCss);
+					el.outerHTML = el.outerHTML.replace(/thisApplication/g, thisClassCss);
 				}
 			},
 			templateUnmounted: (script, scope?) => {
@@ -470,6 +508,18 @@ class KatApp implements IKatApp {
 					toPush.forEach((r, i) => r["@id"] = r["@id"] ?? "_pushId_" + (t.length + i));
 
 					t.push(...toPush);
+				},
+				boolean(table, keyValue, returnField, keyField, calcEngine, tab) {
+					const v = arguments.length == 1
+						? this.value("rbl-value", table) ?? this.value("rbl-display", table) ?? this.value("rbl-disabled", table) ?? this.value("rbl-skip", table)
+						: this.value(table, keyValue, returnField, keyField, calcEngine, tab);
+
+					if (v == undefined) return false;
+
+					if (typeof (v) == "string") return ["true", "1", "y", "yes"].indexOf(v.toLowerCase()) > -1;
+
+					// Convert to boolean
+					return !(!v);
 				},
 				value(table, keyValue, returnField, keyField, calcEngine, tab) {
 					if (arguments.length == 1) {
@@ -565,7 +615,7 @@ class KatApp implements IKatApp {
 			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1) {
 				if (this.options.modalAppOptions?.buttonsTemplate != undefined) {
 					this.select(".modal-footer-buttons button").remove();
-					this.select(".modal-footer-buttons").attr("v-scope", "template('" + this.options.modalAppOptions.buttonsTemplate + "', {})");
+					this.select(".modal-footer-buttons").attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.buttonsTemplate + "'})");
 				}
 
 				this.options.hostApplication.triggerEvent("onModalAppInitialized", this);
@@ -586,10 +636,14 @@ class KatApp implements IKatApp {
 					});
 			})
 
-			// Was thinking about moving the vueApp.mount() to *after* first calculation b/c we ran into issue of v-if="rbl.value('key').length > 1" throwing error
-			// even though 'key' value was hard coded to be exported and we were surprised.  Problem is, on first mount, there are no calculation results so it
-			// returned undefined.  But if I run calculation first before mounting, I'm worried about 'onCalculation' looking for elements it expects to be there
-			// b/c of processing by Vue that wouldn't be there yet.
+			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi).length > 0;
+			if (isConfigureUICalculation) {
+				if (this.options.debug.saveConfigureUiCalculationLocation != undefined && this.calcEngines.find(c => !c.manualResult && c.allowConfigureUi) != undefined) {
+					this.debugNext(this.options.debug.saveConfigureUiCalculationLocation);
+				}
+
+				await this.calculateAsync({ iConfigureUI: 1, iDataBind: 1 });
+			}
 
 			this.vueApp = PetiteVue.createApp(this.state);
 
@@ -608,12 +662,11 @@ class KatApp implements IKatApp {
 
 			this.triggerEvent("onMounted");
 
-			if (this.calcEngines.filter(c => c.allowConfigureUi).length > 0) {
-				if (this.options.debug.saveConfigureUiCalculationLocation != undefined && this.calcEngines.find(c => !c.manualResult && c.allowConfigureUi) != undefined) {
-					this.debugNext(this.options.debug.saveConfigureUiCalculationLocation);
-				}
-
-				await this.calculateAsync({ iConfigureUI: 1, iDataBind: 1 });
+			// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
+			if (isConfigureUICalculation) {
+				this.triggerEvent("onConfigureUICalculation", this.lastCalculation);
+				this.triggerEvent("onCalculation", this.lastCalculation);
+				this.triggerEvent("onCalculateEnd");
 			}
 
 			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1) {
@@ -811,6 +864,7 @@ class KatApp implements IKatApp {
 			this.state.errors = [];
 			this.state.warnings = [];
 			this.lastCalculation = undefined;
+			// First calculation done before application is even mounted, just get the results setup
 			let isConfigureUICalculation = false;
 
 			try {
@@ -862,10 +916,12 @@ class KatApp implements IKatApp {
 
 				await PetiteVue.nextTick(); // Need to make sure all VUE processing is handled
 
-				if (isConfigureUICalculation) {
-					this.triggerEvent("onConfigureUICalculation", this.lastCalculation);
+				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
+				if (!isConfigureUICalculation) {
+					this.triggerEvent("onCalculation", this.lastCalculation);
 				}
-				this.triggerEvent("onCalculation", this.lastCalculation);
+
+				this.state.needsCalculation = false;
 			}
 			catch (error) {
 				if (error instanceof CalculationError) {
@@ -886,10 +942,13 @@ class KatApp implements IKatApp {
 				this.triggerEvent("onCalculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error);
 			}
 			finally {
-				this.triggerEvent("onCalculateEnd");
+				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
+				if (!isConfigureUICalculation) {
+					this.triggerEvent("onCalculateEnd");
+				}
 				delete this.state.inputs.iInputTrigger;
-				this.unblockUI();
 				this.isCalculating = false;
+				this.unblockUI();
 			}
 		}
 	}
@@ -1103,15 +1162,65 @@ class KatApp implements IKatApp {
 		*/
 	}
 
-	public setInput(name: string, value: string | boolean | undefined, calculate = false) : JQuery {
-		const input = document.querySelector("." + name) as HTMLInputElement;
-		this.state.inputs[name] = input.value = value as string;
+	public getInputValue(input: string): string | undefined {
+		const el = this.select<HTMLInputElement>("." + input);
 
-		if (calculate) {
-			input.dispatchEvent(new Event('change'));
+		if (el.length == 0) return undefined;
+
+		if (el.length > 1 && el[0].getAttribute("type") == "radio") {
+			const v = el.filter((i, o) => o.checked).val();
+			return v != undefined ? v + '' : undefined;
+		}
+		else if (el.hasClass("checkbox-list")) {
+			const v = Array.from( el.find<HTMLInputElement>("input:checked") ).map( c => c.value ).join(",");
+			return ( v ?? "" ) != "" ? v : undefined;
+		}
+		else if (el[0].getAttribute("type") == "checkbox") {
+			return el[0].checked ? "1" : "0";
+		}
+		else {
+			return el.val() as string;
+		}
+	}
+
+	public setInputValue(name: string, value: string | undefined, calculate = false) : JQuery | undefined {
+		this.state.inputs[name] = value as string;
+
+		const el = this.select<HTMLInputElement>("." + name);
+
+		if (el.length > 0) {
+			const isCheckboxList = el.hasClass("checkbox-list");
+
+			if (el.length > 1 && el[0].getAttribute("type") == "radio") {
+				el.prop("checked", false);
+				el.filter((i, o) => o.value == value).prop("checked", true);
+			}
+			else if (isCheckboxList) {
+				el.find<HTMLInputElement>("input").prop("checked", false);
+
+				if (value != undefined) {
+					const values = value?.split(",")
+					el.find<HTMLInputElement>("input:checked").each((i, c) => {
+						if (values.indexOf(c.value)) {
+							c.checked = true;
+						}
+					});
+				}
+			}
+			else if (el[0].getAttribute("type") == "checkbox") {
+				el[0].checked = value == "1";
+			}
+			else {
+				el.val(value ?? "");
+			}
+
+			if (calculate) {
+				const target = isCheckboxList ? el.find("input")[0] : el[0];
+				target.dispatchEvent(new Event('change'));
+			}
 		}
 
-		return $(input);
+		return el;
 	}
 
 	public getInputs(customInputs?: ICalculationInputs): ICalculationInputs {
@@ -1134,7 +1243,7 @@ class KatApp implements IKatApp {
 		return cAppId == this.id ? c : $();
 	}
 
-	public select(selector: string, context?: JQuery | HTMLElement): JQuery {
+	public select<T extends HTMLElement>(selector: string, context?: JQuery | HTMLElement): JQuery<T> {
 		const container = context != undefined && !(context instanceof jQuery)
 			? $(context)
 			: context as JQuery ?? $(this.el);
@@ -1146,7 +1255,7 @@ class KatApp implements IKatApp {
 		return $(selector, container).filter(function () {
 			// Sometimes have to select the child app to ask for inputs and selector will have rbl-app= in it, so allow
 			return $(this).parents("[ka-id]").attr("ka-id") == appId;
-		});
+		}) as JQuery<T>;
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {
@@ -1274,6 +1383,10 @@ class KatApp implements IKatApp {
 	}
 		
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
+
+		if (options.contentSelector != undefined) {
+			options.content = this.select(options.contentSelector).html();
+		}
 
 		if (options.content == undefined && options.view == undefined) {
 			throw new Error("You must provide content or viewId when using showModal.");
@@ -1522,7 +1635,7 @@ class KatApp implements IKatApp {
 			});
 
 			(t["rbl-defaults"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
-				this.setInput(r["@id"], r["value"]);
+				this.setInputValue(r["@id"], r["value"]);
 			});
 
 			(t["errors"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
@@ -1534,7 +1647,10 @@ class KatApp implements IKatApp {
 
 			// If table control says they want to export, but no rows are returned, then need to re-assign to empty array
 			(t["table-output-control"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
-				if (r["export"] == "1" && t[r["@id"]] == undefined ) {
+				// export = -1 = don't export table and also clear out in Vue state
+				// export = 0 = don't export table but leave Vue state
+				// export = 1 = try export table and if empty, clear Vue state
+				if ((r["export"] == "-1" || r["export"] == "1") && t[r["@id"]] == undefined ) {
 					this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, r["@id"]);
 				}
 			});
@@ -1651,19 +1767,21 @@ class KatApp implements IKatApp {
 		const kaResources = document.querySelector("ka-resources")!;
 		const processingTemplates = resourceKey != this.id;
 
-		const toFunction = (exp: string): Function => {
-			try {
-				return new Function(`return(${exp})`);
-			} catch (e) {
-				console.error(`${(e as Error).message} in expression: ${exp}`)
-				throw e;
-			}
-		};
-
 		// Put all <style> blocks into markup
 		if (processingTemplates) {
 			kaml.querySelectorAll<HTMLStyleElement>("style").forEach(s => kaResources.appendChild(s));
 		}
+
+		const mountInputs = function (container: Element | DocumentFragment) {
+			container.querySelectorAll("input, select, textarea").forEach(input => {
+				input.setAttribute("v-on:vue:mounted", "mounted($el)");
+				// script.setAttribute("v-on:vue:unmounted", "unmounted($el)");
+			});
+
+			container.querySelectorAll<HTMLTemplateElement>("template[v-for]").forEach(t => {
+				mountInputs(t.content);
+			});
+		};
 
 		const compileMarkup = function (container: Element | DocumentFragment) {
 			let compileError = false;
@@ -1693,6 +1811,46 @@ class KatApp implements IKatApp {
 				}
 				inputComponent.removeAttribute("v-ka-input");
 				inputComponent.setAttribute("v-scope", `components.input(${scope})`);
+
+				if (scope.indexOf("template:") == -1) {
+					const isInput = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(inputComponent.tagName) > -1;
+
+					if (isInput) {
+						// Just binding a raw input
+						inputComponent.setAttribute("v-on:vue:mounted", "mounted($el)");
+						// inputComponent.setAttribute("v-on:vue:unmounted", "unmounted($el)");
+					}
+					else {
+						// Put v-ka-input on a 'container' element that contains inputs...so need to mount those inputs						
+						mountInputs(inputComponent);
+					}
+				}
+			});
+
+			// Turn v-ka-needs-calc into two items with toggled class and handler
+			container.querySelectorAll("button[v-ka-needs-calc], a[v-ka-needs-calc]").forEach(inputComponent => {
+				let needsCalcText = inputComponent.getAttribute("v-ka-needs-calc");
+
+				if (needsCalcText == "") {
+					needsCalcText = "Refresh";
+				}
+
+				inputComponent.removeAttribute("v-ka-needs-calc");
+				const refresh = inputComponent.cloneNode(true) as Element;
+				inputComponent.setAttribute("v-if", "!needsCalculation");
+
+				for (const { name, value } of [...refresh.attributes]) {
+					if (name.startsWith("@click") ) {
+						refresh.attributes.removeNamedItem(name);
+					}
+				}
+
+				refresh.innerHTML = needsCalcText!;
+
+				refresh.setAttribute("v-if", "needsCalculation");
+				refresh.classList.add("ka-needs-calc");
+
+				inputComponent.insertAdjacentElement("afterend", refresh);
 			});
 
 			// Turn v-ka-input-group into v-scope="components.inputGroup({})"
@@ -1711,12 +1869,6 @@ class KatApp implements IKatApp {
 
 				inputComponent.removeAttribute("v-ka-template");
 				inputComponent.setAttribute("v-scope", `components.template(${scope})`);
-			});
-
-			// Set mount/unmount in 'InputComponent' items outside of templates
-			container.querySelectorAll("[v-scope^='input(']").forEach(inputComponent => {
-				inputComponent.setAttribute("v-on:vue:mounted", "mounted($el)");
-				// inputComponent.setAttribute("v-on:vue:unmounted", "unmounted($el)");
 			});
 		}
 
@@ -1738,14 +1890,12 @@ class KatApp implements IKatApp {
 
 				// If this is an 'input template', need attach mounted/unmounted events on all 'inputs'
 				if (el.hasAttribute("input")) {
-					el.content.querySelectorAll("input, select, textarea").forEach(script => {
-						script.setAttribute("v-on:vue:mounted", "mounted($el)");
-						// script.setAttribute("v-on:vue:unmounted", "unmounted($el)");
-					});
+					mountInputs(el.content);
 
-					// Also automatically setup helptips again...
+					// Also automatically setup helptips again if the item is shown/added and lost popup config...
 					el.content.querySelectorAll("[v-if]").forEach(ifDir => {
-						if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
+						// Only do the 'outter most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
+						if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && ( ifDir.parentElement == undefined || ifDir.parentElement.closest("[v-if]") == undefined ) ) {
 							ifDir.setAttribute("v-on:vue:mounted", "KatApp.get($el).processHelpTips($($el))");
 						}
 					});
