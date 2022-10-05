@@ -9,6 +9,7 @@ class Directives {
 	public static initializeCoreDirectives(vueApp: PetiteVueApp, application: KatApp): void {
 		[
 			new DirectiveKaAttributes(),
+			new DirectiveKaInline(),
 
 			new DirectiveKaNavigate(),
 			new DirectiveKaValue(),
@@ -136,7 +137,7 @@ class DirectiveKaNavigate implements IKaDirective {
 					const confirmResponse = await application.showModalAsync(scope.confirm, $(e.currentTarget as HTMLElement));
 
 					if (!confirmResponse.confirmed) {
-						return;
+						return false;
 					}
 				}
 
@@ -175,6 +176,8 @@ class DirectiveKaNavigate implements IKaDirective {
 				}
 
 				application.triggerEvent("onKatAppNavigate", navigationId);
+
+				return false;
 			};
 
 			ctx.el.setAttribute("href", "#");
@@ -278,7 +281,19 @@ class DirectiveKaApp implements IKaDirective {
 		};
 	}
 }
-
+class DirectiveKaInline implements IKaDirective {
+	// https://stackoverflow.com/a/69354385/166231
+	public name = "ka-inline";
+	public getDefinition(application: KatApp): Directive<Element> {
+		return ctx => {
+			if (ctx.el.tagName === 'TEMPLATE') {
+				ctx.el.replaceWith((ctx.el as HTMLTemplateElement).content);
+			} else {
+				ctx.el.replaceWith(...ctx.el.children);
+			}
+		}
+	}
+}
 class DirectiveKaAttributes implements IKaDirective {
 	public name = "ka-attributes";
 	public getDefinition(application: KatApp): Directive<Element> {

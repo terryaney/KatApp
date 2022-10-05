@@ -1,16 +1,17 @@
 ﻿// TODO: Nexgen Convert
+// API Responses in DataSource - why are 'api=true' attributes in that?  Seems it should be empty until placed INSIDE xDS models
+
 //	1. Global
-//		1. profile api fields - need to tack on apiid so that when api runs again, can remove (in case second result doesn't have field first result had)
-//		1. Need to get 'application' inside default scope of any of my stuff - so put on state object
+//		1. ASU - 011103657
+//		1. Estimate
+//			1. chart
+//		1. KatApp VS version update
+//		1. Need showInpector or similar that puts all v-* elements into ka-* elements in markup so that you can see it when inspecting
+//		1. Document this
 //		1. Need onKatAppNotification?  Or just onHostNotification? - QnA/MakePayment
-//		1. Local server
-//			1. Templates seem wrong?
-//			1. Modal pulls normal markup
 //
 //	1. Nexgen.js
 //		1. Added a global Savanna helper...but think for Vue I just code a custom v-ka-savanna directive and add during .update() method?
-//		1. input.removeClass("is-invalid") - put that in core code to remove ? Or maybe remove validations from state ?
-//		1. validationsEventHandler - This isn't enabled yet, might not be needed? If templates and what not just use properties of state.validations
 //
 //	1. Life Cycles:
 //		1. Create App Life-Cycle
@@ -272,11 +273,6 @@
 // TODO: Directives to code
 //	1. v-ka-upload
 
-// TODO: setInput/getInputValue Issues Remaining
-//	1. Need to handle all diff input types here
-//	1. Need to handle diff selectors (. or # prefix?)
-//	1. Need to handle when querySelectorAll returns > 1?
-
 // TODO: Standard template items/make automatically built in? ajax blocker
 //	1. Ajax blocker ? Or UI just uses uiBlocked ? QnA seemed to use onInitializing and showAjax call, not sure calculating would be true when it needs to be ?
 //	1. Valiation summary code/events? Or just update errors/warnings and let each app decide how to show?
@@ -364,11 +360,12 @@ class KatApp implements IKatApp {
 	public lastCalculation?: ILastCalculation;
 	public options: IKatAppOptions;
 	public state: IApplicationData;
+	public el: JQuery;
 
+	private applicationCss: string;
 	private vueApp?: PetiteVueApp;
 	private viewTemplates?: string[];
 	private mountedTemplates: IStringIndexer<boolean> = {};
-	private el: JQuery;
 	private isMounted = false;
 	private updateOptions: IUpdateApplicationOptions | undefined;
 
@@ -376,7 +373,8 @@ class KatApp implements IKatApp {
 	private uiBlockCount = 0;
 
 	private constructor(private selector: string, options: IKatAppOptions) {
-		this.id = Utils.generateId();
+		this.id = "ka" + Utils.generateId();
+		this.applicationCss = ".katapp-" + this.id.substring(2);
 		this.isCalculating = false;
 
 		this.options = Utils.extend<IKatAppOptions>(
@@ -392,11 +390,6 @@ class KatApp implements IKatApp {
 					useTestView: Utils.pageParameters["testview"] === "1",
 					saveConfigureUiCalculationLocation: Utils.pageParameters["saveConfigureUI"],
 					debugResourcesDomain: Utils.pageParameters["localserver"],
-				},
-				nextCalculation: {
-					trace: false,
-					expireCache: false,
-					saveLocations: []
 				},
 				calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
 				kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx"
@@ -415,7 +408,7 @@ class KatApp implements IKatApp {
 		this.el = selectorResults ?? this.createModalContainer();
 
 		this.el.attr("ka-id", this.id);
-		this.el.addClass("katapp-css");
+		this.el.addClass("katapp-css " + this.applicationCss.substring(1));
 
 		if (this.el.attr("v-scope") == undefined) {
 			// Supposedly always need this on there...
@@ -458,6 +451,15 @@ class KatApp implements IKatApp {
 			return that.state.rbl.results[key]?.[table] as Array<IStringIndexer<string>> ?? [];
 		};
 
+		const isTrue = (v: any) => {
+			if (v == undefined) return false;
+
+			if (typeof (v) == "string") return ["true", "1", "y", "yes"].indexOf(v.toLowerCase()) > -1;
+
+			// Convert to boolean
+			return !(!v);
+		};
+
 		const state = {
 			kaId: this.id,
 
@@ -486,14 +488,12 @@ class KatApp implements IKatApp {
 					el.remove();
 				}
 				else if (el.tagName == "STYLE") {
-					const thisClassCss = ".katapp-" + this.id;
-					el.outerHTML = el.outerHTML.replace(/thisApplication/g, thisClassCss);
+					el.outerHTML = el.outerHTML.replace(/thisApplication/g, this.applicationCss);
 				}
 			},
 			templateUnmounted: (script, scope?) => {
 				new Function("_v", "_a", "_s", script.textContent + "\nif ( typeof unmounted !== 'undefined' ) unmounted( _v, _a, _s);")(that.el, that, scope);
 			},
-
 			inputs: Utils.extend({}, this.options.inputs, this.getLocalStorageInputs()),
 			errors: [],
 			warnings: [],
@@ -509,17 +509,18 @@ class KatApp implements IKatApp {
 
 					t.push(...toPush);
 				},
+				onAll(...values: any[]) {
+					return values.find(v => !isTrue(v) ) != undefined;
+				},
+				onAny(...values: any[]) {
+					return values.find(v => isTrue(v)) != undefined;
+				},
 				boolean(table, keyValue, returnField, keyField, calcEngine, tab) {
 					const v = arguments.length == 1
 						? this.value("rbl-value", table) ?? this.value("rbl-display", table) ?? this.value("rbl-disabled", table) ?? this.value("rbl-skip", table)
 						: this.value(table, keyValue, returnField, keyField, calcEngine, tab);
 
-					if (v == undefined) return false;
-
-					if (typeof (v) == "string") return ["true", "1", "y", "yes"].indexOf(v.toLowerCase()) > -1;
-
-					// Convert to boolean
-					return !(!v);
+					return isTrue(v);
 				},
 				value(table, keyValue, returnField, keyField, calcEngine, tab) {
 					if (arguments.length == 1) {
@@ -529,11 +530,33 @@ class KatApp implements IKatApp {
 					return getResultTableRows(table, calcEngine, tab)
 						.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"];
 				},
-				source(table, calcEngine, tab) {
-					return getResultTableRows(table, calcEngine, tab);
+				source(table, calcEngine, tab, predicate) {
+					if (typeof calcEngine == "function") {
+						predicate = calcEngine;
+						calcEngine = undefined;
+					}
+					else if (typeof tab == "function") {
+						predicate = tab;
+						tab = undefined;
+					}
+
+					return predicate
+						? getResultTableRows(table, calcEngine, tab).filter(r => predicate!(r))
+						: getResultTableRows(table, calcEngine, tab);					
 				},
-				exists(table, calcEngine, tab) {
-					return getResultTableRows(table, calcEngine, tab).length > 0;
+				exists(table, calcEngine, tab, predicate) {
+					if (typeof calcEngine == "function") {
+						predicate = calcEngine;
+						calcEngine = undefined;
+					}
+					else if (typeof tab == "function") {
+						predicate = tab;
+						tab = undefined;
+					}
+
+					return predicate
+						? getResultTableRows(table, calcEngine, tab).filter(r => predicate!(r)).length > 0
+						: getResultTableRows(table, calcEngine, tab).length > 0;
 				}
 			},
 
@@ -663,7 +686,7 @@ class KatApp implements IKatApp {
 			this.triggerEvent("onMounted");
 
 			// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
-			if (isConfigureUICalculation) {
+			if (isConfigureUICalculation && this.lastCalculation != undefined) {
 				this.triggerEvent("onConfigureUICalculation", this.lastCalculation);
 				this.triggerEvent("onCalculation", this.lastCalculation);
 				this.triggerEvent("onCalculateEnd");
@@ -747,7 +770,14 @@ class KatApp implements IKatApp {
 			modal.attr("data-bs-keyboard", "false");
 		}
 
-		$("[ka-id]").first().after(modal);
+		if (this.options.modalAppOptions.view != undefined) {
+			$("[ka-id]").first().after(modal);
+		}
+		else {
+			// If just 'content' for a modal dialog, append inside current application so that any CSS from
+			// current application/view is applied as well.
+			this.options.hostApplication!.el.append(modal);
+		}
 
 		return modal;
     }
@@ -896,7 +926,7 @@ class KatApp implements IKatApp {
 				if (results.length == 0) {
 					results.push({
 						_ka: {
-							calcEngineKey: "ResultProcessing",
+							calcEngineKey: "_ResultProcessing",
 							name: "RBLResult"
 						}
 					});
@@ -910,7 +940,7 @@ class KatApp implements IKatApp {
 
 				this.lastCalculation = {
 					inputs: inputs,
-					results: results.filter(r => r._ka.calcEngineKey != "ResultProcessing"),
+					results: results.filter(r => r._ka.calcEngineKey != "_ResultProcessing"),
 					configuration: submitApiConfiguration
 				};
 
@@ -922,6 +952,7 @@ class KatApp implements IKatApp {
 				}
 
 				this.state.needsCalculation = false;
+				this.nextCalculation = undefined;
 			}
 			catch (error) {
 				if (error instanceof CalculationError) {
@@ -1080,6 +1111,10 @@ class KatApp implements IKatApp {
 			throw new ApiError("Unable to complete API submitted to " + endpoint, e instanceof Error ? e : undefined, errorResponse);
 		}
 		finally {
+			const nextCalculation = this.nextCalculation;
+			nextCalculation.saveLocations = nextCalculation.saveLocations.filter(l => !l.serverSideOnly);
+			this.nextCalculation = nextCalculation;
+
 			// this.triggerEvent("onActionComplete", endpoint, apiOptions, trigger);
 			this.unblockUI();
 		}
@@ -1162,36 +1197,45 @@ class KatApp implements IKatApp {
 		*/
 	}
 
-	public getInputValue(input: string): string | undefined {
+	public getInputValue(input: string, allowDisabled = false): string | undefined {
 		const el = this.select<HTMLInputElement>("." + input);
 
 		if (el.length == 0) return undefined;
+
+		if (!allowDisabled && el.prop("disabled")) return undefined;
 
 		if (el.length > 1 && el[0].getAttribute("type") == "radio") {
 			const v = el.filter((i, o) => o.checked).val();
 			return v != undefined ? v + '' : undefined;
 		}
-		else if (el.hasClass("checkbox-list")) {
+
+		if (el.hasClass("checkbox-list")) {
 			const v = Array.from( el.find<HTMLInputElement>("input:checked") ).map( c => c.value ).join(",");
 			return ( v ?? "" ) != "" ? v : undefined;
 		}
-		else if (el[0].getAttribute("type") == "checkbox") {
+
+		if (el[0].getAttribute("type") == "checkbox") {
 			return el[0].checked ? "1" : "0";
 		}
-		else {
-			return el.val() as string;
-		}
+
+		return el.val() as string;
 	}
 
 	public setInputValue(name: string, value: string | undefined, calculate = false) : JQuery | undefined {
-		this.state.inputs[name] = value as string;
+
+		if (value == undefined) {
+			delete this.state.inputs[name];
+		}
+		else {
+			this.state.inputs[name] = value as string;
+		}
 
 		const el = this.select<HTMLInputElement>("." + name);
 
 		if (el.length > 0) {
 			const isCheckboxList = el.hasClass("checkbox-list");
 
-			if (el.length > 1 && el[0].getAttribute("type") == "radio") {
+			if (el.length > 0 && el[0].getAttribute("type") == "radio") {
 				el.prop("checked", false);
 				el.filter((i, o) => o.value == value).prop("checked", true);
 			}
@@ -1335,23 +1379,44 @@ class KatApp implements IKatApp {
 		return true;
 	}
 
+	private get nextCalculation(): INextCalculation {
+		const debugKey = "katapp:debugNext";
+		const debugNext: INextCalculation = JSON.parse(sessionStorage.getItem(debugKey) ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
+		return debugNext;
+	}
+	private set nextCalculation(value: INextCalculation | undefined) {
+		const debugKey = "katapp:debugNext";
+
+		if (value == undefined) {
+			sessionStorage.removeItem(debugKey);
+		}
+		else {
+			sessionStorage.setItem(debugKey, JSON.stringify(value));
+		}
+	}
+
 	public debugNext(saveLocations?: string | boolean, serverSideOnly?: boolean, trace?: boolean, expireCache?: boolean ) {
+		const debugNext = this.nextCalculation;
+
 		if (typeof (saveLocations) == "boolean") {
 			if (!saveLocations) {
-				this.options.nextCalculation.saveLocations = [];
+				debugNext.saveLocations = [];
 			}
 		}
-		else if (( saveLocations ?? "" ) != "") {
-			const locations = saveLocations!.split(",").map( l => l.trim() );
+		else if ((saveLocations ?? "") != "") {
+			
+			const locations = saveLocations!.split(",").map(l => l.trim());
 
-			this.options.nextCalculation.saveLocations = [
-				...this.options.nextCalculation.saveLocations.filter(l => locations.indexOf(l.location) == -1),
+			debugNext.saveLocations = [
+				...debugNext.saveLocations.filter(l => locations.indexOf(l.location) == -1),
 				...locations.map(l => ({ location: l, serverSideOnly: serverSideOnly ?? false }))
 			];
 
-			this.options.nextCalculation.trace = trace ?? false;
-			this.options.nextCalculation.expireCache = expireCache ?? false;
+			debugNext.trace = trace ?? false;
+			debugNext.expireCache = expireCache ?? false;
 		}
+
+		this.nextCalculation = debugNext;
 	}
 
 	public blockUI(): void {
@@ -1462,9 +1527,9 @@ class KatApp implements IKatApp {
 			configuration: Utils.extend<ISubmitApiConfiguration>(
 				{
 					Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
-					TraceEnabled: (currentOptions.nextCalculation?.trace ?? false) ? 1 : 0,
-					SaveCE: currentOptions.nextCalculation?.saveLocations.map(l => l.location).join("|") ?? "",
-					RefreshCalcEngine: (currentOptions.nextCalculation?.expireCache ?? false) || (currentOptions.debug?.refreshCalcEngine ?? false),
+					TraceEnabled: this.nextCalculation.trace ? 1 : 0,
+					SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
+					RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
 					// Should we be using JWT for AuthID, AdminAuthID, Client?
 					AuthID: /* currentOptions.data?.AuthID ?? */ "NODATA",
 					AdminAuthID: undefined,
@@ -1599,14 +1664,19 @@ class KatApp implements IKatApp {
 		if (rows.length > 0) {
 			// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
 			const firstRow = Utils.clone<IStringIndexer<string>>(rows[0], () => "");
-			this.state.rbl.results[key][propName] = rows.map(r => Utils.extend({}, firstRow, r));
+			this.state.rbl.results[key][propName] = rows.map(r => Utils.extend({}, firstRow, Utils.clone( r, ( k, v ) => v ?? "" )));
 		}
 		else {
 			this.state.rbl.results[key][propName] = [];
 		}
-	};
+	}
 
 	private mergeTableToRblState(ce: string, tab: string, table: Array<IStringIndexer<string>>, tableName: string) {
+		if (ce == "_ResultProcessing" && this.calcEngines.length > 0) {
+			ce = this.calcEngines[0].key;
+			tab = this.calcEngines[0].resultTabs[0];
+		}
+
 		const key = String.formatTokens("{ce}.{tab}", { ce: ce, tab: tab })
 		if (this.state.rbl.results[key] == undefined) {
 			this.state.rbl.results[key] = {};
@@ -1616,7 +1686,16 @@ class KatApp implements IKatApp {
 		}
 
 		table.forEach(s => {
+			if (tableName == "rbl-skip") {
+				s["@id"] = s.key;
+				// Legacy support...didn't have ability to turn on and off, so if they don't have value column, imply that it is on
+				if (s.value == undefined) {
+					s.value = "1";
+				}
+			}
+
 			const index = this.state.rbl.results[key][tableName].findIndex(r => r["@id"] == s["@id"]);
+
 			if (index > -1) {
 				Utils.extend(this.state.rbl.results[key][tableName][index], s);
 			}
@@ -1624,7 +1703,7 @@ class KatApp implements IKatApp {
 				this.state.rbl.results[key][tableName].push(Utils.clone(s));
 			}
 		});
-	};
+	}
 
 	private processResults(results: ITabDef[]) {
 		results.forEach(t => {
@@ -1663,13 +1742,11 @@ class KatApp implements IKatApp {
 
 	private async getViewElementAsync(): Promise<HTMLElement | undefined> {
 		const viewElement: HTMLElement = document.createElement("div");
-		const thisClassCss = ".katapp-" + this.id;
-		viewElement.classList.add(thisClassCss.substring(1));
 
 		if ((this.options.modalAppOptions != undefined || this.options.inputs?.iNestedApplication == 1) && this.options.view != undefined ) {
 			const view = this.options.view;
 
-			const url = this.getApiUrl( "rble/verify-katapp?applicationId=" + view );
+			const url = this.getApiUrl(`rble/verify-katapp?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
 				const response = await $.ajax({ method: "GET", url: url, dataType: "json" }) as IModalAppVerifyResult;
@@ -1689,11 +1766,8 @@ class KatApp implements IKatApp {
 
 			const viewContent =
 				viewResource[this.options.view]
-					.replace(/{thisView}/g, "[ka-id='" + this.id + "']")
 					.replace(/{id}/g, this.id)
-					.replace(/{thisClass}/g, thisClassCss)
-					.replace(/\.thisClass/g, thisClassCss)
-					.replace(/thisClass/g, thisClassCss);
+					.replace(/thisApplication/g, this.applicationCss);
 
 			viewElement.innerHTML = viewContent;
 
@@ -1758,7 +1832,7 @@ class KatApp implements IKatApp {
 		const persistedInputsJson = sessionStorage.getItem(persistedInputsKey);
 		const persistedInputs = persistedInputsJson != undefined ? JSON.parse(persistedInputsJson) : undefined;
 
-		const localStorageInputs = Utils.extend<ICalculationInputs>({}, cachedInputs, oneTimeInputs, persistedInputs);
+		const localStorageInputs = Utils.extend<ICalculationInputs>({}, cachedInputs, persistedInputs, oneTimeInputs);
 
 		return localStorageInputs;
 	}
@@ -1775,7 +1849,7 @@ class KatApp implements IKatApp {
 		const mountInputs = function (container: Element | DocumentFragment) {
 			container.querySelectorAll("input, select, textarea").forEach(input => {
 				input.setAttribute("v-on:vue:mounted", "mounted($el)");
-				// script.setAttribute("v-on:vue:unmounted", "unmounted($el)");
+				input.setAttribute("v-on:vue:unmounted", "unmounted($el)");
 			});
 
 			container.querySelectorAll<HTMLTemplateElement>("template[v-for]").forEach(t => {
@@ -1818,7 +1892,7 @@ class KatApp implements IKatApp {
 					if (isInput) {
 						// Just binding a raw input
 						inputComponent.setAttribute("v-on:vue:mounted", "mounted($el)");
-						// inputComponent.setAttribute("v-on:vue:unmounted", "unmounted($el)");
+						inputComponent.setAttribute("v-on:vue:unmounted", "unmounted($el)");
 					}
 					else {
 						// Put v-ka-input on a 'container' element that contains inputs...so need to mount those inputs						
@@ -1869,6 +1943,11 @@ class KatApp implements IKatApp {
 
 				inputComponent.removeAttribute("v-ka-template");
 				inputComponent.setAttribute("v-scope", `components.template(${scope})`);
+			});
+
+			// Recursively fix things
+			container.querySelectorAll<HTMLTemplateElement>("template:not([id])").forEach(template => {
+				compileMarkup(template.content);
 			});
 		}
 

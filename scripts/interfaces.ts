@@ -12,6 +12,7 @@ interface IKatAppComponent {
 }
 
 interface IKatApp {
+	el: JQuery;
 	options: IKatAppOptions;
 	triggerEvent: (eventName: string, ...args: (object | string | undefined | unknown)[]) => boolean | string | ICalculationInputs | undefined;
 }
@@ -26,6 +27,7 @@ interface IApplicationData {
 	model?: any;
 
 	handlers?: IStringAnyIndexer;
+
 	templateMounted: (templateId: string, el: Element, mode: string, scope?: any) => void;
 	templateUnmounted: (el: Element, scope?: any) => void;
 
@@ -36,10 +38,13 @@ interface IApplicationData {
 	rbl: {
 		results: ICalculationResults;
 
-		source: (table: string, calcEngine?: string, tab?: string) => Array<IStringIndexer<string>>;
-		exists: (table: string, calcEngine?: string, tab?: string) => boolean;
+		source: (table: string, calcEngine?: string, tab?: string, predicate?: (row: IStringIndexer<string>) => boolean) => Array<IStringIndexer<string>>;
+		exists: (table: string, calcEngine?: string, tab?: string, predicate?: ( row: IStringIndexer<string> ) => boolean ) => boolean;
 		value: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined;
 		boolean: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => boolean;
+
+		onAll: (...values: any[]) => boolean;
+		onAny: (...values: any[]) => boolean;
 
 		pushTo: (tabDef: ITabDef, table: string, rows: IStringIndexer<string> | Array<IStringIndexer<string>>, calcEngine?: string, tab?: string) => void;
 	}
@@ -90,11 +95,12 @@ interface IKatAppDefaultOptions {
 	};
 	calculationUrl: string;
 	kamlRepositoryUrl: string;
-	nextCalculation: {
-		saveLocations: { location: string, serverSideOnly: boolean }[];
-		expireCache: boolean;
-		trace: boolean;
-	};
+}
+
+interface INextCalculation {
+	saveLocations: { location: string, serverSideOnly: boolean }[];
+	expireCache: boolean;
+	trace: boolean;
 }
 
 interface IKatAppOptions extends IKatAppDefaultOptions {
@@ -233,6 +239,7 @@ interface IKaInputOptions {
 	placeHolder?: string;
 	hideLabel?: boolean;
 	help?: IKaInputHelp;
+	list?: Array<{ key: string; text: string }>;
 	css?: IKaInputCss;
 	prefix?: string;
 	suffix?: string;
@@ -262,6 +269,7 @@ interface IKaInputHelp {
 }
 interface IKaInputCss {
 	input?: string;
+	container?: string;
 }
 
 interface IKaInputGroupOptions {
@@ -283,9 +291,9 @@ interface IKaInputGroupOptions {
 
 	template: string;
 
-	isNoCalc?: (base: IKaInputGroupOptionsBase) => boolean;
-	isDisabled?: (base: IKaInputGroupOptionsBase) => boolean;
-	isDisplay?: (base: IKaInputGroupOptionsBase) => boolean;
+	isNoCalc?: (index: number, base: IKaInputGroupOptionsBase) => boolean;
+	isDisabled?: (index: number, base: IKaInputGroupOptionsBase) => boolean;
+	isDisplay?: (index: number, base: IKaInputGroupOptionsBase) => boolean;
 
 	events?: IStringIndexer<((e: Event, application: KatApp) => void)>
 }

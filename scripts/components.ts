@@ -13,16 +13,13 @@ class InputComponent {
 	constructor(private props: IKaInputOptions) {
 	}
 
-	/*
 	public static unmounted(application: KatApp, input: HTMLInputElement) {
-		// If want to clear input values, probably need to bind a custom handler to whatever triggers unmounting and clear inputs
-		throw new Error("Currently not used because if you hide an input and I remove the value in state inputs, then re-render input it cannot restore previous value.");
+		// throw new Error("Currently not used because if you hide an input and I remove the value in state inputs, then re-render input it cannot restore previous value.");
 		const name = input.getAttribute("name");
 		if (name != undefined) {
 			delete application.state.inputs[name];
 		}
 	}
-	*/
 
 	// My impl of Vue's cacheStringFunction
 	private static stringCache: Record<string, string> = Object.create(null);
@@ -56,7 +53,12 @@ class InputComponent {
 			application.setInputValue(name, value);
 		}
 
-		const inputEventAsync = async ( calculate: boolean ) => {
+		const removeError = () => application.state.errors = application.state.errors.filter(r => r["@id"] != name);
+
+		const inputEventAsync = async (calculate: boolean) => {
+			removeError();
+			application.state.inputs[name] = application.getInputValue(name);
+
 			if (!noCalc(name)) {
 				// Don't trigger calc if rbl-nocalc/rbl-exclude class as well
 				if (
@@ -76,22 +78,68 @@ class InputComponent {
 			}
 		}
 
-		input.addEventListener("change", async () => {
-			return await inputEventAsync(true);
-		});
+		if (type == 'date') {
+			// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
 
-		if (type != "checkbox" && input.tagName != "SELECT") {
-			// input event fires when the value of an <input>, <select>, or <textarea> element has been changed (keypress or mouse).
-			input.addEventListener("input", async () => {
-				application.state.inputs[name] = application.getInputValue(name);
-				return await inputEventAsync(false);
+			// So flow:
+			//	1. Create action to do calculation if the stored input value is different than date input value.
+			//	2. Bind action to change
+			//	3. Bind to keypress
+			//		- When typing, remove change event and bind action to blur
+			//		- If keyCode=13 (enter), fire action
+			//	4. Bind to click event
+			//	5. Remove blur and change, re-add change event
+
+			const dateChangeAsync = async ( e: Event ) => {
+				// Since we might be triggered on a blur vs a change, a blur would happen every time they 'tab' through
+				// an input or if they type a value and change it back to same value before tabbing out (normal inputs
+				// automatically handle this and doesn't trigger change event)
+				const v = application.getInputValue(name);
+				if (application.state.inputs[name] != v) {
+					// To give ability to hook events to it.
+					( e.currentTarget as HTMLInputElement ).dispatchEvent(new Event('value.ka'));
+
+					removeError();
+					application.state.inputs[name] = v;
+					await inputEventAsync(true);				
+				}
+			};
+
+			input.addEventListener("change", dateChangeAsync);
+
+			input.addEventListener("keypress", async e => {
+				input.removeEventListener("change", dateChangeAsync);
+				input.addEventListener("blur", dateChangeAsync);
+
+				removeError();
+				if (e.keyCode == 13) {
+					await dateChangeAsync( e );
+				}
 			});
+
+			input.addEventListener("click", e => {
+				input.removeEventListener("blur", dateChangeAsync);
+				input.removeEventListener("change", dateChangeAsync);
+				input.addEventListener("change", dateChangeAsync);
+			});
+
 			input.addEventListener("blur", () => {
-				// In case they typed in input but ended up at same value, 'change' will not trigger, so need to clear this
 				if (!application.isCalculating) {
 					application.state.needsCalculation = false;
 				}
 			});
+		}
+		else {
+			input.addEventListener("change", async () => await inputEventAsync(true));
+
+			if (type != "checkbox" && input.tagName != "SELECT") {
+				input.addEventListener("input", async () => await inputEventAsync(false));
+				input.addEventListener("blur", () => {
+					if (!application.isCalculating) {
+						application.state.needsCalculation = false;
+					}
+				});
+			}
 		}
 
 		if (events != undefined) {
@@ -151,7 +199,8 @@ class InputComponent {
 					});
 
 					input.addEventListener(
-						arg,
+						// if value.ka, want namespace instead of modifier
+						arg == "value" && modifiers.ka ? "value.ka" : arg,
 						(e: Event) => {
 							if ('key' in e && !(hyphenate((e as KeyboardEvent).key) in modifiers)) {
 								return;
@@ -257,20 +306,21 @@ class InputComponent {
 			},
 			get css() {
 				return {
-					input: props?.css?.input ?? ""
+					input: props?.css?.input ?? "",
+					container: props?.css?.container
 				};
 			},
 			get error() { return this.base.error; },
 			get warning() { return this.base.warning; },
 			get list() {
 				const table = application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : [];
+				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : props.list ?? [];
 			},
 			get hideLabel() { return props.hideLabel ?? false; },
 			get prefix() { return props.prefix; },
 			get suffix() { return props.suffix; },
 
-			// unmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
+			unmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
 			mounted: (input: HTMLInputElement) => InputComponent.mounted( application, name, input, defaultValue, noCalc, props.events )
 		};
 	}
@@ -301,17 +351,18 @@ class TemplateMultipleInputComponent {
 		const tab = props.tab;
 
 		const base = {
-			display: function (index: number) { return application.state.rbl.value("rbl-display", names[index], undefined, undefined, calcEngine, tab) != "0"; },
-			noCalc: function (index: number) { return application.state.rbl.value("rbl-skip", names[index], undefined, undefined, calcEngine, tab) == "1"; },
+			name: ( index: number) => names[index],
+			display: (index: number) => application.state.rbl.value("rbl-display", names[index], undefined, undefined, calcEngine, tab) != "0",
+			noCalc: (index: number) => application.state.rbl.value("rbl-skip", names[index], undefined, undefined, calcEngine, tab) == "1",
 			// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
-			disabled: function (index: number) { return /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", names[index], undefined, undefined, calcEngine, tab) == "1"; },
-			error: function (index: number) { return application.state.errors.find(v => v["@id"] == names[index])?.text; },
-			warning: function (index: number) { return application.state.warnings.find(v => v["@id"] == names[index])?.text; }
+			disabled: (index: number) => /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", names[index], undefined, undefined, calcEngine, tab) == "1",
+			error: (index: number) => application.state.errors.find(v => v["@id"] == names[index])?.text,
+			warning: (index: number) => application.state.warnings.find(v => v["@id"] == names[index])?.text
 		};
 
 		const noCalc = function (name: string) {
 			const index = names.indexOf(name);
-			return props.isNoCalc?.(base) ?? base.noCalc(index);
+			return props.isNoCalc?.(index, base) ?? base.noCalc(index);
 		}
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
@@ -321,49 +372,38 @@ class TemplateMultipleInputComponent {
 		return {
 			"$template": templateId,
 
-			id: function (index: number) {
-				return names[ index ] + "_" + application.id;
-			},
-			name: function (index: number) {
-				return names[index];
-			},
+			id: (index: number) => names[ index ] + "_" + application.id,
+			name: (index: number) => base.name( index ),
 			type: props.type ?? "text",
 
 			application: application,
 			modalAppOptions: application.options.modalAppOptions,
 
-			value: function (index: number) { return application.state.inputs[names[index]] ?? values[ index ] ?? ""; },
+			value: (index: number) => application.state.inputs[names[index]] ?? values[ index ] ?? "",
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
-			base: base,
-			disabled: function (index: number) { return props.isDisabled?.(this.base) ?? this.base.disabled( index ); },
-			display: function (index: number) { return props.isDisplay?.(this.base) ?? this.base.display(index); },
-			noCalc: function (index: number) { return noCalc(names[index]); },
-			label: function (index: number) { return application.state.rbl.value("rbl-value", "l" + names[index], undefined, undefined, calcEngine, tab) ?? labels[index] ?? ""; },
-			placeHolder: function (index: number) { return application.state.rbl.value("rbl-value", "ph" + names[index], undefined, undefined, calcEngine, tab) ?? placeHolders[index]; },			
-			help: function (index: number) {
-				return {
-					content: application.state.rbl.value("rbl-value", "h" + names[index], undefined, undefined, calcEngine, tab) ?? helps[index]?.content,
-					title: application.state.rbl.value("rbl-value", "h" + names[index] + "Title", undefined, undefined, calcEngine, tab) ?? helps[index]?.title ?? "",
-					width: helps[index]?.width || ""
-				};
-			},
-			css: function (index: number ) {
-				return {
-					input: css[index]?.input ?? ""
-				};
-			},
-			error: function (index: number) { return this.base.error(index); },
-			warning: function (index: number) { return this.base.warning(index); },
+			disabled: (index: number) => props.isDisabled?.(index, base) ?? base.disabled(index),
+			display: (index: number) => props.isDisplay?.(index, base) ?? base.display(index),
+			noCalc: (index: number) => noCalc(names[index]),
+			label: (index: number) => application.state.rbl.value("rbl-value", "l" + names[index], undefined, undefined, calcEngine, tab) ?? labels[index] ?? "",
+			placeHolder: (index: number) => application.state.rbl.value("rbl-value", "ph" + names[index], undefined, undefined, calcEngine, tab) ?? placeHolders[index],
+			help: (index: number) => ({
+				content: application.state.rbl.value("rbl-value", "h" + names[index], undefined, undefined, calcEngine, tab) ?? helps[index]?.content,
+				title: application.state.rbl.value("rbl-value", "h" + names[index] + "Title", undefined, undefined, calcEngine, tab) ?? helps[index]?.title ?? "",
+				width: helps[index]?.width || ""
+			}),
+			css: (index: number ) => ({ input: css[index]?.input ?? "" }),
+			error: (index: number) => base.error(index),
+			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
 				const table = application.state.rbl.value("rbl-listcontrol", names[ index ], "table", undefined, calcEngine, tab);
 				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : [];
 			},
 			get hideLabel() { return props.hideLabel ?? false; },
-			prefix: function (index: number) { return prefixes[index]; },
-			suffix: function (index: number) { return suffixes[index]; },
+			prefix: (index: number) => prefixes[index],
+			suffix: (index: number) => suffixes[index],
 
-			// unmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
+			unmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
 			mounted: (input: HTMLInputElement) => {
 				const name = input.getAttribute("name");
 
