@@ -77,7 +77,7 @@
 		};
 
 		const getTipContent = function (h: JQuery<Element>) {
-			// See if they specified data-content directly on trigger element.                
+			// See if they specified data-content directly on trigger element.
 			const dataContent = h.data('bs-content');
 			const dataContentSelector = h.data('bs-content-selector');
 			let content = dataContent == undefined
@@ -114,7 +114,7 @@
 				const trigger = tipElement.data('bs-trigger') || "hover";
 				const container = tipElement.data('bs-container') || "body";
 
-				const options: any = {
+				const options: BootstrapTooltipOptions = {
 					html: true,
 					sanitize: false,
 					trigger: trigger,
@@ -123,7 +123,7 @@
 						? '<div class="tooltip katapp-css" role="tooltip"><div class="tooltip-arrow arrow"></div><div class="tooltip-inner"></div></div>'
 						: '<div v-scope class="popover katapp-css" role="tooltip"><div class="popover-arrow arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
 
-					placement: function (tooltip: any, trigger: any) {
+					placement: (tooltip, trigger) => {
 						// Add a class to the .popover element
 
 						// http://stackoverflow.com/a/19875813/166231
@@ -151,8 +151,12 @@
 
 						return placement;
 					},
-					title: function () { return isTooltip ? getTipContent($(this)) : getTipTitle($(this)); },
-					content: function () { return getTipContent($(this)); }
+					title: function () {
+						return isTooltip ? getTipContent($(this)) : getTipTitle($(this));
+					},
+					content: function () {
+						return getTipContent($(this));
+					}
 				};
 
 				if (isTooltip) {

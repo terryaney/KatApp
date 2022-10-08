@@ -14,7 +14,7 @@ interface IKatAppComponent {
 interface IKatApp {
 	el: JQuery;
 	options: IKatAppOptions;
-	triggerEvent: (eventName: string, ...args: (object | string | undefined | unknown)[]) => boolean | string | ICalculationInputs | undefined;
+	triggerEventAsync: (eventName: string, ...args: (object | string | undefined | unknown)[]) => Promise<boolean | undefined>;
 }
 
 interface IApplicationData {
@@ -28,8 +28,11 @@ interface IApplicationData {
 
 	handlers?: IStringAnyIndexer;
 
-	templateMounted: (templateId: string, el: Element, mode: string, scope?: any) => void;
-	templateUnmounted: (el: Element, scope?: any) => void;
+	// Private...
+	_templateItemMounted: (templateId: string, el: Element, mode: string, scope?: any) => void;
+	_templateItemUnmounted: (el: Element, scope?: any) => void;
+
+	components: IStringIndexer<IStringAnyIndexer>;
 
 	inputs: ICalculationInputs;
 	errors: IValidation[];
@@ -39,7 +42,7 @@ interface IApplicationData {
 		results: ICalculationResults;
 
 		source: (table: string, calcEngine?: string, tab?: string, predicate?: (row: IStringIndexer<string>) => boolean) => Array<IStringIndexer<string>>;
-		exists: (table: string, calcEngine?: string, tab?: string, predicate?: ( row: IStringIndexer<string> ) => boolean ) => boolean;
+		exists: (table: string, calcEngine?: string, tab?: string, predicate?: (row: IStringIndexer<string>) => boolean ) => boolean;
 		value: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined;
 		boolean: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => boolean;
 
@@ -48,8 +51,6 @@ interface IApplicationData {
 
 		pushTo: (tabDef: ITabDef, table: string, rows: IStringIndexer<string> | Array<IStringIndexer<string>>, calcEngine?: string, tab?: string) => void;
 	}
-
-	components: IStringIndexer<IStringAnyIndexer>;
 }
 
 interface IGetSubmitApiOptions {
@@ -134,7 +135,7 @@ interface IModalAppOptions extends IModalOptions {
 
 	// These methods are used when the modal needs to return more than just true/false to the caller
 	// in conjunction with creating their own toolbar
-	confirmed?: (response?: any) => void;
+	confirmedAsync?: (response?: any) => Promise<void>;
 	cancelled?: (response?: any) => void;
 	triggerLink?: JQuery;
 }
@@ -185,6 +186,7 @@ interface IApiOptions {
 	apiParameters?: IStringAnyIndexer;
 	isDownload?: boolean;
 	calculateOnSuccess?: boolean | ICalculationInputs
+	files?: FileList | null;
 }
 
 interface IApiResult {
@@ -243,6 +245,9 @@ interface IKaInputOptions {
 	css?: IKaInputCss;
 	prefix?: string;
 	suffix?: string;
+	maxLength?: number;
+	
+	uploadEndpoint?: string;
 
 	ce?: string;
 	tab?: string;
@@ -302,4 +307,30 @@ interface IKaInputGroupOptionsBase {
 	display: (index: number) => boolean;
 	noCalc: (index: number) => boolean;
 	disabled: (index: number) => boolean;
+}
+interface IKaHighchartOptions {
+	data: string;
+	options?: string;
+	ce?: string;
+	tab?: string;
+}
+
+
+// RBLe Result Row Types
+interface IRblHighChartsOverrideRow extends IRblHighChartsOptionRow {
+	"@id": string;
+}
+interface IRblHighChartsOptionRow extends IStringIndexer<string> {
+	key: string;
+	value: string;
+}
+interface IRblHighChartsDataRow extends IStringIndexer<string | undefined> {
+	category: string;
+	plotLine?: string;
+	plotBand?: string;
+}
+interface IHighChartsPlotConfigurationRow {
+	index: number;
+	plotLine: string;
+	plotBand: string;
 }

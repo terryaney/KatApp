@@ -31,7 +31,7 @@ class InputComponent {
 		}) as any;
 	}
 
-	public static mounted(application: KatApp, name: string, input: HTMLInputElement, defaultValue: (name: string ) => string | undefined, noCalc: (name: string) => boolean, events: undefined | IStringIndexer<((e: Event, application: KatApp) => void)> ) {
+	public static mounted(application: KatApp, name: string, input: HTMLInputElement, defaultValue: (name: string) => string | undefined, noCalc: (name: string) => boolean, events: undefined | IStringIndexer<((e: Event, application: KatApp) => void)> ) {
 		input.setAttribute("name", name);
 		input.classList.add(name);
 
@@ -132,7 +132,7 @@ class InputComponent {
 		else {
 			input.addEventListener("change", async () => await inputEventAsync(true));
 
-			if (type != "checkbox" && input.tagName != "SELECT") {
+			if (type != "file" && type != "checkbox" && input.tagName != "SELECT") {
 				input.addEventListener("input", async () => await inputEventAsync(false));
 				input.addEventListener("blur", () => {
 					if (!application.isCalculating) {
@@ -254,7 +254,7 @@ class InputComponent {
 		}
 
 		const base = {
-			get display() { return application.state.rbl.value("rbl-display", name, undefined, undefined, calcEngine, tab) != "0"; },
+			get display() { return application.state.rbl.value("rbl-display", "v" + name, undefined, undefined, calcEngine, tab) != "0"; },
 			get noCalc() { return application.state.rbl.value("rbl-skip", name, undefined, undefined, calcEngine, tab) == "1"; },
 			// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
 			get disabled() { return /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", name, undefined, undefined, calcEngine, tab) == "1"; },
@@ -319,9 +319,26 @@ class InputComponent {
 			get hideLabel() { return props.hideLabel ?? false; },
 			get prefix() { return props.prefix; },
 			get suffix() { return props.suffix; },
+			get maxLength() { return props.maxLength ?? 250; },
 
-			unmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
-			mounted: (input: HTMLInputElement) => InputComponent.mounted( application, name, input, defaultValue, noCalc, props.events )
+			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
+			inputMounted: (input: HTMLInputElement) => InputComponent.mounted(application, name, input, defaultValue, noCalc, props.events),
+			uploadAsync: async () => {
+				if (props.uploadEndpoint == undefined) {
+					throw new Error("Cannot use uploadAsync if uploadEndpoint is not set.");
+				}
+				const files = (application.select("." + name)[0] as HTMLInputElement).files;
+
+				try {
+					await application.apiAsync(props.uploadEndpoint, { files: files });
+				} catch (e) {
+					console.log("API Upload to " + props.uploadEndpoint + " failed.");
+					console.log({ e });
+				}
+				finally {
+					application.setInputValue(name, undefined);
+				}
+			}
 		};
 	}
 }
@@ -352,7 +369,7 @@ class TemplateMultipleInputComponent {
 
 		const base = {
 			name: ( index: number) => names[index],
-			display: (index: number) => application.state.rbl.value("rbl-display", names[index], undefined, undefined, calcEngine, tab) != "0",
+			display: (index: number) => application.state.rbl.value("rbl-display", "v" + names[index], undefined, undefined, calcEngine, tab) != "0",
 			noCalc: (index: number) => application.state.rbl.value("rbl-skip", names[index], undefined, undefined, calcEngine, tab) == "1",
 			// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
 			disabled: (index: number) => /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", names[index], undefined, undefined, calcEngine, tab) == "1",
@@ -403,8 +420,8 @@ class TemplateMultipleInputComponent {
 			prefix: (index: number) => prefixes[index],
 			suffix: (index: number) => suffixes[index],
 
-			unmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
-			mounted: (input: HTMLInputElement) => {
+			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
+			inputMounted: (input: HTMLInputElement) => {
 				const name = input.getAttribute("name");
 
 				if (name == undefined) {
