@@ -13,13 +13,15 @@ class InputComponent {
 	constructor(private props: IKaInputOptions) {
 	}
 
+	/*
 	public static unmounted(application: KatApp, input: HTMLInputElement) {
-		// throw new Error("Currently not used because if you hide an input and I remove the value in state inputs, then re-render input it cannot restore previous value.");
+		throw new Error("Currently not used because if you hide an input and I remove the value in state inputs, then re-render input it cannot restore previous value.");		
 		const name = input.getAttribute("name");
 		if (name != undefined) {
 			delete application.state.inputs[name];
 		}
 	}
+	*/
 
 	// My impl of Vue's cacheStringFunction
 	private static stringCache: Record<string, string> = Object.create(null);
@@ -78,16 +80,18 @@ class InputComponent {
 			}
 		}
 
-		if (type == 'date') {
+		if (type == "date") {
 			// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
 
 			// So flow:
 			//	1. Create action to do calculation if the stored input value is different than date input value.
 			//	2. Bind action to change
+			//	3. Bind to keydown (so delete/backspace caught too)
+			//		- Remove change event and bind action to blur
 			//	3. Bind to keypress
-			//		- When typing, remove change event and bind action to blur
+			//		- When typing, remove error if present
 			//		- If keyCode=13 (enter), fire action
-			//	4. Bind to click event
+			//	4. Bind to click event (to get calendar change event)
 			//	5. Remove blur and change, re-add change event
 
 			const dateChangeAsync = async ( e: Event ) => {
@@ -95,29 +99,32 @@ class InputComponent {
 				// an input or if they type a value and change it back to same value before tabbing out (normal inputs
 				// automatically handle this and doesn't trigger change event)
 				const v = application.getInputValue(name);
+
 				if (application.state.inputs[name] != v) {
 					// To give ability to hook events to it.
 					( e.currentTarget as HTMLInputElement ).dispatchEvent(new Event('value.ka'));
 
 					removeError();
 					application.state.inputs[name] = v;
-					await inputEventAsync(true);				
+
+					await inputEventAsync(true);
 				}
 			};
 
 			input.addEventListener("change", dateChangeAsync);
 
 			input.addEventListener("keypress", async e => {
-				input.removeEventListener("change", dateChangeAsync);
-				input.addEventListener("blur", dateChangeAsync);
-
 				removeError();
 				if (e.keyCode == 13) {
-					await dateChangeAsync( e );
+					await dateChangeAsync(e);
 				}
 			});
+			input.addEventListener("keydown", () => {
+				input.removeEventListener("change", dateChangeAsync);
+				input.addEventListener("blur", dateChangeAsync);
+			});
 
-			input.addEventListener("click", e => {
+			input.addEventListener("click", () => {
 				input.removeEventListener("blur", dateChangeAsync);
 				input.removeEventListener("change", dateChangeAsync);
 				input.addEventListener("change", dateChangeAsync);
@@ -321,7 +328,7 @@ class InputComponent {
 			get suffix() { return props.suffix; },
 			get maxLength() { return props.maxLength ?? 250; },
 
-			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
+			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
 			inputMounted: (input: HTMLInputElement) => InputComponent.mounted(application, name, input, defaultValue, noCalc, props.events),
 			uploadAsync: async () => {
 				if (props.uploadEndpoint == undefined) {
@@ -420,7 +427,7 @@ class TemplateMultipleInputComponent {
 			prefix: (index: number) => prefixes[index],
 			suffix: (index: number) => suffixes[index],
 
-			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
+			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
 			inputMounted: (input: HTMLInputElement) => {
 				const name = input.getAttribute("name");
 

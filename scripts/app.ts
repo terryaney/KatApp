@@ -5,9 +5,8 @@
 //		1. QnA - 011310302
 //		1. ASU - 011103657
 //		1. Show Inspector - any way to get 'scope' working?  v-for with : attributes are bad...also need to put the comment INSIDE the v-for so scope works? but do I even have what I want?
-//			- css for items should be in vue code not tempalte
+//			- add scope back in...have items figure out scope based on parent 'component' or 'v-for'?
 //		1. Document this
-//		1. Need onKatAppNotification?  Or just 06onHostNotification? - QnA/MakePayment
 //
 // TODO: processResults items to finish
 //	1. const updateData = function(): void {
@@ -35,237 +34,6 @@
 //			1. onApiStart( e: Event, endpoint: string, submitData: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
 //			1. onApiComplete( e: Event, endpoint: string, response: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
 //			1. onApiFailed( e: Event, endpoint: string, response: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
-//
-//	1. Converting Views
-//		1. rbl-config
-//			1. Can't have calcengine attribute (or tab attributes), needs nested calc-engine elements
-//			1. All templates should be NexgenVue:*
-//		1. IIFE
-//			1. Don't need reference to 'view'
-//			1. Declare -> var application = KatApp.get('{id}');
-//			1. Don't need 'manualInputs' in state, think we can just do application.state.inputs.iInputName = 1;
-//			1. If application.updateOptions for 'handlers'...
-//				1. Delete any handlers not in use
-//				1. Change application.updateOptions to application.update
-//
-//		1. Common Miscellaneous Fixes
-//			1. skipRBLe class -> rbl-nocalc
-//			1. thisClass (and any variants of it inside style)-> thisApplication
-//			1. Hidden inputs (for state) need to use update({options: {inputs:{}}})
-//				.update({
-//					options: {
-//						inputs: {
-//							iAgeCommStart: "1",
-//							iAlertType: "home",
-//							iScenario: 1
-//						}
-//					}
-//			1. Common markup/template items
-//				1. <div class="ui-blocker"></div> -> <div v-if="uiBlocked" class="ui-blocker"></div>
-//				1. <div class="row" v-ka-template="validation-summary"></div>
-//			1. Any inputs not using a template, put v-ka-input="name" on the input
-//				1. Before:
-//
-//		1. javascript handlers (via @/v-on syntax)
-//			1. Can't use $(this) to get current element clicked, need to use $(e.currentTarget)
-//
-//		1. Event handlers - all handlers are .ka instead of .RBLe
-//
-//		1. Templates
-//			1. All `rbl-template tid` should be `template id`
-//			1. Calling template without rbl-source, <div rbl-tid="ad-doc-center"></div> -> <div v-ka-template="ad-doc-center"></div>
-//			1. If template is used with a 'source', then needs to have v-for="r in rows" inside template
-//				<template id="benefit-cards">
-//					<div class="col benefit-type" v-for="r in rows">
-//
-//		1. Search for rbl-
-//			1. rbl-on
-//				1. Just @event handlers, rbl-on="click:expandSavannaFAQ" -> @click="handlers.expandSavannaFAQ"
-//				1. Passing params (usually instead of data-input-*) @click="handlers.foo($event, { iInputName: 'value' })"
-//			1. rbl-value -> v-ka-value (probably same syntax)
-//			1. rbl-navigate
-//				1. rbl-navigate="common-documentcenter" -> v-ka-navigate="Common.DocumentCenter"
-//				1. Navigate with prompt:
-//					<a v-ka-navigate="{
-//						view: 'About.Privacy',
-//						confirm: {
-//							content: 'Are you sure you want to leave?',
-//							labels: {
-//								cancel: 'OK, I\'ll Stay',
-//								continue: 'Yes, I have things to do!'
-//							}
-//						}
-//					}">Navigate to Privacy with confirm?</a>
-//
-//			1. rbl-action-link
-//				Before:
-//					.on("onActionResult.RBLe", function (e, endPoint, resultData, application, currentOptions, actionLink) {
-//						var action = (actionLink == undefined) ? application.state.manualInputs.iAction : actionLink.data("input-action");
-//						if (action == "delete-hsa-contribution") {
-//							application.state.manualInputs.iAction = action;
-//							application.state.manualInputs.iTransactionStatus = "SUCCESS";
-//							application.calculate();
-//						}
-//					})
-//					.on("onActionFailed.RBLe", function (e, endPoint, exception, application, currentOptions, actionLink) {
-//						if (action == "delete-hsa-contribution") {
-//							application.state.manualInputs.iTransactionStatus = "FAIL";
-//						}
-//					})
-//
-//					<a rbl-action-link="command-list/process"
-//					   rbl-action-confirm-label-cancel="No"
-//					   rbl-action-confirm-label-continue="Yes"
-//					   rbl-action-confirm-selector=".delete-confirm"
-//					   data-input-record-locator="{transId}"
-//					   data-input-action="delete-hsa-contribution">
-//						<i class="fa-regular fa-trash-can"></i>
-//					</a>
-//
-//				After: (then/catch could point to 'handlers' as well)
-//					<a rbl-display="v:{canDelete}=Y" v-ka-api="{
-//					   endpoint: 'command-list/process',
-//					   calculationInputs: {
-//							iRecordLocator: '{transId}',
-//							iAction: 'delete-hsa-contribution'
-//					   },
-//					   confirm: {
-//							labels: { continue: 'Yes', cancel: 'No' }
-//					   },
-//					   then: async ( response, application ) => {
-//							application.state.inputs.iAction = 'delete-hsa-contribution';
-//							application.state.inputs.iTransactionStatus = "SUCCESS";
-//							await application.calculateAsync();
-//						},
-//						catch: ( response, application ) => {
-//							application.state.inputs.iTransactionStatus = "FAIL";
-//						}
-//					}"><i class="fa-regular fa-trash-can"></i></a>
-//
-//			1. rbl-if / rbl-display
-//				1. <span rbl-if="v:{coveredCount}=0"> -> <span v-if="row.coveredCount == 0"> (use == instead of =)
-//				1. <span rbl-display="v:{coveredCount}>0">You</span> -> <span v-if="row.coveredCount > 0">You</span>
-//				1. rbl-if="exists(payments)" -> v-if="rbl.exists('payments')"
-//				1. <div rbl-display="!showElectionForm"> / <div rbl-display="showElectionForm"> -> <div v-if="!rbl.boolean('showElectionForm')"> / <div v-if="rbl.boolean('showElectionForm')">
-//
-//			1. rbl-attr - just use :attr
-//				1. rbl-attr="href:helpfulInfo.index.{index}['tel:' + row.providerPhone.replace(/-/g, '')]" ->
-//					rbl.value -> value(table, keyValue, returnField, keyField, calcEngine, tab)
-//					:href="'tel:' + rbl.value('helpfulInfo', row.index, 'providerPhone', 'index').replace(/-/g, '')"
-//
-//			1. rbl-source scenarios
-//				1. rbl-source with named template
-//					Before:
-//					<div class="row row-cols-3" rbl-ce="BRD" rbl-source="configBenefitInfo" rbl-tid="benefit-cards">
-//
-//					After:
-//					<div class="row row-cols-3">
-//						<template v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
-//
-//				1. rbl-source with content to be used when no table returned...
-//					Before:
-//					<div class="row row-cols-3" rbl-ce="BRD" rbl-source="configBenefitInfo" rbl-tid="benefit-cards">
-//						<div class="alert alert-info"> No Benefit Contact Info </div>
-//
-//					After:
-//					<div class="row row-cols-3">
-//						<div v-if="rbl.source('configBenefitInfo', 'BRD').length == 0" class="alert alert-info">No Benefit Contact Info</div>
-//						<template v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
-//
-//				1. rbl-source with content to be used with rbl-prepend
-//					Before:
-//					<div class="row row-cols-3" rbl-ce="BRD" rbl-source="configBenefitInfo" rbl-tid="benefit-cards" rbl-prepend="before-preserve">
-//						<div class="col rbl-preserve">
-//
-//					After:
-//					<div class="row row-cols-3">
-//						<div v-ka-template="{ name: 'benefit-cards', source: rbl.source('configBenefitInfo', 'BRD') }">
-//						<div class="col">
-//
-//				1. rbl-source where you need a correct heirarchy of bootstrap classes (.col directly under .row), note scope inside template is just the 'row' so don't need 'prefix' before property names
-//					Before:
-//						<div class="row row-cols-3" rbl-ce="BRD" rbl-source="configBenefitInfo" rbl-tid="benefit-cards">
-//
-//						<rbl-template tid="benefit-cards">
-//							<div class="col benefit-type">
-//							</div>
-//						</rbl-template>
-//
-//					After:
-//						<div class="row row-cols-3">
-//						<div class="col benefit-type" v-for="r in rbl.source('configBenefitInfo', 'BRD')">
-//							<div v-ka-template="{ name: 'benefit-cards', source: r }"></template>
-//						</div>
-//
-//						<template id="benefit-cards">
-//							<div class="card">
-//							</div>
-//						</template>
-//
-//				1. rbl-source with tid="inline"
-//					Before:
-//					<div class="row" rbl-ce="BRD" rbl-source="contentResourceLinks.selector.tools-highlighted">
-//						<div class="col-12 col-md-6" rbl-tid="inline">
-//
-//					After:
-//					<div class="row">
-//						<div class="col-12 col-md-6" v-for="link in rbl.source('contentResourceLinks', 'BRD').filter( r => r.selector == 'tools-highlighted' )">
-//
-//					Values:
-//						- Any use of {} to pull a column needs to come from v-for variable...class="fa-light {icon}" -> :class="['fa-light', link.icon]"
-//						- Html..if item is possibly markup, use v-html, <span>{text}</span> -> <span v-html="text"></span>
-//
-//				1. rbl-source with tid="inline" with *multiple* children...
-//					Before
-//					<div rbl-ce="BRD" rbl-source="faqGroup">
-//						<div rbl-tid="inline">
-//							<h5 class="mt-2">{text}</h5>
-//							<div class="col-12 col-md-12" rbl-ce="BRD" rbl-source="faqCategories.idGroup.{idGroup}">
-//
-//					After
-//					<template v-for="group in rbl.source('faqGroup', 'BRD')">
-//						<h5>...
-//						<div>...
-//
-//				1. rbl-source with tid="empty"
-//					Before
-//						<div rbl-source="configBenefitCategories">
-//							<div class="col" rbl-tid="inline">
-//								... inline content
-//							</div>
-//							<div class="col" rbl-tid="empty">
-//								<div class="alert alert-info">No previous elections or coverages on file.</div>
-//							</div>
-//						</div>
-//
-//					After (take item outside of v-for but use same source for check)
-//						<div class="col" v-if="!rbl.exists('configBenefitCategories')">
-//							<div class="alert alert-info">No previous elections or coverages on file.</div>
-//						</div>
-//						<div class="col" v-for="row in rbl-source('configBenefitCategories')">
-//							... template content
-//						</div>
-//
-//				1. Calling rbl-source/rbl-tid where the tid expects a parent scope but it is hard coded...
-//					Usually (notice-type1 expects a scope variable named 'type'):
-//						<div v-for="type in rbl.source('typeMessage')">
-//							<div v-ka-template="{ name: 'notice-type1', source: rbl.source('messages', 'Messages').filter( r => r.type == type.type ) }"></div>
-//						</div>
-//
-//					Before (template values were passed in via data-* instead of 'type' variable):
-//						<div rbl-ce="Messages" rbl-source="messages[row['@id'] == 'hw-action-enroll' ]" rbl-tid="notice-type1" data-alerttype="danger" data-icon="fa-triangle-exclamation"  data-header="{text}"></div>
-//
-//					After: (note that I set a type and rows property, but the rows has to be get row() {} to make it reactive, b/c it renders when page is rendered *before* calc results so rbl.source.filter is empty...don't fully understand why I need getter yet)
-//						<div v-ka-template="{ name: 'notice-type1', source: { type: { icon: 'fa-triangle-exclamation', text: '', alertType: 'danger' }, get rows() { return rbl.source('messages', 'Messages').filter( r => r['@id'] == 'hw-action-enroll' ); } } }"></div>
-//
-//		1. apiActions
-//			1. onAction* - different parameters
-//			1. onUpdateEndpointOptions - called instead of onUpdateCalculationOptions - pain in but or just use one event?
-//
-//	1. Discuss
-//		1. allowCalculation() method
-//		1. Turning on and off configureUi calculation
-//
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -407,11 +175,14 @@ class KatApp implements IKatApp {
 
 		if (document.querySelector("ka-resources") == undefined) {
 			const kaResources = document.createElement("ka-resources");
+
 			kaResources.innerHTML =
 				"<style>\
 					ka-resources, [v-cloak], [ka-cloak] { display: none; }\
 					.kaModalInit { cursor: progress; }\
+					body.ka-inspector .ka-inspector-value { border: 1px solid #34495E; box-shadow: 5px 5px 5px 0px #41B883; }\
 				</style>";
+
 			document.body.appendChild(kaResources);
 		}
 
@@ -1934,7 +1705,7 @@ class KatApp implements IKatApp {
 		const mountInputs = function (container: Element | DocumentFragment) {
 			container.querySelectorAll("input:not([v-ka-nomount]), select:not([v-ka-nomount]), textarea:not([v-ka-nomount])").forEach(input => {
 				addMountAttribute(input, "mounted", "inputMounted($el)");
-				addMountAttribute(input, "unmounted", "inputUnmounted($el)");
+				// addMountAttribute(input, "unmounted", "inputUnmounted($el)");
 			});
 
 			// If a template contains a template/v-for (i.e. radio button list) need to drill into each one and look for inputs
@@ -2023,7 +1794,7 @@ class KatApp implements IKatApp {
 						if (!inputComponent.hasAttribute("v-ka-nomount")) {
 							// Just binding a raw input
 							addMountAttribute(inputComponent, "mounted", "inputMounted($el)");
-							addMountAttribute(inputComponent, "unmounted", "inputUnmounted($el)");
+							// addMountAttribute(inputComponent, "unmounted", "inputUnmounted($el)");
 						}
 					}
 					else {
