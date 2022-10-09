@@ -410,18 +410,12 @@ class KatApp implements IKatApp {
 			await this.triggerEventAsync("onInitialized");
 
 			const that = this;
-			this.on("onCalculation.ka", function () {
+			this.on("onCalculation", function () {
 				that.select("a[href='#']")
 					.off("click.ka")
 					.on("click.ka", function (e) {
 						e.preventDefault();
 					});
-
-				if (that.options.debug.showInspector) {
-					document.querySelectorAll("[_v-ka-inspector=remove]").forEach(i => {
-						i.remove();
-					});
-				}
 			})
 
 			if (this.options.debug.showInspector) {
@@ -1721,13 +1715,16 @@ class KatApp implements IKatApp {
 			if (!el.classList.contains("ka-inspector-value")) {
 				el.classList.add("ka-inspector-value");
 
-				const inspector: HTMLElement = document.createElement("div");
+				const inspector: Element = document.createElement("template");
 
-				// can't pass scope because if element is a v-for and some of the attributes are using iterator item, if I make a new
-				// element and try to use that scope the object won't be defined
-				// scope: ${scope?.replace(/"/g, '&quot;') ?? 'undefined'}, 
+				let currentScope = scope;
 
-				const info = `{ name: '${el.tagName.toLowerCase()}', details: '${details ?? 'undefined'}' }`;
+				if (el.hasAttribute("v-for")) {
+					currentScope = el.getAttribute("v-for")!.substring(el.getAttribute("v-for")!.indexOf(" in ") + 4);
+				}
+
+				const info = `{ name: '${el.tagName.toLowerCase()}', scope: ${currentScope?.replace(/"/g, '&quot;') ?? 'undefined'}, details: ${details != undefined ? `\'${details}\'` : 'undefined'} }`;
+
 				inspector.setAttribute("v-ka-inspector", info);
 
 				Array.from(el.attributes)
@@ -1883,11 +1880,26 @@ class KatApp implements IKatApp {
 			});
 
 			if (that.options.debug.showInspector) {
-				container.querySelectorAll("[v-ka-app], [v-ka-modal], [v-ka-api]").forEach(directive => {
-					const scope =
-						directive.getAttribute("v-ka-app") ??
-						directive.getAttribute("v-ka-modal") ??
-						directive.getAttribute("v-ka-api");
+				container.querySelectorAll("[v-ka-modal]").forEach(directive => {
+					const scope = directive.getAttribute("v-ka-modal");
+
+					inspectElement(directive, scope);
+				});
+				container.querySelectorAll("[v-ka-api]").forEach(directive => {
+					let scope =directive.getAttribute("v-ka-api")!;
+
+					if (!scope.startsWith("{")) {
+						scope = `{ endpoint: '${scope}' }`;
+					}
+
+					inspectElement(directive, scope);
+				});
+				container.querySelectorAll("[v-ka-app]").forEach(directive => {
+					let scope = directive.getAttribute("v-ka-app")!;
+
+					if (!scope.startsWith("{")) {
+						scope = `{ view: '${scope}' }`;
+					}
 
 					inspectElement(directive, scope);
 				});
@@ -1900,12 +1912,20 @@ class KatApp implements IKatApp {
 					inspectElement(directive, scope);
 				});
 
-				// Common Vue directives (not battling v-else or v-else-if)
-				container.querySelectorAll("[v-if], [v-show]").forEach(directive => {
-					const scope = `{ condition: ${directive.getAttribute("v-if") ?? directive.getAttribute("v-show")} }`;
+				container.querySelectorAll("[v-for]").forEach(directive => {
+					inspectElement(directive);
+				});
+
+				// Common Vue directives
+				// Not battling v-else or v-else-if
+				container.querySelectorAll("[v-if][v-show]").forEach(directive => {
+					const scope = `{ condition: ${directive.getAttribute("v-show") ?? directive.getAttribute("v-if") } }`;
 					inspectElement(directive, scope);
 				});
-				container.querySelectorAll("[v-effect], [v-for], [v-on]").forEach(directive => {
+
+				container.querySelectorAll("[v-effect], [v-on]").forEach(directive => {
+					// No scope here b/c v-effect can be 'code eval' (not returning anything just 'doing' something - setting inner html)
+					// v-on - no scope either, just dump the original element markup
 					inspectElement(directive);
 				});
 

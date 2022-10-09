@@ -342,35 +342,54 @@ class DirectiveKaInspector implements IKaDirective {
 	public name = "ka-inspector";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const info = ctx.get();
 			const el = ctx.el;
-
+			const kaId = ctx.el.getAttribute("v-ka-id") ?? Utils.generateId();
 			const attributes =
 				Array.from(el.attributes)
 					.filter(a => a.name != "v-ka-inspector")
 					.map(a => ({ name: a.name, value: a.name == "_class" ? a.value.replace("ka-inspector-value", "").trim() : a.value }))
-					.filter(a => a.name != "_class" || a.value != "" )
+					.filter(a => a.name != "_class" || a.value != "")
 					.map(a => `${a.name.substring(1).replace("__at__", "@")}="${a.value}"`)
 					.join(" ");
 
-			const details = info.details;
-			const scope = info.scope;
+			ctx.effect(() => {
+				const info = ctx.get();
 
-			const itemDetails = (details ?? "") != ""
-				? `
+				if (ctx.el.hasAttribute("v-ka-id")) {
+					if (ctx.el.nextSibling?.nodeType == 8 && (ctx.el.nextSibling.textContent?.indexOf(`KatApp Inspect ${kaId}`) ?? -1) > -1) {
+						ctx.el.nextSibling!.remove();
+					}
+					else {
+						console.log(`Unable to find inspector value with ID ${kaId}.  Updated comment will not be displayed.`);
+						return;
+					}
+				}
+				else {
+					ctx.el.setAttribute("v-ka-id", kaId)
+				}
+
+				const details = info.details;
+				const scope = info.scope;
+
+				if (scope?.source != undefined && scope.source instanceof Array) {
+					scope.source = `Source is array. ${scope.source.length} rows.`
+				}
+
+				const itemDetails = (details ?? "") != ""
+					? `
 
 Details: ${details}`
-				: '';
+					: '';
 
-			const scopeInfo = scope != undefined
-				? `
+				const scopeInfo = scope != undefined
+					? `
 
 Scope:
 ${JSON.stringify(scope, null, 2)}`
-				: '';
+					: '';
 
-			const comment = new Comment(`
-KatApp Inspect
+				const comment = new Comment(`
+KatApp Inspect ${kaId}
 --------------------------------------------------
 Element:
 <${info.name} ${attributes}>${itemDetails}${scopeInfo}
@@ -378,13 +397,13 @@ Element:
 Rendered Element ↓↓↓↓
 `);
 
-			// see comment in v-ka-inline, I am able to remove this since I don't need the comment to be reactive
-			ctx.el.setAttribute("_v-ka-inspector", "remove");
-			ctx.el.before(comment);
-			// ctx.el.replaceWith(comment);
+				ctx.el.after(comment);
+				// ctx.el.replaceWith(comment);
+			});
 		}
 	}
 }
+
 class DirectiveKaAttributes implements IKaDirective {
 	public name = "ka-attributes";
 	public getDefinition(application: KatApp): Directive<Element> {
