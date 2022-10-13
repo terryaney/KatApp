@@ -825,6 +825,10 @@ class DirectiveKaTable implements IKaDirective {
 				const scope: IKaTableOptions = ctx.get();
 				const data = application.state.rbl.source(scope.name, scope.ce, scope.tab);
 
+				const container = $(ctx.el);
+				container.children().remove();
+
+				container.html(`<p>Table: ${scope.name}, Rows: ${data.length}</p>`);
 			});
 		};
 	}
