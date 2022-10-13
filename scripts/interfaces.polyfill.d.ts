@@ -6,4 +6,7 @@ declare global {
 		formatTokens(template: string, parameters: IStringAnyIndexer): string;
 		localeFormat(format: string, ...args: any[]): string;
 	}
+	interface Number {
+		localeFormat(format: string): string;
+	}
 }

@@ -15,6 +15,7 @@ interface IKatApp {
 	el: JQuery;
 	options: IKatAppOptions;
 	triggerEventAsync: (eventName: string, ...args: (object | string | undefined | unknown)[]) => Promise<boolean | undefined>;
+	getTemplateId(name: string): string | undefined;
 }
 
 interface IApplicationData {
@@ -159,6 +160,7 @@ interface IModalOptions {
 
 	showCancel?: boolean;
 	buttonsTemplate?: string;
+	headerTemplate?: string;
 
 	inputs?: IStringIndexer<string>;
 }
@@ -232,6 +234,57 @@ interface IKaAppOptions {
 	view: string;
 	inputs?: ICalculationInputs;
 }
+
+interface IKaInputScope {
+	$template: string | undefined; // from markup
+
+	readonly id: string; // generated
+	readonly name: string; // from markup
+	readonly type: string; // from markup
+	readonly value: string; // from ce ?? markup
+
+	readonly disabled: boolean; // from isDisabled ?? ce
+	readonly display: boolean; // from isDisplay ?? ce
+	readonly noCalc: boolean; // from isNoCalc ?? ce
+
+	readonly label: string; // from ce ?? markup
+	readonly hideLabel: boolean; // from ce (value=-1) ?? markup
+	readonly placeHolder: string | undefined; // from ce ?? markup
+
+	readonly help: IKaInputScopeHelp; // from ce ?? markup
+	readonly css: IKaInputScopeCss; // from markup
+
+	readonly list: Array<IKaInputListRow>; // from ce ?? markup
+	readonly prefix: string | undefined; // from ce ?? markup
+	readonly suffix: string | undefined; // from ce ?? markup
+	readonly maxLength: number; // from ce ?? markup
+	readonly min: string | undefined; // from ce ?? markup
+	readonly max: string | undefined; // from ce ?? markup
+	readonly step: number; // from ce ?? markup
+
+	readonly error: string | undefined; // from ce
+	readonly warning: string | undefined; // from ce 
+
+	uploadAsync: () => void;
+	inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => void;
+}
+interface IKaInputScopeBase {
+	readonly display: boolean;
+	readonly noCalc: boolean;
+	readonly disabled: boolean;
+	readonly error: string | undefined;
+	readonly warning: string | undefined;
+}
+interface IKaInputScopeHelp {
+	title?: string;
+	content?: string;
+	width?: string;
+}
+interface IKaInputScopeCss {
+	input?: string;
+	container?: string;
+}
+
 interface IKaInputOptions {
 	name: string;
 
@@ -241,11 +294,17 @@ interface IKaInputOptions {
 	placeHolder?: string;
 	hideLabel?: boolean;
 	help?: IKaInputHelp;
-	list?: Array<{ key: string; text: string }>;
-	css?: IKaInputCss;
+	iconHtml?: string;
+	list?: Array<IKaInputListRow>;
+	css?: IKaInputScopeCss;
 	prefix?: string;
 	suffix?: string;
 	maxLength?: number;
+	displayFormat?: string;
+
+	min?: number | string;
+	max?: number | string;
+	step?: number;
 	
 	uploadEndpoint?: string;
 
@@ -254,27 +313,58 @@ interface IKaInputOptions {
 
 	template?: string;
 
-	isNoCalc?: (base: IKaInputOptionsBase) => boolean;
-	isDisabled?: (base: IKaInputOptionsBase) => boolean;
-	isDisplay?: (base: IKaInputOptionsBase) => boolean;
+	isNoCalc?: (base: IKaInputScopeBase) => boolean;
+	isDisabled?: (base: IKaInputScopeBase) => boolean;
+	isDisplay?: (base: IKaInputScopeBase) => boolean;
 
 	events?: IStringIndexer<((e: Event, application: KatApp) => void)>
 }
-
-interface IKaInputOptionsBase {
-	display: boolean;
-	noCalc: boolean;
-	disabled: boolean;
-}
-
 interface IKaInputHelp {
 	title?: string;
 	content?: string;
 	width?: number;
 }
-interface IKaInputCss {
-	input?: string;
-	container?: string;
+interface IKaInputListRow extends IStringIndexer<string> { key: string; text: string; }
+
+interface IKaInputGroupScope {
+	readonly $template: string | undefined; // from markup
+	readonly type: string; // from markup
+
+	id: ( index: number ) => string; // generated
+	name: ( index: number ) => string; // from markup
+	value: ( index: number ) => string; // from ce ?? markup
+
+	disabled: ( index: number ) => boolean; // from isDisabled ?? ce
+	display: ( index: number ) => boolean; // from isDisplay ?? ce
+	noCalc: ( index: number ) => boolean; // from isNoCalc ?? ce
+
+	label: (index: number) => string; // from ce ?? markup
+	readonly hideLabel: boolean; // from ce ?? markup
+	placeHolder: (index: number) => string | undefined; // from ce ?? markup
+
+	help: (index: number) => IKaInputScopeHelp; // from ce ?? markup
+	css: (index: number) => IKaInputScopeCss; // from markup
+
+	list: (index: number) => Array<IKaInputListRow>; // from ce ?? markup
+	prefix: (index: number) => string | undefined; // from ce ?? markup
+	suffix: (index: number) => string | undefined; // from ce ?? markup
+	maxLength: (index: number) => number | undefined; // from ce ?? markup
+	min: (index: number) => string | undefined; // from ce ?? markup
+	max: (index: number) => string | undefined; // from ce ?? markup
+	step: (index: number) => number | undefined; // from ce ?? markup
+
+	error: ( index: number ) => string | undefined;
+	warning: (index: number) => string | undefined;
+
+	inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => void;
+}
+
+interface IKaInputGroupScopeBase {
+	display: ( index: number ) => boolean;
+	noCalc: (index: number) => boolean;
+	disabled: (index: number) => boolean;
+	error: (index: number) => string | undefined;
+	warning: (index: number) => string | undefined;
 }
 
 interface IKaInputGroupOptions {
@@ -286,8 +376,13 @@ interface IKaInputGroupOptions {
 	placeHolders?: string[];
 	hideLabel?: boolean;
 	helps?: IKaInputHelp[]
-	css?: IKaInputCss[];
+	css?: IKaInputScopeCss[];
+	displayFormats?: string[];
 
+	maxLengths?: number[];
+	mins?: string[];
+	maxes?: string[];
+	steps?: number[];
 	prefixes?: string[];
 	suffixes?: string[];
 
@@ -311,6 +406,12 @@ interface IKaInputGroupOptionsBase {
 interface IKaHighchartOptions {
 	data: string;
 	options?: string;
+	ce?: string;
+	tab?: string;
+}
+interface IKaTableOptions {
+	name: string;
+	css?: string;
 	ce?: string;
 	tab?: string;
 }

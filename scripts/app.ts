@@ -4,15 +4,9 @@
 //	1. Global
 //		1. QnA - 011310302
 //		1. ASU - 011103657
-//		1. Show Inspector - any way to get 'scope' working?  v-for with : attributes are bad...also need to put the comment INSIDE the v-for so scope works? but do I even have what I want?
-//			- add scope back in...have items figure out scope based on parent 'component' or 'v-for'?
 //		1. Document this
-//
-// TODO: processResults items to finish
-//	1. const updateData = function(): void {
-//	1. const processDocGens = function (): void {
+//		1. Result table builder (ret planning)
 
-// TODO: Directives to code
 //	1. Life Cycles:
 //		1. Create App Life-Cycle
 //			1. onInitialized( e: Event, application: KatApp )
@@ -20,6 +14,7 @@
 //			1. onNestedAppInitialized( e: Event, nestedApplication: KatApp, hostApplication: KatApp )
 //			1. onMounted( e: Event, application: KatApp )
 //			1. Then do ConfigureUI calculation if any CEs are 'enabled'
+//			1. onModalAppShown( e: Event, application: KatApp )
 //		1. Calculation Life-Cycle
 //			1. onUpdateCalculationOptions( e: Event, options: IGetSubmitApiOptions, application: KatApp )
 //			1. onCalculateStart( e: Event, options: IGetSubmitApiOptions, application: KatApp ): boolean
@@ -36,18 +31,6 @@
 //			1. onApiFailed( e: Event, endpoint: string, response: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
-
-// TODO: Remove reference to jquery and just use vanilla js?
-//	1. Currently, have to wrap application.select() in $() - $(application.select("")).on(...) since it is HTMLElement[], might change this
-//	1. mountAsync issue with scripts in view
-//		1. this.el.append() doesn't execute scripts
-//		1. $(this.el).append() *does* execute scripts
-//		1. https://stackoverflow.com/a/44902662/166231
-//		1. Search for 'htmlelement append doesn't run script' if you want
-//	1. If remove, search for $, JQuery., $.ajax in entire project - don't know how to replicate $.ajax() in vanilla yet
-//	1. Should we make rule to not use it in kaml either? Probably not, just don't want to 'force' dependency if using our stuff
-//	1. .triggerEvent() depends heavily on jquery
-//	1. Make an 'on/off' method on my app that uses standard handlers? Are they automatically removed if element is removed? (note I have on/off methods for adding 'app events' right now)
 
 class KatApp implements IKatApp {
 	private static applications: KatApp[] = [];
@@ -396,9 +379,17 @@ class KatApp implements IKatApp {
 
 			if (this.options.hostApplication != undefined) {
 				if (this.options.inputs?.iModalApplication == 1) {
+
 					if (this.options.modalAppOptions?.buttonsTemplate != undefined) {
 						this.select(".modal-footer-buttons button").remove();
 						this.select(".modal-footer-buttons").attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.buttonsTemplate + "'})");
+					}
+
+					if (this.options.modalAppOptions?.headerTemplate != undefined) {
+						this.select(".modal-header")
+							.removeClass("d-none")
+							.attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.headerTemplate + "'})")
+							.children().remove();
 					}
 
 					await this.options.hostApplication.triggerEventAsync("onModalAppInitialized", this);
@@ -429,15 +420,15 @@ class KatApp implements IKatApp {
 			}
 
 			// show modal after calcs are done...
-			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && this.options.view != undefined) {
-				this.on("onConfigureUICalculation", function () {
-					that.showModalApplication();
-				}).on("onCalculationErrors", function (_e, key, ex) {
+			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && this.options.view != undefined && this.calcEngines.filter(c => !c.manualResult).length > 0) {
+				this.on("onConfigureUICalculation", async () => {
+					await that.showModalApplicationAsync();
+				}).on("onCalculationErrors", async (_e, key, ex) => {
 					if (key == "SubmitCalculation.ConfigureUI") {
 						// KatApp loaded, but error occurred during processing and don't even have results to show/hide things appropriately
 						console.log("KatApp Modal Exception", { ex });
 						that.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-						that.showModalApplication();
+						await that.showModalApplicationAsync();
 					}
 				});
 			}
@@ -472,9 +463,9 @@ class KatApp implements IKatApp {
 				await this.triggerEventAsync("onCalculateEnd");
 			}
 
-			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && this.options.view == undefined) {
-				// don't need to wait for calc, just show now
-				this.showModalApplication();
+			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && (this.options.view == undefined || this.calcEngines.filter(c => !c.manualResult).length == 0)) {
+				// don't need to wait for calc, just show now				
+				await this.showModalApplicationAsync();
 			}
 
 			this.el.removeAttr("ka-cloak");
@@ -564,7 +555,7 @@ class KatApp implements IKatApp {
 		return modal;
     }
 
-	private showModalApplication(): void {
+	private async showModalApplicationAsync(): Promise<void> {
 		if (this.el.hasClass("show")) return;
 
 		const modalBS5 = new bootstrap.Modal(this.el[0]);
@@ -625,10 +616,13 @@ class KatApp implements IKatApp {
 		}
 
 		if (showCancel) {
-			this.select('.modal-header .btn-close').on("click.ka", function (e) {
-				e.preventDefault();
-				options.cancelled!();
-			});
+			if (options.headerTemplate == undefined) {
+				this.select('.modal-header .btn-close').on("click.ka", function (e) {
+					e.preventDefault();
+					options.cancelled!();
+				});
+			}
+
 			$(this.el).on("hidden.bs.modal", function () {
 				// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
 				options.cancelled!();
@@ -636,6 +630,10 @@ class KatApp implements IKatApp {
 		}
 
 		this.select(".modal-footer-buttons").removeClass("d-none");
+
+		$(this.el).on("shown.bs.modal", async () => {
+			await this.triggerEventAsync("onModalAppShown");
+		});
 
 		modalBS5.show();
 
@@ -731,7 +729,7 @@ class KatApp implements IKatApp {
 
 				await this.triggerEventAsync("onResultsProcessing", results, inputs, submitApiConfiguration);
 
-				this.processResults(results);
+				await this.processResultsAsync(results);
 
 				this.lastCalculation = {
 					inputs: inputs,
@@ -755,6 +753,8 @@ class KatApp implements IKatApp {
 				this.nextCalculation = undefined;
 			}
 			catch (error) {
+				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+
 				if (error instanceof CalculationError) {
 					// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
 					Utils.trace(
@@ -936,7 +936,7 @@ class KatApp implements IKatApp {
 
 	private downloadBlob(blob: Blob, filename: string): void {
 		const tempEl = document.createElement("a");
-		$(tempEl).addClass("d-none hidden");
+		tempEl.classList.add("d-none");
 		const url = window.URL.createObjectURL(blob);
 		tempEl.href = url;
 		tempEl.download = filename;
@@ -1078,6 +1078,11 @@ class KatApp implements IKatApp {
 				el.val(value ?? "");
 			}
 
+			if (el[0].getAttribute("type") == "range") {
+				el[0].dispatchEvent(new Event('set.ka'));
+			}
+
+
 			if (calculate) {
 				const target = isCheckboxList ? el.find("input")[0] : el[0];
 				target.dispatchEvent(new Event('change'));
@@ -1127,7 +1132,7 @@ class KatApp implements IKatApp {
 		return (document.querySelector(templateId!) as HTMLTemplateElement)!.content;
 	}
 
-	private getTemplateId(name: string): string | undefined {
+	public getTemplateId(name: string): string | undefined {
 		let templateId: string | undefined;
 
 		// Find template by precedence
@@ -1137,6 +1142,10 @@ class KatApp implements IKatApp {
 				templateId = tid;
 				break;
 			}
+		}
+
+		if (templateId == undefined && this.options.hostApplication != undefined) {
+			templateId = this.options.hostApplication.getTemplateId(name);
 		}
 
 		if (templateId == undefined) {
@@ -1275,6 +1284,7 @@ class KatApp implements IKatApp {
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
 
 		if (options.contentSelector != undefined) {
+			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
 			options.content = this.select(options.contentSelector).html();
 		}
 
@@ -1530,9 +1540,34 @@ class KatApp implements IKatApp {
 		});
 	}
 
-	private processResults(results: ITabDef[]) {
+	private async processResultsAsync(results: ITabDef[]): Promise<void> {
+		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
+
 		results.forEach(t => {
-			["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol"].forEach(table => {
+			Object.keys(t)
+				// No idea how ItemDefs is in here, but not supporting going forward, it was returned by IRP CE but the value was null so it blew up the code
+				.filter(k => !k.startsWith("@") && k != "_ka" && k != "ItemDefs")
+				.forEach(tableName => {
+					const rows = t[tableName] as Array<IStringIndexer<string>> ?? [];
+
+					if (rows.length > 0) {
+						// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
+						rows.forEach(r => {
+							Object.keys(rows[0])
+								.forEach(p => {
+									if (r[p] == undefined) {
+										r[p] == "";
+									}
+								});
+						});
+					}
+
+					if (tablesToMerge.indexOf(tableName) == -1) {
+						this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, tableName);
+					}
+				});
+
+			tablesToMerge.forEach(table => {
 				if (t[table] != undefined) {
 					this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[table] as Array<IStringIndexer<string>>, table);
 				}
@@ -1540,6 +1575,23 @@ class KatApp implements IKatApp {
 
 			(t["rbl-defaults"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
 				this.setInputValue(r["@id"], r["value"]);
+			});
+
+			// Only set 'value', 'error', 'warning' column is returned in rbl-input table
+			const hasRblInputValue = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].value != undefined;
+			const hasRblInputError = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].error != undefined;
+			const hasRblInputWarning = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].warning != undefined;
+
+			(t["rbl-input"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
+				if (hasRblInputValue) {
+					this.setInputValue(r["@id"], r["value"]);
+				}
+				if (hasRblInputError && (r["error"] ?? "") != "") {
+					this.state.errors.push({ "@id": r["@id"], text: r["error"] } as IValidation);
+				}
+				if (hasRblInputWarning && (r["warning"] ?? "") != "") {
+					this.state.warnings.push({ "@id": r["@id"], text: r["warning"] } as IValidation);
+				}
 			});
 
 			(t["errors"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
@@ -1558,11 +1610,78 @@ class KatApp implements IKatApp {
 					this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, r["@id"]);
 				}
 			});
-
-			Object.keys(t)
-				.filter(k => !k.startsWith("@") && ["_ka", "rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol"].indexOf( k ) == -1 )
-				.forEach(k => this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, k));
 		});
+
+		try {
+			await this.processDataUpdateResultsAsync(results);
+			this.processDocGenResults(results);
+		} catch (e) {
+			console.log({ e });
+		}
+	}
+
+	private async processDataUpdateResultsAsync(results: ITabDef[]): Promise<void> {
+		const jwtPayload = {
+			DataTokens: [] as Array<{ Name: string; Token: string; }>
+		};
+
+		results
+			.forEach(t => {
+				(t["jwt-data"] as Array<IStringIndexer<string>> ?? [])
+					.filter(r => r["@id"] == "data-updates")
+					.forEach(r => {
+						jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
+					});
+			});
+
+		if (jwtPayload.DataTokens.length > 0) {
+			await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload });
+		}
+    }
+
+	private processDocGenResults(results: ITabDef[]) {
+		const base64toBlob = function (base64Data: string, contentType = 'application/octet-stream', sliceSize = 1024): Blob {
+			// https://stackoverflow.com/a/20151856/166231                
+			const byteCharacters = atob(base64Data);
+			const bytesLength = byteCharacters.length;
+			const slicesCount = Math.ceil(bytesLength / sliceSize);
+			const byteArrays = new Array(slicesCount);
+
+			for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+				const begin = sliceIndex * sliceSize;
+				const end = Math.min(begin + sliceSize, bytesLength);
+
+				const bytes = new Array(end - begin);
+				for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+					bytes[i] = byteCharacters[offset].charCodeAt(0);
+				}
+				byteArrays[sliceIndex] = new Uint8Array(bytes);
+			}
+			return new Blob(byteArrays, { type: contentType });
+		}
+		/*
+		const base64toBlobFetch = (base64 : string, type: string = 'application/octet-stream'): Promise<Blob> => 
+			// Can't use in IE :(
+			fetch(`data:${type};base64,${base64}`).then(res => res.blob())
+		*/
+
+		results
+			.forEach(t => {
+				(t["api-actions"] as Array<IStringIndexer<string>> ?? [])
+					.filter(r => r["action"] == "DocGen")
+					.forEach(r => {
+						if (r.exception != undefined) {
+							console.log(r);
+						}
+						else {
+							const base64 = r["content"];
+							const contentType = r["content-type"];
+							const fileName = r["file-name"];
+							const blob = base64toBlob(base64, contentType);
+							this.downloadBlob(blob, fileName);
+						}
+					});
+			});
 	}
 
 	private async getViewElementAsync(): Promise<HTMLElement | undefined> {
@@ -1698,7 +1817,7 @@ class KatApp implements IKatApp {
 		// Mount all inputs within a template
 		const mountInputs = function (container: Element | DocumentFragment) {
 			container.querySelectorAll("input:not([v-ka-nomount]), select:not([v-ka-nomount]), textarea:not([v-ka-nomount])").forEach(input => {
-				addMountAttribute(input, "mounted", "inputMounted($el)");
+				addMountAttribute(input, "mounted", "inputMounted($el, $refs)");
 				// addMountAttribute(input, "unmounted", "inputUnmounted($el)");
 			});
 
@@ -1790,7 +1909,7 @@ class KatApp implements IKatApp {
 					if (isInput) {
 						if (!inputComponent.hasAttribute("v-ka-nomount")) {
 							// Just binding a raw input
-							addMountAttribute(inputComponent, "mounted", "inputMounted($el)");
+							addMountAttribute(inputComponent, "mounted", "inputMounted($el, $refs)");
 							// addMountAttribute(inputComponent, "unmounted", "inputUnmounted($el)");
 						}
 					}
@@ -1815,6 +1934,19 @@ class KatApp implements IKatApp {
 
 				chart.setAttribute("v-ka-highchart", exp);
 				inspectElement(chart, exp);
+			});
+
+			// Fix v-ka-table 'short hand' of name string into a valid {} scope
+			container.querySelectorAll("[v-ka-table]").forEach(table => {
+				let exp = table.getAttribute("v-ka-table")!;
+
+				if (!exp.startsWith("{")) {
+					// Using short hand of just the 'table name'
+					exp = `{ name: '${exp}' }`;
+				}
+
+				table.setAttribute("v-ka-table", exp);
+				inspectElement(table, exp);
 			});
 
 			// Turn v-ka-needs-calc into two items with toggled class and handler

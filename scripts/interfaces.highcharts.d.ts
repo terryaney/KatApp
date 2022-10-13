@@ -7,10 +7,11 @@ interface HighchartsStatic {
 
 interface HighchartsChartObject {
 	destroy: () => void;
+	reflow: () => void;
 }
 
 interface JQuery {
-	highcharts: (options: HighchartsOptions) => JQuery;
+	highcharts: (options?: HighchartsOptions) => JQuery | HighchartsChartObject;
 }
 
 interface HighchartsGlobalOptions extends HighchartsOptions {

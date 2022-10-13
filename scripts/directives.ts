@@ -11,6 +11,7 @@ class Directives {
 			new DirectiveKaAttributes(),
 			new DirectiveKaInline(),
 			new DirectiveKaHighchart(),
+			new DirectiveKaTable(),
 
 			new DirectiveKaNavigate(),
 			new DirectiveKaValue(),
@@ -427,6 +428,11 @@ class DirectiveKaHighchart implements IKaDirective {
 	private application: KatApp | undefined;
 
 	public getDefinition(application: KatApp): Directive<Element> {
+		application.on("onModalAppShown", () => {
+			// https://api.highcharts.com/class-reference/Highcharts.Chart#reflow
+			application.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
+		});
+
 		return ctx => {
 			this.application = application;
 
@@ -807,5 +813,19 @@ class DirectiveKaHighchart implements IKaDirective {
 			.replace(/&gt;&gt;/g, ">")
 			.replace(/&quot;/g, "\"")
 			.replace(/&amp;nbsp;/g, "&nbsp;");
+	}
+}
+
+class DirectiveKaTable implements IKaDirective {
+	public name = "ka-table";
+
+	public getDefinition(application: KatApp): Directive<Element> {
+		return ctx => {
+			ctx.effect(() => {
+				const scope: IKaTableOptions = ctx.get();
+				const data = application.state.rbl.source(scope.name, scope.ce, scope.tab);
+
+			});
+		};
 	}
 }

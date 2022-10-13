@@ -33,7 +33,18 @@ class InputComponent {
 		}) as any;
 	}
 
-	public static mounted(application: KatApp, name: string, input: HTMLInputElement, defaultValue: (name: string) => string | undefined, noCalc: (name: string) => boolean, events: undefined | IStringIndexer<((e: Event, application: KatApp) => void)> ) {
+	static percentFormat = /([/s/S]*?){0:p\d*}/;
+
+	public static mounted(
+		application: KatApp,
+		scope: IStringAnyIndexer,
+		name: string,
+		input: HTMLInputElement,
+		defaultValue: (name: string) => string | undefined,
+		noCalc: (name: string) => boolean,
+		displayFormat: (name: string) => string | undefined,
+		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, refs: IStringIndexer<HTMLElement>
+	) {
 		input.setAttribute("name", name);
 		input.classList.add(name);
 
@@ -136,6 +147,96 @@ class InputComponent {
 				}
 			});
 		}
+		else if (type == "range") {
+			// https://css-tricks.com/value-bubbles-for-range-inputs/
+			let bubbleTimer: number | undefined;
+			const bubble = refs.bubble != undefined ? $(refs.bubble) : undefined;
+			const bubbleValue = refs.bubbleValue != undefined ? $(refs.bubbleValue) : bubble;
+			
+			const display = refs.display != undefined ? $(refs.display) : undefined;
+			
+			const setRangeValues = ( showBubble: boolean ) => {
+				if (bubbleTimer) {
+					clearTimeout(bubbleTimer);
+				}
+
+				const range = $(input);
+
+				const
+					value = range.val()!,
+					valueFormat = displayFormat( name ),
+					displayValue = valueFormat != undefined
+						? String.localeFormat(valueFormat, valueFormat.match(InputComponent.percentFormat) ? +value / 100 : +value)
+						: value.toString(),
+					max = +(range.attr("max"))!,
+					min = +(range.attr("min"))!,
+					newValue = Number((+value - min) * 100 / (max - min)),
+					newPosition = 10 - (newValue * 0.2);
+
+				if (display != undefined) {
+					display.html(displayValue);
+				}
+				if (bubble != undefined) {
+					bubbleValue!.html(displayValue);
+
+					if (showBubble) {
+						let displayWidth = 30;
+						if (display != undefined) {
+							// displayWidth = display[0].clientWidth;
+
+							// https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
+							const element = display[0];
+							const cs = getComputedStyle(element);
+
+							const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+							const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+							const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+							const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+							// Element width and height minus padding and border
+							displayWidth = element.offsetWidth - paddingX - borderX;
+							// elementHeight = element.offsetHeight - paddingY - borderY;
+						}
+
+						bubbleValue!.css("width", `${displayWidth}px`);
+
+						bubble
+							.css("left", `calc(${newValue}% + (${newPosition}px))`)
+							.addClass("active");
+					}
+				}
+
+				range.css("backgroundSize", `${((+value - min) * 100) / (max - min)}% 100%`);
+			};
+
+			// Initial render
+			setRangeValues(false);
+
+			input.addEventListener("input", async () => {
+				setRangeValues(true);
+			});
+			input.addEventListener("set.ka", async () => {
+				setRangeValues(false);
+			});
+			input.addEventListener("change", async () => {
+				await inputEventAsync(true);
+			});
+
+			if (bubble != undefined) {
+				input.addEventListener("mouseenter", () => {
+					bubbleTimer = setTimeout(() => {
+						setRangeValues(true);
+					}, 750);
+				});
+				input.addEventListener("mouseleave", () => {
+					if (bubbleTimer) {
+						clearTimeout(bubbleTimer);
+					}
+					bubble.removeClass("active");
+				});
+			}
+		}
 		else {
 			input.addEventListener("change", async () => await inputEventAsync(true));
 
@@ -220,12 +321,12 @@ class InputComponent {
 								}
 							}
 
-							return events[propertyName](e, application);
+							return events[propertyName](e, application, scope);
 						},
 						modifiers);
 				}
 				else {
-					input.addEventListener(propertyName, (e: Event) => events[propertyName](e, application));
+					input.addEventListener(propertyName, (e: Event) => events[propertyName](e, application, scope));
 				}
 			}
 		}
@@ -245,8 +346,33 @@ class InputComponent {
 		return modifiers;
 	}
 
-	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer {
+	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputScope | undefined {
+		/*
+			rbl-inputs									
+			id									
+			label	-1 'hides it'								
+			value									
+			display									
+			disabled									
+			list	name of table for dropdown, radio list								
+			skip									
+			help									
+			help-title			
+			error
+			warning
+			help-width	250 default								following items are 'less used'
+			min	if slider/date - but could put 'min' here for 'documentation' to use for validation								
+			max	if slider/date - but could put 'min' here for 'documentation' to use for validation								
+			step	if slider								
+			placeholder									
+			prefix	input-group prefix								
+			suffix	input-group suffix								
+			max-length	text input max length								
+			type	html text input type: text, range, date, etc. default is text								
+		*/
+
 		const props = this.props;
+
 		const name = props.name;
 		const calcEngine = props.ce;
 		const tab = props.tab;
@@ -256,26 +382,46 @@ class InputComponent {
 			template = getTemplateId(template);
 
 			if (template == undefined) {
-				return {};
+				return undefined;
 			}
 		}
 
-		const base = {
-			get display() { return application.state.rbl.value("rbl-display", "v" + name, undefined, undefined, calcEngine, tab) != "0"; },
-			get noCalc() { return application.state.rbl.value("rbl-skip", name, undefined, undefined, calcEngine, tab) == "1"; },
-			// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
-			get disabled() { return /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", name, undefined, undefined, calcEngine, tab) == "1"; },
+		const getInputCeValue = function(columnName: string, legacyTable?: string, legacyId?: string): string | undefined {
+			return application.state.rbl.value("rbl-input", name, columnName, undefined, calcEngine, tab) ??
+				( legacyTable != undefined && legacyId != undefined ? application.state.rbl.value(legacyTable, legacyId, undefined, undefined, calcEngine, tab) : undefined );
+		};
+
+		const base: IKaInputScopeBase = {
+			get display() { return getInputCeValue("display", "rbl-display", "v" + name) != "0"; },
+			get noCalc() { return getInputCeValue( "skip", "rbl-skip", name) == "1"; },
+			get disabled() {
+				// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
+				return /* application.state.uiBlocked || */ getInputCeValue( "disabled", "rbl-disabled", name) == "1";
+			},
 			get error() { return application.state.errors.find(v => v["@id"] == name)?.text; },
 			get warning() { return application.state.warnings.find(v => v["@id"] == name)?.text; }
 		};
 
 		const defaultValue = (name: string) => application.state.inputs[name] ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
+		const displayFormat = (name: string) => {
+			let ceFormat = getInputCeValue("display-format") ?? "";
+
+			if (ceFormat == "") {
+				const format = application.state.rbl.value("rbl-sliders", name, 'format', undefined, calcEngine, tab)
+				const decimals = application.state.rbl.value("rbl-sliders", name, 'decimals', undefined, calcEngine, tab)
+				if (format != undefined && decimals != undefined) {
+					ceFormat = `{0:${format}${decimals}}`;
+				}
+			}
+
+			return ceFormat != "" ? ceFormat : props.displayFormat;
+		};
 		
-		return {
+		const scope = {
 			$template: template,
 
-			id: props.name + "_" + application.id,
+			id: name + "_" + application.id,
 			name: name,
 			type: props.type ?? "text",
 
@@ -298,38 +444,48 @@ class InputComponent {
 			get value() { return application.state.inputs[name] ?? props.value ?? ""; },
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
-			base: base,
-			get disabled() { return props.isDisabled?.(this.base) ?? this.base.disabled; },
-			get display() { return props.isDisplay?.(this.base) ?? this.base.display; },
-			get noCalc() { return noCalc( name ) },
-			get label() { return application.state.rbl.value("rbl-value", "l" + name, undefined, undefined, calcEngine, tab) ?? props.label ?? ""; },
-			get placeHolder() { return application.state.rbl.value("rbl-value", "ph" + name, undefined, undefined, calcEngine, tab) ?? props.placeHolder; },
+
+			get disabled() { return props.isDisabled?.(base) ?? base.disabled; },
+			get display() { return props.isDisplay?.(base) ?? base.display; },
+			get noCalc() { return noCalc(name) },
+			get label() { return getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? ""; },
+			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
+			get placeHolder() { return getInputCeValue("placeholder", "rbl-value", "ph" + name) ?? props.placeHolder; },
 			get help() {
 				return {
-					content: application.state.rbl.value("rbl-value", "h" + name, undefined, undefined, calcEngine, tab) ?? props.help?.content,
-					title: application.state.rbl.value("rbl-value", "h" + name + "Title", undefined, undefined, calcEngine, tab) ?? props.help?.title ?? "",
-					width: props?.help?.width ?? ""
+					content: getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content,
+					title: getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "",
+					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? ""
 				};
 			},
+			get iconHtml() { return props.iconHtml },
 			get css() {
 				return {
 					input: props?.css?.input ?? "",
 					container: props?.css?.container
 				};
 			},
-			get error() { return this.base.error; },
-			get warning() { return this.base.warning; },
+			get error() { return base.error; },
+			get warning() { return base.warning; },
 			get list() {
-				const table = application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : props.list ?? [];
+				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
+				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) as Array<IKaInputListRow> : props.list ?? [];
 			},
-			get hideLabel() { return props.hideLabel ?? false; },
-			get prefix() { return props.prefix; },
-			get suffix() { return props.suffix; },
-			get maxLength() { return props.maxLength ?? 250; },
+			get prefix() { return getInputCeValue("prefix") ?? props.prefix; },
+			get suffix() { return getInputCeValue("suffix") ?? props.suffix; },
+			get maxLength() {
+				const v = getInputCeValue("max-length");
+				return (v != undefined ? +v : undefined) ?? props.maxLength ?? 250;
+			},
+			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString(); },
+			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString(); },
+			get step() {
+				const v = getInputCeValue("step") ?? application.state.rbl.value("rbl-sliders", name, "step", undefined, calcEngine, tab);
+				return (v != undefined ? +v : undefined) ?? props.step ?? 1;
+			},
 
 			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
-			inputMounted: (input: HTMLInputElement) => InputComponent.mounted(application, name, input, defaultValue, noCalc, props.events),
+			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder */ },
 			uploadAsync: async () => {
 				if (props.uploadEndpoint == undefined) {
 					throw new Error("Cannot use uploadAsync if uploadEndpoint is not set.");
@@ -347,6 +503,10 @@ class InputComponent {
 				}
 			}
 		};
+
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, props.events, refs);
+
+		return scope;
 	}
 }
 
@@ -354,32 +514,41 @@ class TemplateMultipleInputComponent {
 	constructor(private props: IKaInputGroupOptions) {
 	}
 
-	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer {
+	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputGroupScope | undefined {
 		const templateId = getTemplateId(this.props.template);
 
 		if (templateId == undefined) {
-			return {};
+			return undefined;
 		}
 
 		const props = this.props;
 		const names = props.names as string[];
-		const values = props.values != undefined ? props.values as string[] : names.map(n => undefined);
-		const labels = props.labels != undefined ? props.labels as string[] : names.map(n => undefined);
-		const prefixes = props.prefixes != undefined ? props.prefixes as string[] : names.map(n => undefined);
-		const suffixes = props.suffixes != undefined ? props.suffixes as string[] : names.map(n => undefined);
-		const placeHolders = props.placeHolders != undefined ? props.placeHolders as string[] : names.map(n => '');		
-		const helps = props.helps != undefined ? props.helps as IKaInputHelp[] : names.map(n => undefined);
-		const css = props.css != undefined ? props.css as IKaInputCss[] : names.map(n => undefined);
+		const values = props.values != undefined ? props.values : names.map(n => undefined);
+		const labels = props.labels != undefined ? props.labels : names.map(n => undefined);
+		const prefixes = props.prefixes != undefined ? props.prefixes : names.map(n => undefined);
+		const suffixes = props.suffixes != undefined ? props.suffixes : names.map(n => undefined);
+		const placeHolders = props.placeHolders != undefined ? props.placeHolders : names.map(n => '');		
+		const displayFormats = props.displayFormats != undefined ? props.displayFormats : names.map(n => undefined);
+		const helps = props.helps != undefined ? props.helps : names.map(n => undefined);
+		const css = props.css != undefined ? props.css : names.map(n => undefined);
+		const maxLengths = props.maxLengths != undefined ? props.maxLengths : names.map(n => undefined);
+		const mins = props.mins != undefined ? props.mins : names.map(n => undefined);
+		const maxes = props.maxes != undefined ? props.maxes : names.map(n => undefined);
+		const steps = props.steps != undefined ? props.steps : names.map(n => undefined);
 		
 		const calcEngine = props.ce;
 		const tab = props.tab;
 
+		const getInputCeValue = function (index: number, columnName: string, legacyTable?: string, legacyId?: string): string | undefined {
+			return application.state.rbl.value("rbl-input", names[ index ], columnName, undefined, calcEngine, tab) ??
+				(legacyTable != undefined && legacyId != undefined ? application.state.rbl.value(legacyTable, legacyId, undefined, undefined, calcEngine, tab) : undefined);
+		};
+
 		const base = {
 			name: ( index: number) => names[index],
-			display: (index: number) => application.state.rbl.value("rbl-display", "v" + names[index], undefined, undefined, calcEngine, tab) != "0",
-			noCalc: (index: number) => application.state.rbl.value("rbl-skip", names[index], undefined, undefined, calcEngine, tab) == "1",
-			// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
-			disabled: (index: number) => /* application.state.uiBlocked || */ application.state.rbl.value("rbl-disabled", names[index], undefined, undefined, calcEngine, tab) == "1",
+			display: (index: number) => getInputCeValue( index, "display", "rbl-display", "v" + names[ index ] ) != "0",
+			noCalc: (index: number) => getInputCeValue(index, "skip", "rbl-skip", names[index]) == "1",
+			disabled: (index: number) => getInputCeValue(index, "disabled", "rbl-disabled", names[index]) == "1",
 			error: (index: number) => application.state.errors.find(v => v["@id"] == names[index])?.text,
 			warning: (index: number) => application.state.warnings.find(v => v["@id"] == names[index])?.text
 		};
@@ -392,52 +561,79 @@ class TemplateMultipleInputComponent {
 			const index = names.indexOf(name);
 			return application.state.inputs[names[index]] ?? values[index];
 		}
+		const displayFormat = function (name: string) {
+			const index = names.indexOf(name);
+			let ceFormat = getInputCeValue(index, "display-format") ?? "";
 
-		return {
+			if (ceFormat == "") {
+				const format = application.state.rbl.value("rbl-sliders", name, 'format', undefined, calcEngine, tab)
+				const decimals = application.state.rbl.value("rbl-sliders", name, 'decimals', undefined, calcEngine, tab)
+				if (format != undefined && decimals != undefined) {
+					ceFormat = `{0:${format}${decimals}}`;
+				}
+			}
+
+			return ceFormat != "" ? ceFormat : displayFormats[index];
+		}
+
+		const scope = {
 			"$template": templateId,
 
 			id: (index: number) => names[ index ] + "_" + application.id,
 			name: (index: number) => base.name( index ),
 			type: props.type ?? "text",
 
-			application: application,
-			modalAppOptions: application.options.modalAppOptions,
-
-			value: (index: number) => application.state.inputs[names[index]] ?? values[ index ] ?? "",
+			value: (index: number) => defaultValue( names[ index ]) ?? "",
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
 			disabled: (index: number) => props.isDisabled?.(index, base) ?? base.disabled(index),
 			display: (index: number) => props.isDisplay?.(index, base) ?? base.display(index),
 			noCalc: (index: number) => noCalc(names[index]),
-			label: (index: number) => application.state.rbl.value("rbl-value", "l" + names[index], undefined, undefined, calcEngine, tab) ?? labels[index] ?? "",
-			placeHolder: (index: number) => application.state.rbl.value("rbl-value", "ph" + names[index], undefined, undefined, calcEngine, tab) ?? placeHolders[index],
+			label: (index: number) => getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "",
+			placeHolder: (index: number) => getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index],
 			help: (index: number) => ({
-				content: application.state.rbl.value("rbl-value", "h" + names[index], undefined, undefined, calcEngine, tab) ?? helps[index]?.content,
-				title: application.state.rbl.value("rbl-value", "h" + names[index] + "Title", undefined, undefined, calcEngine, tab) ?? helps[index]?.title ?? "",
-				width: helps[index]?.width || ""
+				content: getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content,
+				title: getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "",
+				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
 			}),
-			css: (index: number ) => ({ input: css[index]?.input ?? "" }),
+			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
 			error: (index: number) => base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
-				const table = application.state.rbl.value("rbl-listcontrol", names[ index ], "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) : [];
+				const table =
+					getInputCeValue(index, "list") ??
+					application.state.rbl.value("rbl-listcontrol", names[index], "table", undefined, calcEngine, tab);
+				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) as Array<IKaInputListRow> : [];
 			},
-			get hideLabel() { return props.hideLabel ?? false; },
-			prefix: (index: number) => prefixes[index],
-			suffix: (index: number) => suffixes[index],
+			get hideLabel() { return getInputCeValue(0, "label") == "-1" || ( props.hideLabel ?? false ); },
+			maxLength: (index: number) => {
+				const v = getInputCeValue(index, "max-length");
+				return (v != undefined ? +v : undefined) ?? maxLengths[index];
+			},
+			min: (index: number) => getInputCeValue(index, "min") ?? application.state.rbl.value("rbl-sliders", names[index], "min", undefined, calcEngine, tab) ?? mins[index],
+			max: (index: number) => getInputCeValue(index, "max") ?? application.state.rbl.value("rbl-sliders", names[index], "max", undefined, calcEngine, tab) ?? maxes[index],
+			step: (index: number) => {
+				const v = getInputCeValue(index, "step") ?? application.state.rbl.value("rbl-sliders", names[index], "step", undefined, calcEngine, tab);
+				return (v != undefined ? +v : undefined) ?? steps[index];
+			},
+			prefix: (index: number) => getInputCeValue(index, "prefix") ?? prefixes[index],
+			suffix: (index: number) => getInputCeValue(index, "suffix") ?? suffixes[index],
 
 			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
-			inputMounted: (input: HTMLInputElement) => {
-				const name = input.getAttribute("name");
-
-				if (name == undefined) {
-					throw new Error("You must assign a name attribute via :name=\"name(index)\".");
-				}
-
-				InputComponent.mounted(application, name, input, defaultValue, noCalc, props.events);
-			}
+			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder */ }
 		};
+
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => {
+			const name = input.getAttribute("name");
+
+			if (name == undefined) {
+				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
+			}
+
+			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, props.events, refs);
+		};
+
+		return scope;
 	}
 }
 
