@@ -108,6 +108,7 @@ class KatApp implements IKatApp {
 
 	private calcEngines: ICalcEngine[] = [];
 	private uiBlockCount = 0;
+	private hasHighChart = false;
 
 	private constructor(private selector: string, options: IKatAppOptions) {
 		const id = this.id = "ka" + Utils.generateId();
@@ -469,6 +470,11 @@ class KatApp implements IKatApp {
 			}
 
 			this.el.removeAttr("ka-cloak");
+
+			// Can't do original reflow until cloak is removed...
+			if (this.hasHighChart) {
+				this.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
+			}
 
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
@@ -1810,7 +1816,7 @@ class KatApp implements IKatApp {
 			if (predicate?.(mountScript) ?? true) {
 				el.removeAttribute("v-on:vue:" + type);
 				el.removeAttribute("@vue:" + type);
-				el.setAttribute("v-on:vue:" + type, `${exp}${mountScript != '' ? ';' + mountScript + ';' : ''}`);
+				el.setAttribute("v-on:vue:" + type, `${mountScript != '' ? ';' + mountScript + ';' : ''}${exp}`);
 			}
 		};
 
@@ -1922,6 +1928,8 @@ class KatApp implements IKatApp {
 
 			// Fix v-ka-highchart 'short hand' of data or data.options string into a valid {} scope
 			container.querySelectorAll("[v-ka-highchart]").forEach(chart => {
+				that.hasHighChart = true;
+
 				let exp = chart.getAttribute("v-ka-highchart")!;
 
 				if (!exp.startsWith("{")) {
@@ -2003,11 +2011,19 @@ class KatApp implements IKatApp {
 
 			// Also automatically setup helptips again if the item is removed/added via v-if and the v-if contains tooltips (popup config is lost on remove)
 			// Used to occur inside template[id] processing right after mountInputs(); call, but I think this should happen all the time
+
+			// PROBLEM: May have a problem here...if v-if contains templates that contain other v-ifs or helptips...the processing might not work right b/c selection doesn't
+			// span outside/inside of templates
 			container.querySelectorAll("[v-if]").forEach(ifDir => {
 				// Only do the 'outer most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
 				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
-				if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && (ifDir.parentElement == undefined || ifDir.parentElement.closest("[v-if]") == undefined)) {
+				// if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && ifDir.parentElement?.closest("[v-if]") == undefined) {
+				if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
 					addMountAttribute(ifDir, "mounted", "KatApp.get($el).processHelpTips($($el))", existing => existing.indexOf("KatApp.get($el).processHelpTips($($el))") == -1);
+				}
+
+				if (ifDir.querySelector("[v-ka-highchart]") != undefined) {
+					addMountAttribute(ifDir, "mounted", "KatApp.get($el).select('[data-highcharts-chart]', $($el)).each((i, c) => $(c).highcharts().reflow())", existing => existing.indexOf("KatApp.get($el).select('[data-highcharts-chart]'") == -1);
 				}
 			});
 

@@ -415,6 +415,17 @@ interface IKaTableOptions {
 	ce?: string;
 	tab?: string;
 }
+interface IKaTableColumnConfiguration {
+	name: string;
+	cssClass: string | undefined;
+	isTextColumn: boolean;
+	xsColumns: number | undefined;
+	smColumns: number | undefined;
+	mdColumns: number | undefined;
+	lgColumns: number | undefined;
+	width: number | undefined;
+	widthPct: string | undefined;
+}
 
 
 // RBLe Result Row Types
