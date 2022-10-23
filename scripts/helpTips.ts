@@ -78,11 +78,11 @@
 
 		const getTipContent = function (h: JQuery<Element>) {
 			// See if they specified data-content directly on trigger element.
-			const dataContent = h.data('bs-content');
+			const dataContent: string | undefined = h.data('bs-content');
 			const dataContentSelector = h.data('bs-content-selector');
 			let content = dataContent == undefined
 				? dataContentSelector == undefined ? h.next().html() : application.select(dataContentSelector, container).html()
-				: dataContent as string;
+				: dataContent;
 
 			// Replace {Label} in content with the trigger provided...used in Error Messages
 			const labelFix = h.data("label-fix");

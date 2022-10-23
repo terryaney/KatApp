@@ -3,14 +3,14 @@
 		// Not sure I need this, idea was to be able to inject a reference to application/modalAppOptions so I could use it...but can't think of when I'd need
 		// application.state.components["kaScope"] = ((scope?) => new KaScopeComponent(scope).getScope(application)) as (scope: IStringAnyIndexer[]) => IStringAnyIndexer;
 
-		application.state.components["template"] = ((props) => new TemplateComponent(props).getScope(application, getTemplateId)) as (props: { name: string, source?: IStringAnyIndexer | Array<IStringIndexer<string>> }) => IStringAnyIndexer;
-		application.state.components["input"] = ((props) => new InputComponent(props).getScope(application, getTemplateId)) as (props: IKaInputOptions) => IStringAnyIndexer;
-		application.state.components["inputGroup"] = ((props) => new TemplateMultipleInputComponent(props).getScope(application, getTemplateId)) as (props: IKaInputGroupOptions) => IStringAnyIndexer;		
+		application.state.components["template"] = ((props) => new TemplateComponent(props).getScope(application, getTemplateId)) as (props: { name: string, source?: IStringAnyIndexer | Array<ITabDefRow> }) => IStringAnyIndexer;
+		application.state.components["input"] = ((props) => new InputComponent(props).getScope(application, getTemplateId)) as (props: IKaInputModel) => IStringAnyIndexer;
+		application.state.components["inputGroup"] = ((props) => new TemplateMultipleInputComponent(props).getScope(application, getTemplateId)) as (props: IKaInputGroupModel) => IStringAnyIndexer;		
 	}
 }
 
 class InputComponent {
-	constructor(private props: IKaInputOptions) {
+	constructor(private props: IKaInputModel) {
 	}
 
 	/*
@@ -347,30 +347,6 @@ class InputComponent {
 	}
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputScope | undefined {
-		/*
-			rbl-inputs									
-			id									
-			label	-1 'hides it'								
-			value									
-			display									
-			disabled									
-			list	name of table for dropdown, radio list								
-			skip									
-			help									
-			help-title			
-			error
-			warning
-			help-width	250 default								following items are 'less used'
-			min	if slider/date - but could put 'min' here for 'documentation' to use for validation								
-			max	if slider/date - but could put 'min' here for 'documentation' to use for validation								
-			step	if slider								
-			placeholder									
-			prefix	input-group prefix								
-			suffix	input-group suffix								
-			max-length	text input max length								
-			type	html text input type: text, range, date, etc. default is text								
-		*/
-
 		const props = this.props;
 
 		const name = props.name;
@@ -418,12 +394,12 @@ class InputComponent {
 			return ceFormat != "" ? ceFormat : props.displayFormat;
 		};
 		
-		const scope = {
+		const scope: IKaInputScope = {
 			$template: template,
 
 			id: name + "_" + application.id,
 			name: name,
-			type: props.type ?? "text",
+			type: getInputCeValue("type") ?? props.type ?? "text",
 
 			// reactive...
 			// input binding attempts in template:
@@ -458,18 +434,18 @@ class InputComponent {
 					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? ""
 				};
 			},
-			get iconHtml() { return props.iconHtml },
+			get iconHtml() { return props.iconHtml ?? "" },
 			get css() {
 				return {
 					input: props?.css?.input ?? "",
-					container: props?.css?.container
+					container: props?.css?.container ?? ""
 				};
 			},
 			get error() { return base.error; },
 			get warning() { return base.warning; },
 			get list() {
 				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) as Array<IKaInputListRow> : props.list ?? [];
+				return table != undefined ? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab) : props.list ?? [];
 			},
 			get prefix() { return getInputCeValue("prefix") ?? props.prefix; },
 			get suffix() { return getInputCeValue("suffix") ?? props.suffix; },
@@ -477,15 +453,15 @@ class InputComponent {
 				const v = getInputCeValue("max-length");
 				return (v != undefined ? +v : undefined) ?? props.maxLength ?? 250;
 			},
-			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString(); },
-			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString(); },
+			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString() ?? ""; },
+			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString() ?? ""; },
 			get step() {
 				const v = getInputCeValue("step") ?? application.state.rbl.value("rbl-sliders", name, "step", undefined, calcEngine, tab);
 				return (v != undefined ? +v : undefined) ?? props.step ?? 1;
 			},
 
 			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
-			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder */ },
+			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder, assigned below so that 'scope' can be passed to handlers */ },
 			uploadAsync: async () => {
 				if (props.uploadEndpoint == undefined) {
 					throw new Error("Cannot use uploadAsync if uploadEndpoint is not set.");
@@ -511,7 +487,7 @@ class InputComponent {
 }
 
 class TemplateMultipleInputComponent {
-	constructor(private props: IKaInputGroupOptions) {
+	constructor(private props: IKaInputGroupModel) {
 	}
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputGroupScope | undefined {
@@ -522,11 +498,12 @@ class TemplateMultipleInputComponent {
 		}
 
 		const props = this.props;
-		const names = props.names as string[];
+		const names = props.names;
 		const values = props.values != undefined ? props.values : names.map(n => undefined);
 		const labels = props.labels != undefined ? props.labels : names.map(n => undefined);
 		const prefixes = props.prefixes != undefined ? props.prefixes : names.map(n => undefined);
 		const suffixes = props.suffixes != undefined ? props.suffixes : names.map(n => undefined);
+		const hideLabels = props.hideLabels != undefined ? props.hideLabels : names.map(n => undefined);
 		const placeHolders = props.placeHolders != undefined ? props.placeHolders : names.map(n => '');		
 		const displayFormats = props.displayFormats != undefined ? props.displayFormats : names.map(n => undefined);
 		const helps = props.helps != undefined ? props.helps : names.map(n => undefined);
@@ -596,16 +573,16 @@ class TemplateMultipleInputComponent {
 				title: getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "",
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
 			}),
-			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
+			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container ?? "" }),
 			error: (index: number) => base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
 				const table =
 					getInputCeValue(index, "list") ??
 					application.state.rbl.value("rbl-listcontrol", names[index], "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source(table, calcEngine, tab) as Array<IKaInputListRow> : [];
+				return table != undefined ? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab) : [];
 			},
-			get hideLabel() { return getInputCeValue(0, "label") == "-1" || ( props.hideLabel ?? false ); },
+			hideLabel: (index: number) => { return getInputCeValue(index, "label") == "-1" || ( hideLabels[index] ?? false ); },
 			maxLength: (index: number) => {
 				const v = getInputCeValue(index, "max-length");
 				return (v != undefined ? +v : undefined) ?? maxLengths[index];
@@ -638,9 +615,12 @@ class TemplateMultipleInputComponent {
 }
 
 class TemplateComponent {
-	constructor(private props: { name: string, source?: IStringAnyIndexer | IStringIndexer<string>[] }) {
+	constructor(private props: { name: string, source?: IStringAnyIndexer | Array<ITabDefRow> }) {
 	}
-	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer | IStringIndexer<string>[] {
+
+	static templateRenderedCount: IStringIndexer<number> = {};
+
+	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer | Array<ITabDefRow> {
 		if (this.props.name == undefined) {
 			throw new Error("You must provide {name:'templateName'} when using v-ka-template.");
 		}
@@ -652,19 +632,26 @@ class TemplateComponent {
 		}
 
 		const scope = this.props.source ?? {};
+		const that = this;
+
+		TemplateComponent.templateRenderedCount[templateId] = TemplateComponent.templateRenderedCount[templateId] == undefined
+			? 1
+			: TemplateComponent.templateRenderedCount[templateId] + 1;
 
 		if (scope instanceof Array) {
 			return {
 				"$template": templateId,
 				application: application,
 				modalAppOptions: application.options.modalAppOptions,
-				rows: scope
+				rows: scope,
+				$renderId: `${templateId.substring(1)}_${TemplateComponent.templateRenderedCount[templateId]}`
 			};
 		}
 		else {
 			scope["$template"] = templateId;
-			scope["application"] = application;
-			scope["modalAppOptions"] = application.options.modalAppOptions;
+			scope.application = application;
+			scope.modalAppOptions = application.options.modalAppOptions;
+			scope.$renderId = `${templateId.substring(1)}_${TemplateComponent.templateRenderedCount[templateId]}`;
 			return scope;
 		}
 	}
@@ -672,9 +659,9 @@ class TemplateComponent {
 
 /*
 class KaScopeComponent {
-	constructor(private scope?: IStringAnyIndexer | IStringIndexer<string>[]) {
+	constructor(private scope?: IStringAnyIndexer | Array<ITabDefRow>) {
 	}
-	public getScope(application: KatApp): IStringAnyIndexer | IStringIndexer<string>[] {
+	public getScope(application: KatApp): IStringAnyIndexer | Array<ITabDefRow> {
 		const scope = this.scope ?? {};
 
 		if (scope instanceof Array) {

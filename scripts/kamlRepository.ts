@@ -154,7 +154,7 @@
 			// If querying service and get a 'string' back...then I know error happened
 			// data.Content when request from service, just data when local files
 			return isRelativePath || tryLocalWebServer || typeof result == "object"
-				? { data: isRelativePath || tryLocalWebServer ? result : (result as any).Resources[0].Content }
+				? { data: isRelativePath || tryLocalWebServer ? result : result.Resources[0].Content }
 				: { errorMessage: result.startsWith("<!DOCTYPE") && result.indexOf("Code: 004") ? "RBLe Web Service Failure" : result };
 		} catch (error) {
 			return { errorMessage: (error as XMLHttpRequest).statusText };

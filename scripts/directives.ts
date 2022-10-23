@@ -9,13 +9,16 @@ class Directives {
 	public static initializeCoreDirectives(vueApp: PetiteVueApp, application: KatApp): void {
 		[
 			new DirectiveKaInspector(),
+
 			new DirectiveKaAttributes(),
 			new DirectiveKaInline(),
+
 			new DirectiveKaHighchart(),
 			new DirectiveKaTable(),
 
-			new DirectiveKaNavigate(),
 			new DirectiveKaValue(),
+
+			new DirectiveKaNavigate(),
 			new DirectiveKaModal(),
 			new DirectiveKaApp(),
 			new DirectiveKaApi()
@@ -26,6 +29,7 @@ class Directives {
 	}
 
 	public static getObjectFromAttributes(attributes: string): IStringIndexer<string> {
+		// https://stackoverflow.com/questions/30420491/javascript-regex-to-get-tag-attribute-value/48396506#48396506
 		const regex = new RegExp('[\\s\\r\\t\\n]*([a-z0-9\\-_]+)[\\s\\r\\t\\n]*=[\\s\\r\\t\\n]*([\'"])((?:\\\\\\2|(?!\\2).)*)\\2', 'ig');
 		const o: IStringIndexer<string> = {};
 		let match : RegExpExecArray | null = null;
@@ -44,21 +48,36 @@ class DirectiveKaValue implements IKaDirective {
 		return ctx => {
 			// Shortcut for v-html="rbl.value(table, keyValue, returnField, keyField, calcEngine, tab)"
 			// table, keyValue, returnField, keyField, calcEngine, tab
-			let selectors = ctx.exp.split(".").map(s => s != "" ? s : undefined);
-			if (selectors.length == 1) {
-				selectors = ["rbl-value", ...selectors];
+
+			const model = ctx.exp.startsWith("{") ? ctx.get() : undefined;
+
+			if (model != undefined && model.table == undefined) {
+				model.table = "rbl-value";
 			}
-			const getSelector = function (pos: number) { return selectors.length > pos && selectors[pos] != "" ? selectors[pos] : undefined; };
+
+			const selector = ctx.exp.startsWith("{")
+				? undefined
+				: ctx.exp;
+
+			let selectors = selector?.split(".").map(s => s != "" ? s : undefined) ?? [];
+
+			if (selectors.length == 1) {
+				selectors = ["rbl-value", selectors[0] ];
+			}
+
+			const getSelector = function (pos: number) {
+				return selectors.length > pos && selectors[pos] != "" ? selectors[pos] : undefined;
+			};
 
 			ctx.effect(() => {
 				ctx.el.innerHTML =
 					application.state.rbl.value(
-						getSelector(0)!,
-						getSelector(1)!,
-						getSelector(2),
-						getSelector(3),
-						getSelector(4),
-						getSelector(5)
+						model?.table ?? getSelector(0)!,
+						model?.keyValue ?? getSelector(1)!,
+						model?.returnField ?? getSelector(2),
+						model?.keyField ?? getSelector(3),
+						model?.ce ?? getSelector(4),
+						model?.tab ?? getSelector(5)
 					) ?? ctx.el.innerHTML;
 			});
 		};
@@ -69,7 +88,7 @@ class DirectiveKaApi implements IKaDirective {
 	public name = "ka-api";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const scope: IKaApiOptions = ctx.exp.startsWith("{") ? ctx.get() : { endpoint: ctx.exp };
+			const scope: IKaApiModel = ctx.exp.startsWith("{") ? ctx.get() : { endpoint: ctx.exp };
 			const endpoint = scope.endpoint;
 
 			const submitApi = async function (e: Event) {
@@ -130,7 +149,16 @@ class DirectiveKaNavigate implements IKaDirective {
 			}
 			*/
 
-			const scope: IKaNavigateOptions = ctx.exp.startsWith("{") ? ctx.get() : { view: ctx.exp };
+			let scope: IKaNavigateModel = ctx.get();
+
+			try {
+				if (scope.model != undefined) {
+					scope = ctx.get(scope.model);
+				}
+			} catch (e) {
+				console.log({ e });
+			}
+
 			const navigationId = scope.view;
 
 			const navigate = async function (e: Event) {
@@ -150,11 +178,14 @@ class DirectiveKaNavigate implements IKaDirective {
 				// ceInputs are 'key="" key=""' string returned from CalcEngine, used to just put {inputs} into template markup and it dumped attribute
 				// if there, otherwise not, so parse them and assign as inputs
 				if (scope.ceInputs != undefined) {
-					const attrObject = Directives.getObjectFromAttributes(scope.ceInputs as string);
+					const attrObject = Directives.getObjectFromAttributes(scope.ceInputs);
 					for (const propertyName in attrObject) {
-						if (propertyName.startsWith("data-input-")) {
-							inputs!["i" + propertyName.split("-").slice(2).map(n => n[0].toUpperCase() + n.slice(1)).join("")] =
-								attrObject[ propertyName ];
+						if (propertyName.startsWith("i") || /* legacy */ propertyName.startsWith("data-input-")) {
+							const inputName = propertyName.startsWith("i")
+								? propertyName
+								: "i" + propertyName.split("-").slice(2).map(n => n[0].toUpperCase() + n.slice(1)).join("");
+
+							inputs![inputName] = attrObject[ propertyName ];
 						}
 					}
 				}
@@ -178,7 +209,7 @@ class DirectiveKaNavigate implements IKaDirective {
 					sessionStorage.setItem(cachingKey, JSON.stringify(inputs));
 				}
 
-				await application.triggerEventAsync("onKatAppNavigate", navigationId);
+				await application.triggerEventAsync("katAppNavigate", navigationId);
 
 				return false;
 			};
@@ -197,7 +228,15 @@ class DirectiveKaModal implements IKaDirective {
 	public name = "ka-modal";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const scope: IKaModalOptions = ctx.get();
+			let scope: IKaModalModel = ctx.get();
+
+			try {
+				if (scope.model != undefined) {
+					scope = ctx.get(scope.model);
+				}
+			} catch (e) {
+				console.log({ e });
+			}
 
 			const showModal = async function (e: Event) {
 				e.preventDefault();
@@ -250,7 +289,7 @@ class DirectiveKaApp implements IKaDirective {
 	public name = "ka-app";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const scope: IKaAppOptions = ctx.get();
+			const scope: IKaAppModel = ctx.get();
 			const view = scope.view;
 
 			const nestedAppOptions = Utils.extend<IKatAppOptions>(
@@ -410,10 +449,10 @@ class DirectiveKaAttributes implements IKaDirective {
 	public name = "ka-attributes";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const attributes = ctx.get();
+			const attributes: string = ctx.get();
 
 			if (attributes != undefined && attributes != "") {
-				const attrObject = Directives.getObjectFromAttributes(attributes as string);
+				const attrObject = Directives.getObjectFromAttributes(attributes);
 				for (const propertyName in attrObject) {
 					ctx.el.setAttribute(propertyName, attrObject[propertyName]);
 				}
@@ -438,15 +477,6 @@ class DirectiveKaHighchart implements IKaDirective {
 		return ctx => {
 			this.application = application;
 
-			/*
-			if (!this.appReflowAdded) {
-				this.appReflowAdded = true;
-				application.on(application.options.inputs?.iModalApplication == 1 ? "onModalAppShown" : "onConfigureUICalculation", () => {
-					// https://api.highcharts.com/class-reference/Highcharts.Chart#reflow
-					application.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
-				});
-			}
-			*/
 			const navItemId = application.closest(ctx.el as HTMLElement, ".tab-pane").attr("aria-labelledby");
 			if (navItemId != undefined) {
 				const navItem = application.select("#" + navItemId);
@@ -461,10 +491,10 @@ class DirectiveKaHighchart implements IKaDirective {
 					return;
 				}
 
-				const scope: IKaHighchartOptions = ctx.get();
-				const data = application.state.rbl.source(`HighCharts-${scope.data}-Data`, scope.ce, scope.tab) as IRblHighChartsDataRow[];
-				const optionRows = application.state.rbl.source(`HighCharts-${scope.options ?? scope.data}-Options`, scope.ce, scope.tab) as IRblHighChartsOptionRow[];
-				const overrideRows = application.state.rbl.source("HighCharts-Overrides", scope.ce, scope.tab, r => String.compare(r["@id"], scope.data, true) == 0) as IRblHighChartsOverrideRow[];
+				const scope: IKaHighchartModel = ctx.get();
+				const data = application.state.rbl.source(`HighCharts-${scope.data}-Data`, scope.ce, scope.tab) as Array<IRblHighChartsDataRow>;
+				const optionRows = application.state.rbl.source<IRblHighChartsOptionRow>(`HighCharts-${scope.options ?? scope.data}-Options`, scope.ce, scope.tab);
+				const overrideRows = application.state.rbl.source<IRblHighChartsOverrideRow>("HighCharts-Overrides", scope.ce, scope.tab, r => String.compare(r["@id"], scope.data, true) == 0);
 
 				const dataRows = data.filter(r => !r.category.startsWith("config-"));
 				const seriesConfigurationRows = data.filter(r => r.category.startsWith("config-"));
@@ -551,12 +581,12 @@ class DirectiveKaHighchart implements IKaDirective {
 		}
 
 		// Get the series 'format' row to look for specified format, otherwise return c0 as default (find => firstordefault)
-		const configFormat = seriesConfigurationRows.find(c => c.category === "config-format") as IStringAnyIndexer | undefined;
+		const configFormat = seriesConfigurationRows.find(c => c.category === "config-format");
 
 		const seriesFormats = seriesColumns
 			// Ensure the series/column is visible
-			.filter(seriesName => seriesConfigurationRows.filter((c: IStringAnyIndexer) => c.category === "config-visible" && c[seriesName] === "0").length === 0)
-			.map(seriesName => configFormat?.[seriesName] as string || "c0");
+			.filter(seriesName => seriesConfigurationRows.filter(c => c.category === "config-visible" && c[seriesName] === "0").length === 0)
+			.map(seriesName => configFormat?.[seriesName] || "c0");
 
 		return {
 			formatter: function () {
@@ -586,7 +616,7 @@ class DirectiveKaHighchart implements IKaDirective {
 
 		const plotInformation =
 			dataRows
-				.map((d, index) => ({ index: index, plotLine: d.plotLine ?? "", plotBand: d.plotBand ?? "" }) as IHighChartsPlotConfigurationRow)
+				.map<IHighChartsPlotConfigurationRow>((d, index) => ({ index: index, plotLine: d.plotLine ?? "", plotBand: d.plotBand ?? "" }))
 				.filter(r => r.plotLine !== "" || r.plotBand !== "");
 
 		const plotLines: HighchartsPlotLines[] = [];
@@ -655,7 +685,7 @@ class DirectiveKaHighchart implements IKaDirective {
 				const series: HighchartsSeriesOptions = {};
 				const properties = seriesConfigurationRows
 					.filter((c: IStringAnyIndexer) => ["config-visible", "config-hidden", "config-format"].indexOf(c.category) === -1 && c[seriesName] !== undefined)
-					.map((c: IStringAnyIndexer) => ({ key: c.category.substring(7), value: c[seriesName] } as IRblHighChartsOptionRow));
+					.map<IRblHighChartsOptionRow>( c => ({ key: c.category.substring(7), value: c[seriesName]! }));
 
 				series.data = dataRows.map(d => this.getSeriesDataRow(d, allChartColumns, seriesName, isXAxisChart));
 
@@ -839,7 +869,7 @@ class DirectiveKaTable implements IKaDirective {
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
 			ctx.effect(() => {
-				const scope: IKaTableOptions = ctx.get();
+				const scope: IKaTableModel = ctx.get();
 				const data = application.state.rbl.source(scope.name, scope.ce, scope.tab);
 
 				$(ctx.el).empty();
@@ -889,7 +919,7 @@ class DirectiveKaTable implements IKaDirective {
 							columnConfiguration[e.Name] = config;
 						});
 
-					const isHeaderRow = (row: IStringIndexer<string>) => {
+					const isHeaderRow = (row: ITabDefRow) => {
 						const code = row["code"] ?? "";
 						const id = row["@id"] ?? "";
 						return (code === "h" || code.startsWith("header") || code.startsWith("hdr")) ||
@@ -1044,7 +1074,7 @@ class DirectiveKaTable implements IKaDirective {
 						data.forEach(r => {
 							const isHeader = isHeaderRow(r);
 
-							if (isHeader && rowContainer?.tagName != "THEAD") {
+							if (isHeader && rowContainer == undefined) {
 								rowContainer = document.createElement("thead");
 								table.append(rowContainer);
 							}
@@ -1054,7 +1084,7 @@ class DirectiveKaTable implements IKaDirective {
 							}
 
 							const row = document.createElement("tr");
-							addClass(row, r["@class"] ?? r["class"] ?? "");
+							addClass(row, `${r["@class"] ?? r["class"] ?? ""} ${isHeader && rowContainer!.tagName == "TBODY" ? "h-row" : ""}`);
 
 							const elementName = isHeader ? "th" : "td";
 							const span = getCellValue(r, "span");

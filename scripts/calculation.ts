@@ -11,21 +11,23 @@
 				.map(c => {
 					const d: JQuery.Deferred<ICalculationSuccessResponse | ICalculationFailedResponse> = $.Deferred();
 
+					const submitCalculationConfiguration: ISubmitCalculationConfiguration = {
+						CalcEngine: c.name,
+						InputTab: c.inputTab,
+						ResultTabs: c.resultTabs,
+						PreCalcs: c.preCalcs,
+					};
+
 					const submitConfiguration =
 						Utils.extend<ISubmitApiConfiguration>(
 							{},
 							configuration,
-							{
-								CalcEngine: c.name,
-								InputTab: c.inputTab,
-								ResultTabs: c.resultTabs,
-								PreCalcs: c.preCalcs,
-							} as ISubmitCalculationConfiguration
+							submitCalculationConfiguration
 						);
 
 					const submitData: ISubmitApiData = {
 						Inputs: Utils.clone( inputs, ( k, v ) => k == "tables" ? undefined : v ),
-						InputTables: inputs.tables?.map(t => ({ Name: t.name, Rows: t.rows } as ISubmitCalculationInputTable)),
+						InputTables: inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
 						Configuration: submitConfiguration
 					};
 
@@ -40,7 +42,7 @@
 								: undefined
 						}).then(
 							function (response, status, jqXHR) {
-								let result = jqXHR.responseJSON ?? response;
+								let result: IRblCalculationSuccessResponse = jqXHR.responseJSON ?? response;
 
 								if (typeof result == "string") {
 									result = JSON.parse(result);
@@ -50,7 +52,7 @@
 									console.group(c.name + " " + result.Diagnostics.CalcEngineVersion + " Diagnostics");
 
 									const utcDateLength = 28;
-									const timings: string[] = result.Diagnostics.Timings.Status.map((t: IStringIndexer<string>) => {
+									const timings: string[] = result.Diagnostics.Timings.Status.map(t => {
 										const start = (t["@Start"] + "       ").substring(0, utcDateLength);
 										return start + ": " + t["#text"];
 									}) ?? [];
@@ -60,43 +62,48 @@
 										Session: result.Diagnostics.SessionID,
 										Url: result.Diagnostics.ServiceUrl,
 										Timings: timings,
-										Trace: (result.Diagnostics.Trace?.Item as Array<string> ).map(i => i.substring(2))
+										Trace: result.Diagnostics.Trace?.Item.map(i => i.substring(2))
 									};
 									console.log(diag);
 
 									console.groupEnd();
 								}
 
-								if (result.Exception == undefined) {
-									const tabDefs = result["RBL"]["Profile"]["Data"]["TabDef"];
-									d.resolve({ calcEngine: c.name, results: tabDefs instanceof Array ? tabDefs as Array<IRbleTabDef> : [tabDefs] as Array<IRbleTabDef> } as ICalculationSuccessResponse);
-								}
-								else {
-									d.reject({
+								if (result.Exception != undefined) {
+									const response: ICalculationFailedResponse = {
 										calcEngine: c.name,
 										exception: {
-											message: result.Exception.Message as string,
-											detail: result.Exception.Message as string,
-											stackTrace: (result.Exception.StackTrace as string).split("\n"),
+											message: result.Exception.Message,
+											detail: result.Exception.Message,
+											stackTrace: result.Exception.StackTrace.split("\n"),
 											configuration: submitConfiguration,
 											inputs: inputs
 										}
-									} as ICalculationFailedResponse);
+									};
+
+									d.reject(response);
+								}
+								else {
+									const tabDefs = result.RBL.Profile.Data.TabDef;
+									const resopnse: ICalculationSuccessResponse = { calcEngine: c.name, results: tabDefs instanceof Array ? tabDefs : [tabDefs] };
+									d.resolve(resopnse);
 								}
 							},
 							function (jqXHR, status) {
-								const response = jqXHR.responseJSON ?? (jqXHR.responseText.startsWith("{") ? JSON.parse(jqXHR.responseText) : {});
+								const apiResponse: IRblCalculationFailedResponse = jqXHR.responseJSON ?? (jqXHR.responseText.startsWith("{") ? JSON.parse(jqXHR.responseText) : {});
 
-								d.reject({
+								const response: ICalculationFailedResponse = {
 									calcEngine: c.name,
 									exception: {
-										message: response.Validations?.[0]?.Message as string ?? status,
-										detail: response.ExceptionDetails?.Message as string ?? jqXHR.responseText,
-										stackTrace: response.ExceptionDetails?.StackTrace as string[],
+										message: apiResponse.Validations?.[0]?.Message ?? status,
+										detail: apiResponse.ExceptionDetails?.Message ?? jqXHR.responseText,
+										stackTrace: apiResponse.ExceptionDetails?.StackTrace,
 										configuration: submitConfiguration,
 										inputs: inputs
 									}
-								} as ICalculationFailedResponse);
+								};
+
+								d.reject(response);
 							}
 						);
 					} catch (e) {
@@ -134,81 +141,6 @@
 	}
 }
 
-interface ICalcEngine {
-	key: string;
-	name: string;
-	inputTab: string;
-	resultTabs: string[];
-	preCalcs?: string;
-	manualResult: boolean;
-	enabled: boolean;
-	allowConfigureUi: boolean;
-}
-
-interface ICalculationInputs extends IStringAnyIndexer {
-	iConfigureUI?: number;
-	iDataBind?: number;
-	iInputTrigger?: string;
-	iNestedApplication?: number;
-	iModalApplication?: number;
-	tables?: ICalculationInputTable[];
-}
-
-interface ICalculationInputTable {
-	name: string;
-	rows: ICalculationInputTableRow[]
-}
-
-interface ICalculationInputTableRow extends IStringIndexer<string> {
-	index: string;
-}
-
-interface IRbleTabDef extends IStringIndexer<string | IStringIndexer<string> | Array<IStringIndexer<string>>> { }
-interface ITabDef extends IStringIndexer<ITabDefKatAppInfo | string | Array<IStringIndexer<string>>> {
-	_ka: ITabDefKatAppInfo;
-}
-
-interface ITabDefKatAppInfo {
-	calcEngineKey: string;
-	name: string;
-}
-
-interface ISubmitApiData {
-	// Data?: RBLeRESTServiceResult; // Passed in if non-session calcs being used
-	Inputs: IStringIndexer<string>;
-	InputTables?: Array<ISubmitCalculationInputTable>;
-	Configuration: ISubmitApiConfiguration;
-}
-interface ISubmitCalculationInputTable { Name: string, Rows: Array<ICalculationInputTableRow>; }
-
-interface ISubmitCalculationConfiguration {
-	CalcEngine: string;
-	InputTab: string;
-	ResultTabs: string[];
-	PreCalcs?: string;
-}
-interface ICalculationFailedResponse {
-	calcEngine: string;
-	exception: ICalculationResponseException;
-}
-interface ICalculationSuccessResponse {
-	calcEngine: string;
-	results: IRbleTabDef[];
-}
-interface ICalculationResponseException {
-	message: string;
-	detail: string;
-	stackTrace: string[];
-	configuration: ICalculationResponseExceptionConfiguration;
-	inputs: ICalculationInputs;
-}
-interface ICalculationResponseExceptionConfiguration extends ISubmitApiConfiguration, ISubmitCalculationConfiguration { }
-
-interface ILastCalculation {
-	inputs: ICalculationInputs;
-	results: ITabDef[];
-	configuration: ISubmitApiConfiguration;
-}
 class CalculationError extends Error {
 	constructor(message: string, public failures: ICalculationFailedResponse[]) {
 		super(message);

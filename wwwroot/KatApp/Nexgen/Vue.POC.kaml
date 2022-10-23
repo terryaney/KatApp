@@ -169,31 +169,31 @@ Count: {{model.count}}
 
 <template id="myTemplateterry">
 	<style>
-		thisVueClass h3 { color: red; }
+		thisApplication h3 { color: red; }
 	</style>
 
 	<!-- POC: Sample script to run only the first time this template is used ('setup' attribute triggered) - replaces temlateOn() -->
 	<script setup type="text/javascript">
-		function mounted(view, application, scope) {
+		function mounted(application) {
 			console.log("setup templateMounted");
 			application.select("input").on("input.nexgen-once", function () {
 				console.log("One time mount:change - " + $(this).attr("name"));
 			});
 		}
-		function unmounted(view, application, scope) {
+		function unmounted(application) {
 			console.log("setup templateUnmounted");
 			application.select("input").off("input.nexgen-once");
 		}
 	</script>
 	<!-- POC: Sample script to run only the *every* time this template is used (no 'setup' attribute present) - replaces temlateOn() -->
 	<script type="text/javascript">
-		function mounted(view, application, scope) {
+		function mounted(application) {
 			console.log("templateMounted");
 			application.select("input").on("input.nexgen", function () {
 				console.log("Every time mount:change - " + $(this).attr("name"));
 			});
 		}
-		function unmounted(view, application, scope) {
+		function unmounted(application) {
 			console.log("templateUnmounted");
 			application.select("input").off("input.nexgen");
 		}

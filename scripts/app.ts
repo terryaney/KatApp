@@ -2,33 +2,13 @@
 //	API Responses in DataSource - why are 'api=true' attributes in that?  Seems it should be empty until placed INSIDE xDS models
 
 //	1. Global
-//		1. QnA - 011310302
-//		1. ASU - 011103657
-//		1. Document this
-//		1. Result table builder (ret planning)
-
-//	1. Life Cycles:
-//		1. Create App Life-Cycle
-//			1. onInitialized( e: Event, application: KatApp )
-//			1. onModalAppInitialized( e: Event, modalApplication: KatApp, hostApplication: KatApp )
-//			1. onNestedAppInitialized( e: Event, nestedApplication: KatApp, hostApplication: KatApp )
-//			1. onMounted( e: Event, application: KatApp )
-//			1. Then do ConfigureUI calculation if any CEs are 'enabled'
-//			1. onModalAppShown( e: Event, application: KatApp )
-//		1. Calculation Life-Cycle
-//			1. onUpdateCalculationOptions( e: Event, options: IGetSubmitApiOptions, application: KatApp )
-//			1. onCalculateStart( e: Event, options: IGetSubmitApiOptions, application: KatApp ): boolean
-//			1. onInputsCache( e: Event, cachedInputs: ICalculationInputs, application: KatApp )
-//			1. onResultsProcessing( e: Event, results: ITabDef[], inputs: ICalculationInputs, options: IGetSubmitApiOptions, application: KatApp)
-//			1. onConfigureUICalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp ) *only triggered if iConfigureUI=1
-//			1. onCalculation( e: Event, lastCalculation: ILastCalculation, application: KatApp )
-//			1. onCalculationErrors( e: Event, key: string, error: Error, application: KatApp ) *triggered any time an error occurs
-//			1. onCalculateEnd( e: Event, application: KatApp )
-//		1. Api Life-Cycle
-//			1. onUpdateApiOptions( e: Event, options: IGetSubmitApiOptions, endpoint: string, application: KatApp )
-//			1. onApiStart( e: Event, endpoint: string, submitData: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
-//			1. onApiComplete( e: Event, endpoint: string, response: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
-//			1. onApiFailed( e: Event, endpoint: string, response: any, triggerLink: JQuery | undefined, options: IApiOptions, application: KatApp ): boolean
+//		1. IDs: QnA - 011310302, ASU - 011103657
+//		1. ASU - 011103657 - ApiDataSource - dbRetireePaymentHistoryComponents - need to do 'table.field' value for inherited index field
+//		1. Show inspector on v-if v-else-if - it screws up element order for 'if chain', have to put all of them BEFORE the v-if? :(
+//			1. Put a comment 'marker' with ID...can I just keep ref instead of 'looking for it'...put all template items at bottom of katapp inside 'inspectorTemplates' item
+//		1. Debug Next - make it focus name, and 'enter' submits
+//		1. Review https://www.typescriptlang.org/play?target=8&ts=4.8.4#code/JYOwLgpgTgZghgYwgAgJIDED2nkG8CwAUMicgM6YCuUSAXMgDwAqyEAHpCACZnIBKEBJihcGZMFFABzADTkJ0gHyKAFGDgAjADYR64ySFnIEcLQgCih0BAD8ehYbnqNd+QaMAHKBC7ATkVxUoTAB3eiYASmQAXkVkDWwdOBAo2OQAQSgoOABPZkUAbiIAXyIiIRBxZCkIMCxMPlDeaOQYShAEMGBMEEYWdk4efkFhUX1pOXHDZTVNHXt3ORMzSylrVymjZw2HKSiCYlIANzgoZGCQgEZ6ASERMV3J3biW3GKiw5ITs4uAJhuRvdNk93C88O8iKRzrVqL0ANoXS5yP4AXWQcF4mWyeSYhRKZUIFSqGlO9Aw2BieEhpAo1CQzFYHAg3F4t1GD0WbiUqmc8y5jmMpgsVhAtgWE2Q23FAq8Pj8cAC9CCoXCqTiCUwSRSVM+UOhYFhyFlvn8EGper1NmqtXqjRCZHys20ECWQtW1icmgiADoYMAtJAoEEYnFjfLIEEIhFzRbSPQanVsHaHbinTpXSsRS7JV6PlDSoQCwSQHAALYQMgeRAoVDgZlcHw6mOgQPwJBoADClHEmFLdsZg1ZgLGj35UjiB1jxm7YF7AAVgh5rmO87GEDP54v-iuYwWoUSwNOe32mpSSVBvbSaBAGKgu8e7aoAETr49MOYQJ8RVckV+zk-2r6wjmIgAAWwZpJOa49BQOjelomBSCoAAGAAkuAXn+m6YEuxTIOhmEbqWC44b8xTId+u6UYWxZlhWVbtgA6qBCqoDATa6i20BtigADyYCgdATCgdIA71kOdwjpymwTjGUJeDh9BPmwT67jGB5Hv+yZnqcl5UNeDD8YJUDCUoKgvkR77Ol+P6ab2yZAVAIEIOBZyxHJpAqLgyBsEpmgIE+yDFBECLegpHgot6s4AKoeB40AdhiEAqFEAD0qWSiJvAhP6WjolopaYFUSBQOooBaDk8QoHA5ztF05asFkwgxtRJRAA
+//		1. Required<ReadOnly<>> - https://www.typescriptlang.org/docs/handbook/utility-types.html#readonlytype - maybe use this for 'input scope' objects that basically match inputs coming in?
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -47,7 +27,7 @@ class KatApp implements IKatApp {
 		if (typeof key == "number") return this.applications[key];
 
 		if (typeof key == 'object') {
-			const el = key as Element;
+			const el = key;
 			key = el.closest("[ka-id]")?.getAttribute("ka-id") ?? "";
 		}
 
@@ -74,7 +54,7 @@ class KatApp implements IKatApp {
 		return undefined;
 	}
 
-	public static async createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp | undefined> {
+	public static async createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp> {
 		let katApp: KatApp | undefined;
 		try {
 			katApp = new KatApp(selector, options);
@@ -110,28 +90,28 @@ class KatApp implements IKatApp {
 	private uiBlockCount = 0;
 	private hasHighChart = false;
 
-	private constructor(private selector: string, options: IKatAppOptions) {
+	private constructor(public selector: string, options: IKatAppOptions) {
 		const id = this.id = "ka" + Utils.generateId();
 		this.applicationCss = ".katapp-" + this.id.substring(2);
 		this.isCalculating = false;
 
+		const defaultOptions: IKatAppDefaultOptions = {
+			inputCaching: false,
+			debug: {
+				traceVerbosity: TraceVerbosity.None,
+				showInspector: Utils.pageParameters["showinspector"] === "1" || Utils.pageParameters["localserver"] != undefined,
+				refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
+				useTestCalcEngine: Utils.pageParameters["test"] === "1",
+				useTestView: Utils.pageParameters["testview"] === "1",
+				debugResourcesDomain: Utils.pageParameters["localserver"],
+			},
+			calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
+			kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx"
+		};
+
 		this.options = Utils.extend<IKatAppOptions>(
 			{},
-			{
-				inputCaching: false,
-				debug: {
-					traceVerbosity: TraceVerbosity.None,
-					showInspector: Utils.pageParameters["showinspector"] === "1" || Utils.pageParameters["localserver"] != undefined, 
-					refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
-					useTestCalcEngine: Utils.pageParameters["test"] === "1",
-					useTestPlugin: Utils.pageParameters["testplugin"] === "1",
-					useTestView: Utils.pageParameters["testview"] === "1",
-					saveConfigureUiCalculationLocation: Utils.pageParameters["saveConfigureUI"],
-					debugResourcesDomain: Utils.pageParameters["localserver"],
-				},
-				calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
-				kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx"
-			} as IKatAppDefaultOptions,
+			defaultOptions,
 			options
 		);
 
@@ -172,7 +152,7 @@ class KatApp implements IKatApp {
 
 		const that = this;
 
-		const getResultTableRows = (table: string, calcEngine?: string, tab?: string) => {
+		const getResultTableRows = function <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string) {
 			const ce = calcEngine
 				? that.calcEngines.find(c => c.key == calcEngine)
 				: that.calcEngines[0];
@@ -188,9 +168,20 @@ class KatApp implements IKatApp {
 			}
 
 			const key = String.formatTokens("{ce}.{tab}", { ce: ce.key, tab: tabName });
-
-			return that.state.rbl.results[key]?.[table] as Array<IStringIndexer <string>> ?? [];
+			return (that.state.rbl.results[key]?.[table] ?? []) as Array<T>;
 		};
+
+		const getValue = function (...args: Array<string | undefined>) {
+			const table = args.length == 1 ? "rbl-value" : args[0]!;
+			const keyValue = args.length == 1 ? args[0]! : args[1]!;
+			const returnField = args.length >= 3 ? args[2] : undefined;
+			const keyField = args.length >= 4 ? args[3] : undefined;
+			const calcEngine = args.length >= 5 ? args[4] : undefined;
+			const tab = args.length >= 6 ? args[5] : undefined;
+
+			return getResultTableRows(table, calcEngine, tab)
+				.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"];
+		}
 
 		const isTrue = (v: any) => {
 			if (v == undefined) return true;
@@ -201,49 +192,23 @@ class KatApp implements IKatApp {
 			return !(!v);
 		};
 
-		const state = {
+		const state: IApplicationData = {
 			kaId: this.id,
 
 			application: this,
-			options: this.options,
+
+			// options: this.options,
 
 			uiBlocked: false,
 			needsCalculation: false,
-
-			model: undefined,
-
-			handlers: {},
-
-			_templateItemMounted: (templateId, el, mode, scope?) => {
-				if (mode == "setup") {
-					const oneTimeId = `${templateId}_${el.tagName}_${id}`;
-					if (that.mountedTemplates[oneTimeId] != undefined) {
-						el.remove();
-						return;
-					}
-					that.mountedTemplates[oneTimeId] = true;
-				}
-
-				if (el.tagName == "SCRIPT") {
-					new Function("_v", "_a", "_s", el.textContent + "\nif ( typeof mounted !== 'undefined' ) mounted( _v, _a, _s);")(that.el, that, scope);
-					el.remove();
-				}
-				else if (el.tagName == "STYLE") {
-					el.outerHTML = el.outerHTML.replace(/thisApplication/g, this.applicationCss);
-				}
-			},
-			_templateItemUnmounted: (script, scope?) => {
-				new Function("_v", "_a", "_s", script.textContent + "\nif ( typeof unmounted !== 'undefined' ) unmounted( _v, _a, _s);")(that.el, that, scope);
-			},
 			inputs: Utils.extend({}, this.options.inputs, this.getLocalStorageInputs()),
 			errors: [],
 			warnings: [],
-
 			rbl: {
 				results: {},
 
 				pushTo(tabDef, table, rows, calcEngine, tab) {
-					const t = (tabDef[table] ?? (tabDef[table] = [])) as Array<IStringIndexer<string>>;
+					const t = (tabDef[table] ?? (tabDef[table] = [])) as ITabDefTable;
 					const toPush = rows instanceof Array ? rows : [rows];
 
 					toPush.forEach((r, i) => r["@id"] = r["@id"] ?? "_pushId_" + (t.length + i));
@@ -256,21 +221,24 @@ class KatApp implements IKatApp {
 				onAny(...values: any[]) {
 					return values.find(v => isTrue(v)) != undefined;
 				},
-				boolean(table, keyValue, returnField, keyField, calcEngine, tab) {
-					const v = arguments.length == 1
+				boolean() {
+					const argList = Array.from(arguments);
+					const stringParams = argList.filter(i => typeof i != "boolean");
+					const table = argList[0];
+
+					const v = stringParams.length == 1
 						? this.value("rbl-value", table) ?? this.value("rbl-display", table) ?? this.value("rbl-disabled", table) ?? this.value("rbl-skip", table)
-						: this.value(table, keyValue, returnField, keyField, calcEngine, tab);
+						: getValue(...stringParams);
+
+					const valueWhenMissing = argList.find(i => typeof i == "boolean");
+
+					if (v == undefined && valueWhenMissing != undefined) {
+						return valueWhenMissing;
+					}
 
 					return isTrue(v);
 				},
-				value(table, keyValue, returnField, keyField, calcEngine, tab) {
-					if (arguments.length == 1) {
-						keyValue = table;
-						table = "rbl-value";
-					}
-					return getResultTableRows(table, calcEngine, tab)
-						.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"];
-				},
+				value() { return getValue(...arguments) },
 				source(table, calcEngine, tab, predicate) {
 					if (typeof calcEngine == "function") {
 						predicate = calcEngine;
@@ -281,9 +249,15 @@ class KatApp implements IKatApp {
 						tab = undefined;
 					}
 
-					return predicate
-						? getResultTableRows(table, calcEngine, tab).filter(r => predicate!(r))
-						: getResultTableRows(table, calcEngine, tab);					
+					// https://stackoverflow.com/a/74083606/166231
+					type T = typeof predicate extends
+						((row: infer T) => boolean) | undefined ? T : never;
+
+					const result = predicate
+						? getResultTableRows<T>(table, calcEngine, tab).filter(r => predicate!( r ))
+						: getResultTableRows<T>(table, calcEngine, tab);
+
+					return result;
 				},
 				exists(table, calcEngine, tab, predicate) {
 					if (typeof calcEngine == "function") {
@@ -295,19 +269,64 @@ class KatApp implements IKatApp {
 						tab = undefined;
 					}
 
+					type T = typeof predicate extends
+						((row: infer T) => boolean) | undefined ? T : never;
+
 					return predicate
-						? getResultTableRows(table, calcEngine, tab).filter(r => predicate!(r)).length > 0
-						: getResultTableRows(table, calcEngine, tab).length > 0;
+						? getResultTableRows<T>(table, calcEngine, tab).filter(r => predicate!(r)).length > 0
+						: getResultTableRows<T>(table, calcEngine, tab).length > 0;
 				}
 			},
 
-			components: {}
-		} as IApplicationData;
+			model: undefined,
+			handlers: {},
+			components: {},
+
+			// Private
+			_templateItemMounted: (templateId, el, scope?) => {
+				// Setup a mount event that will put <style> into markup or run <script> appropritately when this template is ever used
+				const mode = el.tagName == "STYLE" || el.hasAttribute("setup") ? "setup" : "mount";
+
+				el.removeAttribute("setup");
+
+				if (mode == "setup") {
+					const oneTimeId = `${templateId}_${el.tagName}_${id}_mount`;
+					if (that.mountedTemplates[oneTimeId] != undefined) {
+						el.remove(); // Remove tag just to keep content clean
+						return;
+					}
+					that.mountedTemplates[oneTimeId] = true;
+				}
+
+				if (el.tagName == "SCRIPT") {
+					new Function("_a", "_s", el.textContent + "\nif ( typeof mounted !== 'undefined' ) mounted(_a, _s);")(that, scope);
+					el.remove(); // Remove script tag just to keep content clean
+				}
+				else if (el.tagName == "STYLE") {
+					el.outerHTML = el.outerHTML.replace(/thisApplication/g, this.applicationCss);
+				}
+			},
+			_templateItemUnmounted: (templateId, el, scope?) => {
+				const mode = el.hasAttribute("setup") ? "setup" : "mount";
+
+				if (mode == "setup") {
+					const oneTimeId = `${templateId}_${el.tagName}_${id}_unmount`;
+					if (that.mountedTemplates[oneTimeId] != undefined) {
+						el.remove();
+						return;
+					}
+					that.mountedTemplates[oneTimeId] = true;
+				}
+
+				console.log(el);
+				new Function("_a", "_s", el.textContent + "\nif ( typeof unmounted !== 'undefined' ) unmounted(_a, _s);")(that, scope);
+			}
+		};
 
 		this.state = PetiteVue.reactive(state);
 	}
 
-	public update(options: IUpdateApplicationOptions): KatApp {
+	public update(options: IUpdateApplicationOptions): IKatApp {
 		if (this.isMounted) {
 			throw new Error("You cannot call 'update' after the KatApp has been mounted.");
 		}
@@ -328,7 +347,7 @@ class KatApp implements IKatApp {
 
 			this.calcEngines = viewElement != undefined
 				? Array.from(viewElement.querySelectorAll("rbl-config calc-engine")).map(c => {
-					return {
+					const ce: ICalcEngine = {
 						key: c.getAttribute("key") ?? "default",
 						name: c.getAttribute("name") ?? "UNAVAILABLE",
 						inputTab: c.getAttribute("input-tab") ?? "RBLInput",
@@ -337,17 +356,26 @@ class KatApp implements IKatApp {
 						allowConfigureUi: c.getAttribute("configure-ui") != "false",
 						manualResult: false,
 						enabled: true
-					} as ICalcEngine;
+					};
+					return ce;
 				})
 				: [];
 
-			this.calcEngines.push(...this.toCalcEngines(this.options.manualResults as IRbleTabDef[]));
-
 			if (this.options.manualResults != undefined) {
-				this.toTabDefs(this.options.manualResults as IRbleTabDef[]).forEach(t => {
+				this.calcEngines.push(...this.toCalcEngines(this.options.manualResults));
+
+				this.toTabDefs(this.options.manualResults as unknown as IRbleTabDef[]).forEach(t => {
 					Object.keys(t)
 						.filter(k => !k.startsWith("@") && "_ka" != k)
-						.forEach(k => this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, k));
+						.forEach(k => {
+							const rows = t[k] as ITabDefTable;
+
+							// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
+							const firstRow = Utils.clone<ITabDefRow>(rows[0], () => "");
+							t[k] = rows.map(r => Utils.extend<ITabDefRow>({}, firstRow, Utils.clone(r, (k, v) => v ?? "")));
+
+							this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, k);
+						});
 				});
 			}
 
@@ -393,21 +421,23 @@ class KatApp implements IKatApp {
 							.children().remove();
 					}
 
-					await this.options.hostApplication.triggerEventAsync("onModalAppInitialized", this);
+					await this.options.hostApplication.triggerEventAsync("modalAppInitialized", this);
 				}
 				else if (this.options.inputs?.iNestedApplication == 1) {
-					await this.options.hostApplication.triggerEventAsync("onNestedAppInitialized", this);
+					await this.options.hostApplication.triggerEventAsync("nestedAppInitialized", this);
 				}
 			}
-			await this.triggerEventAsync("onInitialized");
+			await this.triggerEventAsync("initialized");
 
 			const that = this;
-			this.on("onCalculation", function () {
+			this.on("calculation", function () {
 				that.select("a[href='#']")
 					.off("click.ka")
 					.on("click.ka", function (e) {
 						e.preventDefault();
 					});
+
+				HelpTips.processHelpTips(that, that.el);
 			})
 
 			if (this.options.debug.showInspector) {
@@ -420,23 +450,21 @@ class KatApp implements IKatApp {
 					});
 			}
 
-			// show modal after calcs are done...
-			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && this.options.view != undefined && this.calcEngines.filter(c => !c.manualResult).length > 0) {
-				this.on("onConfigureUICalculation", async () => {
-					await that.showModalApplicationAsync();
-				}).on("onCalculationErrors", async (_e, key, ex) => {
+			const waitForCalculation = this.options.view != undefined && this.calcEngines.filter(c => !c.manualResult).length > 0;
+			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1;
+			let configureUiException: any = undefined;
+
+			if (waitForCalculation) {
+				this.on("calculationErrors", async (_e, key, ex) => {
 					if (key == "SubmitCalculation.ConfigureUI") {
-						// KatApp loaded, but error occurred during processing and don't even have results to show/hide things appropriately
-						console.log("KatApp Modal Exception", { ex });
-						that.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-						await that.showModalApplicationAsync();
+						configureUiException = ex;
 					}
 				});
 			}
 
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && !c.manualResult && c.enabled).length > 0;
 			if (isConfigureUICalculation) {
-				// _iConfigureUI is 'indicator' to calcuate to not trigger events
+				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
 				await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
 			}
 
@@ -455,23 +483,29 @@ class KatApp implements IKatApp {
 			// Make sure everything is processed from vue before raising event to ensure onMounted code that looks for elements aren't missed
 			await PetiteVue.nextTick();
 
-			await this.triggerEventAsync("onMounted");
-
 			// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
-			if (isConfigureUICalculation && this.lastCalculation != undefined) {
-				await this.triggerEventAsync("onConfigureUICalculation", this.lastCalculation);
-				await this.triggerEventAsync("onCalculation", this.lastCalculation);
-				await this.triggerEventAsync("onCalculateEnd");
+			if (isConfigureUICalculation && this.lastCalculation) {
+				await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
+				await this.triggerEventAsync("calculation", this.lastCalculation);
+				await this.triggerEventAsync("calculateEnd");
+			}
+			else if (this.calcEngines.find(c => c.manualResult) != undefined) {
+				await this.triggerEventAsync("calculation", this.lastCalculation);
 			}
 
-			if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1 && (this.options.view == undefined || this.calcEngines.filter(c => !c.manualResult).length == 0)) {
-				// don't need to wait for calc, just show now				
+			if (configureUiException != undefined) {
+				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+				console.log(isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", { configureUiException });
+			}
+
+			if (isModalApplication) {
 				await this.showModalApplicationAsync();
 			}
 
 			this.el.removeAttr("ka-cloak");
+			await this.triggerEventAsync("rendered");
 
-			// Can't do original reflow until cloak is removed...
+			// Can't do original reflow until view is 'visible' is removed...
 			if (this.hasHighChart) {
 				this.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
 			}
@@ -561,10 +595,16 @@ class KatApp implements IKatApp {
 		return modal;
     }
 
-	private async showModalApplicationAsync(): Promise<void> {
-		if (this.el.hasClass("show")) return;
+	private async showModalApplicationAsync(): Promise<boolean> {
+		const d: JQuery.Deferred<boolean> = $.Deferred();
+
+		if (this.el.hasClass("show")) {
+			d.resolve(true);
+			return d;
+		}
 
 		const modalBS5 = new bootstrap.Modal(this.el[0]);
+		this.el.on("shown.bs.modal", () => d.resolve(true));
 
 		const that = this;
 		const closeModal = function () {
@@ -610,7 +650,7 @@ class KatApp implements IKatApp {
 			});
 
 			if (!showCancel) {
-				this.select('.modal-footer-buttons .cancelButton, .modal-header .btn-close').remove();
+				this.select('.modal-footer-buttons .cancelButton').remove();
 				this.el.attr("data-bs-keyboard", "false");
 			}
 			else {
@@ -621,7 +661,17 @@ class KatApp implements IKatApp {
 			}
 		}
 
-		if (showCancel) {
+		if (!showCancel) {
+			if (options.headerTemplate == undefined) {
+				this.select('.modal-header .btn-close').remove();
+			}
+			else if (this.select('.modal-header .btn-close').length == 0) {
+				this.el.attr("data-bs-keyboard", "false");
+			}
+		}
+
+
+		if (showCancel || options.headerTemplate != undefined) {
 			if (options.headerTemplate == undefined) {
 				this.select('.modal-header .btn-close').on("click.ka", function (e) {
 					e.preventDefault();
@@ -629,17 +679,15 @@ class KatApp implements IKatApp {
 				});
 			}
 
-			$(this.el).on("hidden.bs.modal", function () {
-				// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
-				options.cancelled!();
-			});
+			if (this.select('.modal-header .btn-close').length > 0) {
+				$(this.el).on("hidden.bs.modal", function () {
+					// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
+					options.cancelled!();
+				});
+			}
 		}
 
 		this.select(".modal-footer-buttons").removeClass("d-none");
-
-		$(this.el).on("shown.bs.modal", async () => {
-			await this.triggerEventAsync("onModalAppShown");
-		});
 
 		modalBS5.show();
 
@@ -647,6 +695,8 @@ class KatApp implements IKatApp {
 			options.triggerLink.prop("disabled", false).removeClass("disabled kaModalInit");
 			$("body").removeClass("kaModalInit kaModalInit");
 		}
+
+		return d;
 	}
 
 	public on<TType extends string>(events: TType, handler: JQuery.TypeEventHandler<HTMLElement, undefined, HTMLElement, HTMLElement, TType> | false): KatApp {
@@ -670,7 +720,7 @@ class KatApp implements IKatApp {
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
 		const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 			async submitApiOptions => {
-				await this.triggerEventAsync("onUpdateCalculationOptions", submitApiOptions);
+				await this.triggerEventAsync("updateCalculationOptions", submitApiOptions);
 			},
 			customInputs
 		);
@@ -682,9 +732,9 @@ class KatApp implements IKatApp {
 					serviceUrl,
 					calcEngines ?? this.calcEngines,
 					getSubmitApiConfigurationResults.inputs,
-					getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration
+					getSubmitApiConfigurationResults.configuration
 				)
-			);
+			) as Array<ITabDef>;
 		}
 		else {
 			this.isCalculating = true;
@@ -697,11 +747,11 @@ class KatApp implements IKatApp {
 
 			try {
 				const inputs = getSubmitApiConfigurationResults.inputs;
-				const submitApiConfiguration = getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration;
+				const submitApiConfiguration = getSubmitApiConfigurationResults.configuration;
 				isConfigureUICalculation = inputs._iConfigureUI === 1;
 				delete inputs._iConfigureUI;
 
-				const calcStartResult = await this.triggerEventAsync("onCalculateStart", submitApiConfiguration) ?? true;
+				const calcStartResult = await this.triggerEventAsync("calculateStart", submitApiConfiguration) ?? true;
 				if (!calcStartResult) {
 					return;
 				}
@@ -733,13 +783,13 @@ class KatApp implements IKatApp {
 
 				await this.cacheInputsAsync(inputs);
 
-				await this.triggerEventAsync("onResultsProcessing", results, inputs, submitApiConfiguration);
+				await this.triggerEventAsync("resultsProcessing", results, inputs, submitApiConfiguration);
 
 				await this.processResultsAsync(results);
 
 				this.lastCalculation = {
 					inputs: inputs,
-					results: results.filter(r => r._ka.calcEngineKey != "_ResultProcessing"),
+					results: results.filter(r => r._ka.calcEngineKey != "_ResultProcessing") as Array<ITabDef>,
 					configuration: submitApiConfiguration
 				};
 
@@ -750,9 +800,9 @@ class KatApp implements IKatApp {
 					// Sometimes KAMLs call a iConfigureUI calc at different intervals (outside of the normal 'mount' flow) and if iConfigureUI=1, 
 					// but I'm not in the 'mountAsync configureUI calc', then I want to trigger the event
 					if (inputs.iConfigureUI == 1) {
-						await this.triggerEventAsync("onConfigureUICalculation", this.lastCalculation);
+						await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
 					}
-					await this.triggerEventAsync("onCalculation", this.lastCalculation);
+					await this.triggerEventAsync("calculation", this.lastCalculation);
 				}
 
 				this.state.needsCalculation = false;
@@ -772,16 +822,20 @@ class KatApp implements IKatApp {
 						TraceVerbosity.None
 					);
 				}
+				else if (error instanceof Error) {
+					Utils.trace(this, "calculateAsync Exception: " + error.message, TraceVerbosity.None);
+				}
 				else {
-					Utils.trace(this, "calculateAsync Exception: " + (error as Error).message, TraceVerbosity.None);
+					Utils.trace(this, "calculateAsync Exception", TraceVerbosity.None);
+					console.log({ error });
 				}
 
-				await this.triggerEventAsync("onCalculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error);
+				await this.triggerEventAsync("calculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error instanceof Error ? error : undefined);
 			}
 			finally {
 				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
 				if (!isConfigureUICalculation) {
-					await this.triggerEventAsync("onCalculateEnd");
+					await this.triggerEventAsync("calculateEnd");
 				}
 				delete this.state.inputs.iInputTrigger;
 				this.isCalculating = false;
@@ -790,8 +844,8 @@ class KatApp implements IKatApp {
 		}
 	}
 
-	public async notify(from: KatApp, name: string, information?: IStringAnyIndexer) {
-		await this.triggerEventAsync("onHostNotification", name, information, from);
+	public async notifyAsync(from: KatApp, name: string, information?: IStringAnyIndexer) {
+		await this.triggerEventAsync("hostNotification", name, information, from);
 	}
 
 	public async apiAsync(endpoint: string, apiOptions: IApiOptions, calculationSubmitApiConfiguration?: IGetSubmitApiOptions, trigger?: JQuery): Promise<IStringAnyIndexer | undefined> {
@@ -815,7 +869,7 @@ class KatApp implements IKatApp {
 		this.state.warnings = [];
 
 		let successResponse: IStringAnyIndexer | Blob | undefined = undefined;
-		let errorResponse: IApiResult | undefined = undefined;
+		let errorResponse: IApiErrorResponse | undefined = undefined;
 
 		try {
 			const url = this.getApiUrl(endpoint);
@@ -824,7 +878,7 @@ class KatApp implements IKatApp {
 				calculationSubmitApiConfiguration ??
 				await this.getSubmitApiConfigurationAsync(
 					async submitApiOptions => {
-						await this.triggerEventAsync("onUpdateApiOptions", submitApiOptions, endpoint);
+						await this.triggerEventAsync("updateApiOptions", submitApiOptions, endpoint);
 					},
 					apiOptions.calculationInputs
 				);
@@ -833,7 +887,7 @@ class KatApp implements IKatApp {
 
 			const submitData: ISubmitApiData = {
 				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v),
-				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map(t => ({ Name: t.name, Rows: t.rows } as ISubmitCalculationInputTable)),
+				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
 				Configuration: Utils.extend(
 					Utils.clone(this.options, (k, v) => ["manualResults", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation"].indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
@@ -859,8 +913,8 @@ class KatApp implements IKatApp {
 			// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
 			( submitData as IStringAnyIndexer )["inputTablesRaw"] = submitData.InputTables != undefined ? JSON.stringify(submitData.InputTables) : undefined;
 
-			// const startResult = this.triggerEvent("onApiStart", endpoint, apiOptions, trigger);
-			const startResult = await this.triggerEventAsync("onApiStart", endpoint, submitData, trigger, apiOptions);
+			// const startResult = this.triggerEvent("apiStart", endpoint, apiOptions, trigger);
+			const startResult = await this.triggerEventAsync("apiStart", endpoint, submitData, trigger, apiOptions);
 			if (typeof startResult == "boolean" && !startResult) {
 				return undefined;
 			}
@@ -908,11 +962,11 @@ class KatApp implements IKatApp {
 			}
 
 			if (!isDownload) {
-				await this.triggerEventAsync("onApiComplete", endpoint, successResponse, trigger, apiOptions);
-				return successResponse as IStringAnyIndexer;
+				await this.triggerEventAsync("apiComplete", endpoint, successResponse, trigger, apiOptions);
+				return successResponse;
 			}
 		} catch (e) {
-			errorResponse = xhr.response as IApiResult ?? {};
+			errorResponse = xhr.response as IApiErrorResponse ?? {};
 
 			this.state.errors = (errorResponse.Validations ?? []).map(v => ({ "@id": v.ID, text: v.Message }));
 			if (this.state.errors.length == 0) {
@@ -926,7 +980,7 @@ class KatApp implements IKatApp {
 			console.log(this.state.errors);
 			console.groupEnd();
 
-			await this.triggerEventAsync("onApiFailed", endpoint, errorResponse, trigger, apiOptions);
+			await this.triggerEventAsync("apiFailed", endpoint, errorResponse, trigger, apiOptions);
 
 			throw new ApiError("Unable to complete API submitted to " + endpoint, e instanceof Error ? e : undefined, errorResponse);
 		}
@@ -1017,8 +1071,8 @@ class KatApp implements IKatApp {
 		*/
 	}
 
-	public getInputValue(input: string, allowDisabled = false): string | undefined {
-		const el = this.select<HTMLInputElement>("." + input);
+	public getInputValue(name: string, allowDisabled = false): string | undefined {
+		const el = this.select<HTMLInputElement>("." + name);
 
 		if (el.length == 0) return undefined;
 
@@ -1039,7 +1093,7 @@ class KatApp implements IKatApp {
 		}
 
 		if (el[0].getAttribute("type") == "file") {
-			const files = (el[0] as HTMLInputElement).files;
+			const files = el[0].files;
 			const numFiles = files?.length ?? 1;
 			return numFiles > 1 ? numFiles + ' files selected' : (el.val() as string).replace(/\\/g, '/').replace(/.*\//, ''); // remove c:\fakepath
 		}
@@ -1053,7 +1107,7 @@ class KatApp implements IKatApp {
 			delete this.state.inputs[name];
 		}
 		else {
-			this.state.inputs[name] = value as string;
+			this.state.inputs[name] = value;
 		}
 
 		const el = this.select<HTMLInputElement>("." + name);
@@ -1108,9 +1162,7 @@ class KatApp implements IKatApp {
 	}
 
 	public closest(element: JQuery | HTMLElement, selector: string): JQuery {
-		const context = element != undefined && !(element instanceof jQuery)
-			? $(element)
-			: element as JQuery;
+		const context = element instanceof jQuery ? element as JQuery : $(element);
 
 		const c = context.closest(selector);
 		const cAppId = c.attr("ka-id") || c.closest("[ka-id]").attr("ka-id");
@@ -1118,8 +1170,8 @@ class KatApp implements IKatApp {
 		return cAppId == this.id ? c : $();
 	}
 
-	public select<T extends HTMLElement>(selector: string, context?: JQuery | HTMLElement): JQuery<T> {
-		const container = context != undefined && !(context instanceof jQuery)
+	public select<T extends HTMLElement>(selector: string, context?: JQuery | HTMLElement | undefined): JQuery<T> {
+		const container = context instanceof jQuery
 			? $(context)
 			: context as JQuery ?? $(this.el);
 
@@ -1151,7 +1203,7 @@ class KatApp implements IKatApp {
 		}
 
 		if (templateId == undefined && this.options.hostApplication != undefined) {
-			templateId = this.options.hostApplication.getTemplateId(name);
+			templateId = ( this.options.hostApplication as KatApp ).getTemplateId(name);
 		}
 
 		if (templateId == undefined) {
@@ -1220,15 +1272,18 @@ class KatApp implements IKatApp {
 	}
 
 	private get nextCalculation(): INextCalculation {
-		const debugKey = "katapp:debugNext:" + this.selector;
-		const debugNext: INextCalculation = JSON.parse(sessionStorage.getItem(debugKey) ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
+		const cacheValue =
+			sessionStorage.getItem("katapp:debugNext:" + this.selector) ??
+			sessionStorage.getItem("katapp:debugNext:" + this.options.hostApplication?.selector);
+		
+		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
 		return debugNext;
 	}
 	private set nextCalculation(value: INextCalculation | undefined) {
 		const debugKey = "katapp:debugNext:" + this.selector;
-
 		if (value == undefined) {
 			sessionStorage.removeItem(debugKey);
+			sessionStorage.removeItem("katapp:debugNext:" + this.options.hostApplication?.selector);
 		}
 		else {
 			sessionStorage.setItem(debugKey, JSON.stringify(value));
@@ -1279,10 +1334,7 @@ class KatApp implements IKatApp {
 		}
 	}
 
-	public processHelpTips(container?: JQuery, selector?: string): void {
-		HelpTips.processHelpTips(this, container ?? this.el, selector);
-	}
-
+	// public so HelpTips can call when needed
 	public cloneOptions(includeManualResults: boolean): IKatAppOptions {
 		return Utils.clone<IKatAppOptions>(this.options, (k, v) => ["handlers", "view", "content", "modalAppOptions", "hostApplication"].indexOf(k) > -1 || (!includeManualResults && k == "manualResults") ? undefined : v)
 	}
@@ -1315,18 +1367,23 @@ class KatApp implements IKatApp {
 			// const d: JQuery.Deferred<ICalculationSuccessResponse | ICalculationFailedResponse> = $.Deferred();
 			const d: JQuery.Deferred<IModalResponse> = $.Deferred();
 
+			const modalOptions: IKatAppPartialModalOptions = {
+				view: options.view,
+				content: options.content,
+				currentPage: options.view ?? this.options.currentPage,
+				hostApplication: this,
+				modalAppOptions: Utils.extend<IModalAppOptions>(
+					{ promise: d, triggerLink: triggerLink },
+					Utils.clone(options, (k, v) => ["content", "view"].indexOf(k) > -1 ? undefined : v)
+				),
+				inputs: {
+					iModalApplication: 1
+				}
+			};
+
 			const modalAppOptions = Utils.extend<IKatAppOptions>(
 				this.cloneOptions(options.content == undefined),
-				{
-					view: options.view,
-					content: options.content,
-					currentPage: options.view,
-					hostApplication: this,
-					modalAppOptions: Utils.extend({ promise: d, triggerLink: triggerLink }, Utils.clone(options, (k, v) => ["content", "view"].indexOf(k) > -1 ? undefined : v)),
-					inputs: {
-						iModalApplication: 1
-					}
-				},
+				modalOptions,
 				options.inputs != undefined ? { inputs: options.inputs } : undefined
 			);
 			delete modalAppOptions.inputs!.iNestedApplication;
@@ -1348,14 +1405,14 @@ class KatApp implements IKatApp {
 		if (this.options.inputCaching) {
 			const inputCachingKey = "katapp:cachedInputs:" + this.options.currentPage + ":" + (this.options.userIdHash ?? "EveryOne");
 			const cachedInputs = Utils.clone<ICalculationInputs>(inputs);
-			await this.triggerEventAsync("onInputsCache", cachedInputs);
+			await this.triggerEventAsync("inputsCache", cachedInputs);
 			sessionStorage.setItem(inputCachingKey, JSON.stringify(cachedInputs));
 		}
     }
 
-	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: IGetSubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<IGetSubmitApiOptions> {
+	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: IGetSubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<ISubmitApiOptions> {
 		const submitApiOptions: IGetSubmitApiOptions = {
-			inputs: Utils.extend(this.getInputs(customInputs), { tables: [] }),
+			inputs: Utils.extend<ICalculationInputs>(this.getInputs(customInputs), { tables: [] }),
 			configuration: {}
 		}
 		
@@ -1363,97 +1420,94 @@ class KatApp implements IKatApp {
 
 		const currentOptions = this.options;
 
+		const submitConfiguration: ISubmitApiConfiguration = {
+			Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
+			TraceEnabled: this.nextCalculation.trace ? 1 : 0,
+			SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
+			RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
+			// Should we be using JWT for AuthID, AdminAuthID, Client?
+			AuthID: /* currentOptions.data?.AuthID ?? */ "NODATA",
+			AdminAuthID: undefined,
+			Client: /* currentOptions.data?.Client ?? */ "KatApp",
+			TestCE: currentOptions.debug?.useTestCalcEngine ?? false,
+			CurrentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
+			RequestIP: currentOptions.requestIP ?? "1.1.1.1",
+			CurrentUICulture: currentOptions.currentUICulture ?? "en-US",
+			Environment: currentOptions.environment ?? "EW.PROD",
+			Framework: "KatApp"
+		};
+
 		return {
 			inputs: submitApiOptions.inputs,
 			configuration: Utils.extend<ISubmitApiConfiguration>(
-				{
-					Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
-					TraceEnabled: this.nextCalculation.trace ? 1 : 0,
-					SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
-					RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
-					// Should we be using JWT for AuthID, AdminAuthID, Client?
-					AuthID: /* currentOptions.data?.AuthID ?? */ "NODATA",
-					AdminAuthID: undefined,
-					Client: /* currentOptions.data?.Client ?? */ "KatApp",
-					TestCE: currentOptions.debug?.useTestCalcEngine ?? false,
-					CurrentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
-					RequestIP: currentOptions.requestIP ?? "1.1.1.1",
-					CurrentUICulture: currentOptions.currentUICulture ?? "en-US",
-					Environment: currentOptions.environment ?? "EW.PROD",
-					Framework: "KatApp"
-				} as ISubmitApiConfiguration,
+				submitConfiguration,
 				submitApiOptions.configuration
 			)
-		} as IGetSubmitApiOptions;
+		};
 	}
 
 	private getCeName(name: string) {
 		return name?.split(".")[0].replace("_Test", "") ?? "";
 	}
 
-	private toCalcEngines(manualResults: IRbleTabDef[] | undefined): ICalcEngine[] {
-		if (manualResults == undefined) {
-			return [];
+	private toCalcEngines(manualResults: IManualTabDef[] | undefined): ICalcEngine[] {
+		if (manualResults != undefined) {
+			const mrCalcEngineTabs: IStringIndexer<{ ceKey: string, tabs: string[] }> = {};
+
+			manualResults.forEach(t => {
+				const ceKey = t["@calcEngineKey"];
+				let ceName = t["@calcEngineKey"];
+				if (ceKey == undefined) {
+					throw new Error("manualResults requires a @calcEngineKey attribute specified.");
+				}
+
+				if (this.calcEngines.find(c => !c.manualResult && c.name.toLowerCase() == ceName!.toLowerCase()) != undefined) {
+					// Can't have same CE in manual results as we do in normal results, so prefix with Manual
+					ceName = "Manual." + ceName;
+				}
+				t["@calcEngine"] = ceName;
+
+				if (mrCalcEngineTabs[ceName] == undefined) {
+					mrCalcEngineTabs[ceName] = { ceKey: ceKey, tabs: [] };
+				}
+
+				let tabName = t["@name"];
+				if (tabName == undefined) {
+					tabName = t["@name"] = "RBLResult" + (mrCalcEngineTabs[ceName].tabs.length + 1);
+				}
+				mrCalcEngineTabs[ceName].tabs.push(tabName);
+			});
+
+			const mrCalcEngines: ICalcEngine[] = [];
+
+			for (const ceName in mrCalcEngineTabs) {
+				const ceInfo = mrCalcEngineTabs[ceName];
+
+				const ce: ICalcEngine = {
+					key: ceInfo.ceKey,
+					name: ceName,
+					inputTab: "RBLInput",
+					resultTabs: ceInfo.tabs,
+					manualResult: true,
+					allowConfigureUi: true,
+					enabled: true
+				};
+
+				mrCalcEngines.push(ce);
+			}
+
+			return mrCalcEngines;
 		}
 
-		const mrCalcEngineTabs: IStringIndexer<{ ceKey: string, tabs: string[] }> = {};
-
-		(this.options.manualResults as IRbleTabDef[]).forEach(t => {
-			const ceKey: string | undefined = t["@calcEngineKey"] as string;
-			let ceName: string | undefined = t["@calcEngine"] as string;
-			if (ceName == undefined) {
-				ceName = t["@calcEngine"] = ceKey;
-			}
-
-			if (ceKey == undefined) {
-				throw new Error("manualResults requires a @calcEngineKey attribute specified.");
-			}
-
-			ceName = this.getCeName(ceName);
-
-			if (this.calcEngines.find(c => !c.manualResult && c.name.toLowerCase() == ceName!.toLowerCase()) != undefined) {
-				// Can't have same CE in manual results as we do in normal results, so prefix with Manual
-				ceName = t["@calcEngine"] = "Manual." + ceName;
-			}
-
-			if (mrCalcEngineTabs[ceName] == undefined) {
-				mrCalcEngineTabs[ceName] = { ceKey: ceKey, tabs: [] };
-			}
-
-			let tabName: string | undefined = t["@name"] as string;
-			if (tabName == undefined) {
-				tabName = t["@name"] = "RBLResult" + (mrCalcEngineTabs[ceName].tabs.length + 1);
-			}
-			mrCalcEngineTabs[ceName].tabs.push(tabName);
-		});
-
-		const mrCalcEngines: ICalcEngine[] = [];
-
-		for (const ceName in mrCalcEngineTabs) {
-			const ceInfo = mrCalcEngineTabs[ceName];
-
-			const ce: ICalcEngine = {
-				key: ceInfo.ceKey,
-				name: ceName,
-				inputTab: "RBLInput",
-				resultTabs: ceInfo.tabs,
-				manualResult: true,
-				allowConfigureUi: true,
-				enabled: true
-			};
-
-			mrCalcEngines.push( ce );
-		}
-
-		return mrCalcEngines;
+		return [];
 	}
 
-	private toTabDefs(rbleResults: IRbleTabDef[]): ITabDef[] {
+	private toTabDefs(rbleResults: IRbleTabDef[]): IKaTabDef[] {
 		const calcEngines = this.calcEngines;
 		const defaultCEKey = calcEngines[0].key;
 
 		return rbleResults.map((t, i) => {
-			const ceName = this.getCeName(t["@calcEngine"] as string);
+			const ceName = this.getCeName(t["@calcEngine"]);
 			const configCe = calcEngines.find(c => c.name.toLowerCase() == ceName.toLowerCase());
 
 			if (configCe == undefined) {
@@ -1461,7 +1515,7 @@ class KatApp implements IKatApp {
 				// If they run a different CE than is configured via this event handler
 				// the CalcEngine might not be in calcEngine options, so find will be 
 				// undefined, just treat results as 'primary' CE
-                .on("onCalculationOptions.ka", function (event, submitOptions, application) {
+                .on("calculationOptions.ka", function (event, submitOptions, application) {
                     submitOptions.Configuration.CalcEngine = "Conduent_Nexgen_Profile_SE";
                 })
 				*/
@@ -1469,9 +1523,9 @@ class KatApp implements IKatApp {
 			}
 
 			const ceKey = configCe?.key ?? defaultCEKey;
-			const name = t["@name"] as string;
+			const name = t["@name"];
 
-			const tabDef: ITabDef = {
+			const tabDef: IKaTabDef = {
 				_ka: {
 					calcEngineKey: ceKey,
 					name: name
@@ -1485,8 +1539,8 @@ class KatApp implements IKatApp {
 					}
 					else {
 						tabDef[k] = !(t[k] instanceof Array)
-							? [t[k] as IStringIndexer<string>]
-							: t[k] as Array<IStringIndexer<string>>;
+							? [t[k] as ITabDefRow]
+							: t[k] as ITabDefTable;
 					}
 				});
 
@@ -1494,25 +1548,16 @@ class KatApp implements IKatApp {
 		});
 	}
 	
-	private copyTabDefToRblState(ce: string, tab: string, t: ITabDef, propName: string) {
+	private copyTabDefToRblState(ce: string, tab: string, t: IKaTabDef, propName: string) {
 		const key = String.formatTokens("{ce}.{tab}", { ce: ce, tab: tab })
 		if (this.state.rbl.results[key] == undefined) {
 			this.state.rbl.results[key] = {};
 		}
 
-		const rows = t[propName] as Array<IStringIndexer<string>> ?? [];
-
-		if (rows.length > 0) {
-			// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
-			const firstRow = Utils.clone<IStringIndexer<string>>(rows[0], () => "");
-			this.state.rbl.results[key][propName] = rows.map(r => Utils.extend({}, firstRow, Utils.clone( r, ( k, v ) => v ?? "" )));
-		}
-		else {
-			this.state.rbl.results[key][propName] = [];
-		}
+		this.state.rbl.results[key][propName] = t[propName] as ITabDefTable ?? [];
 	}
 
-	private mergeTableToRblState(ce: string, tab: string, table: Array<IStringIndexer<string>>, tableName: string) {
+	private mergeTableToRblState(ce: string, tab: string, table: ITabDefTable, tableName: string) {
 		if (ce == "_ResultProcessing" && this.calcEngines.length > 0) {
 			ce = this.calcEngines[0].key;
 			tab = this.calcEngines[0].resultTabs[0];
@@ -1526,27 +1571,27 @@ class KatApp implements IKatApp {
 			this.state.rbl.results[key][tableName] = [];
 		}
 
-		table.forEach(s => {
+		table.forEach(row => {
 			if (tableName == "rbl-skip") {
-				s["@id"] = s.key;
+				row["@id"] = row.key;
 				// Legacy support...didn't have ability to turn on and off, so if they don't have value column, imply that it is on
-				if (s.value == undefined) {
-					s.value = "1";
+				if (row.value == undefined) {
+					row.value = "1";
 				}
 			}
 
-			const index = this.state.rbl.results[key][tableName].findIndex(r => r["@id"] == s["@id"]);
+			const index = this.state.rbl.results[key][tableName].findIndex(r => r["@id"] == row["@id"]);
 
 			if (index > -1) {
-				Utils.extend(this.state.rbl.results[key][tableName][index], s);
+				Utils.extend(this.state.rbl.results[key][tableName][index], row);
 			}
 			else {
-				this.state.rbl.results[key][tableName].push(Utils.clone(s));
+				this.state.rbl.results[key][tableName].push(row);
 			}
 		});
 	}
 
-	private async processResultsAsync(results: ITabDef[]): Promise<void> {
+	private async processResultsAsync(results: IKaTabDef[]): Promise<void> {
 		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
 
 		results.forEach(t => {
@@ -1554,7 +1599,7 @@ class KatApp implements IKatApp {
 				// No idea how ItemDefs is in here, but not supporting going forward, it was returned by IRP CE but the value was null so it blew up the code
 				.filter(k => !k.startsWith("@") && k != "_ka" && k != "ItemDefs")
 				.forEach(tableName => {
-					const rows = t[tableName] as Array<IStringIndexer<string>> ?? [];
+					const rows = t[tableName] as ITabDefTable ?? [];
 
 					if (rows.length > 0) {
 						// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
@@ -1571,44 +1616,41 @@ class KatApp implements IKatApp {
 					if (tablesToMerge.indexOf(tableName) == -1) {
 						this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, tableName);
 					}
+					else {
+						this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[tableName] as ITabDefTable, tableName);
+					}
 				});
 
-			tablesToMerge.forEach(table => {
-				if (t[table] != undefined) {
-					this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[table] as Array<IStringIndexer<string>>, table);
-				}
-			});
-
-			(t["rbl-defaults"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
-				this.setInputValue(r["@id"], r["value"]);
-			});
+			(t["rbl-defaults"] as ITabDefTable ?? []).forEach(r => this.setInputValue(r["@id"], r["value"]) );
 
 			// Only set 'value', 'error', 'warning' column is returned in rbl-input table
-			const hasRblInputValue = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].value != undefined;
-			const hasRblInputError = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].error != undefined;
-			const hasRblInputWarning = t["rbl-input"] != undefined && (t["rbl-input"] as Array<IStringIndexer<string>>)[0].warning != undefined;
+			const hasRblInputValue = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].value != undefined;
+			const hasRblInputError = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].error != undefined;
+			const hasRblInputWarning = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].warning != undefined;
 
-			(t["rbl-input"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
+			(t["rbl-input"] as ITabDefTable ?? []).forEach(r => {
 				if (hasRblInputValue) {
 					this.setInputValue(r["@id"], r["value"]);
 				}
 				if (hasRblInputError && (r["error"] ?? "") != "") {
-					this.state.errors.push({ "@id": r["@id"], text: r["error"] } as IValidation);
+					const v: IValidation = { "@id": r["@id"], text: r["error"] };
+					this.state.errors.push(v);
 				}
 				if (hasRblInputWarning && (r["warning"] ?? "") != "") {
-					this.state.warnings.push({ "@id": r["@id"], text: r["warning"] } as IValidation);
+					const v: IValidation = { "@id": r["@id"], text: r["warning"] };
+					this.state.warnings.push(v);
 				}
 			});
 
-			(t["errors"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
-				this.state.errors.push(Utils.clone(r) as any as IValidation);
+			(t["errors"] as ITabDefTable ?? []).forEach(r => {
+				this.state.errors.push(r as unknown as IValidation);
 			});
-			(t["warnings"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
-				this.state.warnings.push(Utils.clone(r) as any as IValidation);
+			(t["warnings"] as ITabDefTable ?? []).forEach(r => {
+				this.state.warnings.push(r as unknown as IValidation);
 			});
 
 			// If table control says they want to export, but no rows are returned, then need to re-assign to empty array
-			(t["table-output-control"] as Array<IStringIndexer<string>> ?? []).forEach(r => {
+			(t["table-output-control"] as ITabDefTable ?? []).forEach(r => {
 				// export = -1 = don't export table and also clear out in Vue state
 				// export = 0 = don't export table but leave Vue state
 				// export = 1 = try export table and if empty, clear Vue state
@@ -1620,20 +1662,26 @@ class KatApp implements IKatApp {
 
 		try {
 			await this.processDataUpdateResultsAsync(results);
+		} catch (error) {
+			console.log({ error });
+			await this.triggerEventAsync("calculationErrors", "ProcessDataUpdateResults", error instanceof Error ? error : undefined);
+		}
+		try {
 			this.processDocGenResults(results);
-		} catch (e) {
-			console.log({ e });
+		} catch (error) {
+			console.log({ error });
+			await this.triggerEventAsync("calculationErrors", "ProcessDocGenResults", error instanceof Error ? error : undefined);
 		}
 	}
 
-	private async processDataUpdateResultsAsync(results: ITabDef[]): Promise<void> {
+	private async processDataUpdateResultsAsync(results: IKaTabDef[]): Promise<void> {
 		const jwtPayload = {
 			DataTokens: [] as Array<{ Name: string; Token: string; }>
 		};
 
 		results
 			.forEach(t => {
-				(t["jwt-data"] as Array<IStringIndexer<string>> ?? [])
+				(t["jwt-data"] as ITabDefTable ?? [])
 					.filter(r => r["@id"] == "data-updates")
 					.forEach(r => {
 						jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
@@ -1645,7 +1693,7 @@ class KatApp implements IKatApp {
 		}
     }
 
-	private processDocGenResults(results: ITabDef[]) {
+	private processDocGenResults(results: IKaTabDef[]) {
 		const base64toBlob = function (base64Data: string, contentType = 'application/octet-stream', sliceSize = 1024): Blob {
 			// https://stackoverflow.com/a/20151856/166231                
 			const byteCharacters = atob(base64Data);
@@ -1673,7 +1721,7 @@ class KatApp implements IKatApp {
 
 		results
 			.forEach(t => {
-				(t["api-actions"] as Array<IStringIndexer<string>> ?? [])
+				(t["api-actions"] as ITabDefTable ?? [])
 					.filter(r => r["action"] == "DocGen")
 					.forEach(r => {
 						if (r.exception != undefined) {
@@ -1699,7 +1747,7 @@ class KatApp implements IKatApp {
 			const url = this.getApiUrl(`rble/verify-katapp?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
-				const response = await $.ajax({ method: "GET", url: url, dataType: "json" }) as IModalAppVerifyResult;
+				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: url, dataType: "json" });
 
 				Utils.extend( this.options, { view: response.path, currentPath: view } );
 
@@ -1863,8 +1911,8 @@ class KatApp implements IKatApp {
 
 		const compileMarkup = function (container: Element | DocumentFragment) {
 			let compileError = false;
-			container.querySelectorAll("[v-for][v-if]").forEach(invalid => {
-				console.log(invalid);
+			container.querySelectorAll("[v-for][v-if]").forEach(directive => {
+				console.log(directive);
 				compileError = true;
 			});
 			if (compileError) {
@@ -1873,13 +1921,13 @@ class KatApp implements IKatApp {
 
 			// Make sure v-ka-inline only present on template items, then move the 'v-html' source
 			// into the scope for v-ka-inline so it is reactive
-			container.querySelectorAll("[v-ka-inline]").forEach(inline => {
-				if (inline.tagName != "TEMPLATE" || !inline.hasAttribute("v-html")) {
-					console.log(inline);
+			container.querySelectorAll("[v-ka-inline]").forEach(directive => {
+				if (directive.tagName != "TEMPLATE" || !directive.hasAttribute("v-html")) {
+					console.log(directive);
 					compileError = true;
 				}
 				else {
-					inline.setAttribute("v-ka-inline", inline.getAttribute("v-html")!);
+					directive.setAttribute("v-ka-inline", directive.getAttribute("v-html")!);
 				}
 			});
 			if (compileError) {
@@ -1897,40 +1945,40 @@ class KatApp implements IKatApp {
 			}
 
 			// Turn v-ka-input into v-scope="components.input({})"
-			container.querySelectorAll("[v-ka-input]").forEach(inputComponent => {
-				let scope = inputComponent.getAttribute("v-ka-input")!;
+			container.querySelectorAll("[v-ka-input]").forEach(directive => {
+				let scope = directive.getAttribute("v-ka-input")!;
 				if (!scope.startsWith("{")) {
 					scope = `{ name: '${scope}' }`;
 				}
 
-				inspectElement(inputComponent, scope);
+				inspectElement(directive, scope);
 
-				inputComponent.removeAttribute("v-ka-input");
-				inputComponent.setAttribute("v-scope", `components.input(${scope})`);
+				directive.removeAttribute("v-ka-input");
+				directive.setAttribute("v-scope", `components.input(${scope})`);
 
 				// If no template used, just hooking up the input
 				if (scope.indexOf("template:") == -1 && scope.indexOf("'template':") == -1) {
-					const isInput = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(inputComponent.tagName) > -1;
+					const isInput = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(directive.tagName) > -1;
 
 					if (isInput) {
-						if (!inputComponent.hasAttribute("v-ka-nomount")) {
+						if (!directive.hasAttribute("v-ka-nomount")) {
 							// Just binding a raw input
-							addMountAttribute(inputComponent, "mounted", "inputMounted($el, $refs)");
+							addMountAttribute(directive, "mounted", "inputMounted($el, $refs)");
 							// addMountAttribute(inputComponent, "unmounted", "inputUnmounted($el)");
 						}
 					}
 					else {
 						// If v-ka-input was on a 'container' element that contains inputs...drill into content and mount inputs
-						mountInputs(inputComponent);
+						mountInputs(directive);
 					}
 				}
 			});
 
 			// Fix v-ka-highchart 'short hand' of data or data.options string into a valid {} scope
-			container.querySelectorAll("[v-ka-highchart]").forEach(chart => {
+			container.querySelectorAll("[v-ka-highchart]").forEach(directive => {
 				that.hasHighChart = true;
 
-				let exp = chart.getAttribute("v-ka-highchart")!;
+				let exp = directive.getAttribute("v-ka-highchart")!;
 
 				if (!exp.startsWith("{")) {
 					// Using short hand of just the 'table names': 'data.options' (.options name is optional)
@@ -1940,38 +1988,51 @@ class KatApp implements IKatApp {
 					exp = `{ data: '${data}', options: '${options}' }`;
 				}
 
-				chart.setAttribute("v-ka-highchart", exp);
-				inspectElement(chart, exp);
+				directive.setAttribute("v-ka-highchart", exp);
+				inspectElement(directive, exp);
 			});
 
 			// Fix v-ka-table 'short hand' of name string into a valid {} scope
-			container.querySelectorAll("[v-ka-table]").forEach(table => {
-				let exp = table.getAttribute("v-ka-table")!;
+			container.querySelectorAll("[v-ka-table]").forEach(directive => {
+				let exp = directive.getAttribute("v-ka-table")!;
 
 				if (!exp.startsWith("{")) {
 					// Using short hand of just the 'table name'
 					exp = `{ name: '${exp}' }`;
 				}
 
-				table.setAttribute("v-ka-table", exp);
-				inspectElement(table, exp);
+				directive.setAttribute("v-ka-table", exp);
+				inspectElement(directive, exp);
+			});
+
+			// Fix v-ka-navigate 'short hand' of view string into a valid {} scope
+			container.querySelectorAll("[v-ka-navigate]").forEach(directive => {
+				let exp = directive.getAttribute("v-ka-navigate")!;
+
+				if (!exp.startsWith("{")) {
+					// Using short hand of just the 'table names': 'data.options' (.options name is optional)
+					exp = `{ view: '${exp}' }`;
+				}
+
+				directive.setAttribute("v-ka-navigate", exp);
+				inspectElement(directive, exp);
 			});
 
 			// Turn v-ka-needs-calc into two items with toggled class and handler
-			container.querySelectorAll("button[v-ka-needs-calc], a[v-ka-needs-calc]").forEach(inputComponent => {
-				let needsCalcText = inputComponent.getAttribute("v-ka-needs-calc");
+			container.querySelectorAll("button[v-ka-needs-calc], a[v-ka-needs-calc]").forEach(directive => {
+				let needsCalcText = directive.getAttribute("v-ka-needs-calc");
 
 				if (needsCalcText == "") {
 					needsCalcText = "Refresh";
 				}
 
-				inputComponent.setAttribute("v-if", "!needsCalculation");
+				directive.setAttribute("v-if", "!needsCalculation");
 
-				inspectElement(inputComponent, `{ needsCalcText: '${needsCalcText}' }`, `Cloned element immediately following with v-if=needsCalculation`);
+				inspectElement(directive, `{ needsCalcText: '${needsCalcText}' }`, `Cloned element immediately following with v-if=needsCalculation`);
 
-				inputComponent.removeAttribute("v-ka-needs-calc");
+				directive.removeAttribute("v-ka-needs-calc");
 
-				const refresh = inputComponent.cloneNode(true) as Element;
+				const refresh = directive.cloneNode(true) as Element;
 				for (const { name, value } of [...refresh.attributes]) {
 					if (name.startsWith("@click") ) {
 						refresh.attributes.removeNamedItem(name);
@@ -1982,31 +2043,32 @@ class KatApp implements IKatApp {
 				refresh.setAttribute("v-if", "needsCalculation");
 				refresh.classList.add("ka-needs-calc");
 
-				inputComponent.after(refresh);
+				directive.after(refresh);
 			});
 
 			// Turn v-ka-input-group into v-scope="components.inputGroup({})"
-			container.querySelectorAll("[v-ka-input-group]").forEach(inputComponent => {
-				const scope = inputComponent.getAttribute("v-ka-input-group")!;
+			container.querySelectorAll("[v-ka-input-group]").forEach(directive => {
+				const scope = directive.getAttribute("v-ka-input-group")!;
 
-				inspectElement(inputComponent, scope);
+				inspectElement(directive, scope);
 
-				inputComponent.removeAttribute("v-ka-input-group");
-				inputComponent.setAttribute("v-scope", `components.inputGroup(${scope})`);
+				directive.removeAttribute("v-ka-input-group");
+				directive.setAttribute("v-scope", `components.inputGroup(${scope})`);
 			});
 
 			// Turn v-ka-template="templateId, scope" into v-scope="components.template(templateId, scope)"
-			container.querySelectorAll("[v-ka-template]").forEach(inputComponent => {
-				const exp = inputComponent.getAttribute("v-ka-template")!;
+			container.querySelectorAll("[v-ka-template]").forEach(directive => {
+				const exp = directive.getAttribute("v-ka-template")!;
 				let scope = exp;
 				if (!scope.startsWith("{")) {
 					scope = `{ name: '${scope}' }`;
 				}
 
-				inspectElement(inputComponent, scope);
+				inspectElement(directive, scope);
 
-				inputComponent.removeAttribute("v-ka-template");
-				inputComponent.setAttribute("v-scope", `components.template(${scope})`);
+				directive.removeAttribute("v-ka-template");
+
+				directive.setAttribute("v-scope", `components.template(${scope})`);
 			});
 
 			// Also automatically setup helptips again if the item is removed/added via v-if and the v-if contains tooltips (popup config is lost on remove)
@@ -2019,7 +2081,7 @@ class KatApp implements IKatApp {
 				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
 				// if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && ifDir.parentElement?.closest("[v-if]") == undefined) {
 				if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
-					addMountAttribute(ifDir, "mounted", "KatApp.get($el).processHelpTips($($el))", existing => existing.indexOf("KatApp.get($el).processHelpTips($($el))") == -1);
+					addMountAttribute(ifDir, "mounted", "HelpTips.processHelpTips(KatApp.get($el), $($el))", existing => existing.indexOf("HelpTips.processHelpTips(KatApp") == -1);
 				}
 
 				if (ifDir.querySelector("[v-ka-highchart]") != undefined) {
@@ -2049,14 +2111,6 @@ class KatApp implements IKatApp {
 						scope = `{ view: '${scope}' }`;
 					}
 
-					inspectElement(directive, scope);
-				});
-				container.querySelectorAll("[v-ka-navigate]").forEach(directive => {
-					let scope = directive.getAttribute("v-ka-navigate")!;
-
-					if (!scope.startsWith("{")) {
-						scope = `{ view: '${scope}' }`;
-					}
 					inspectElement(directive, scope);
 				});
 
@@ -2106,30 +2160,20 @@ class KatApp implements IKatApp {
 				if (kaResources.querySelector(`template[id=${template.id}]`) == undefined) {
 					compileMarkup(template.content);
 
-					// Setup a mount event that will put style into markup if this template is ever used
-					template.content.querySelectorAll("style").forEach(style => {
-						addMountAttribute(style, "mounted", "_templateItemMounted('" + template.id + "', $el, 'setup')");
-					});
-
 					// If this is an 'input template', need attach mounted/unmounted events on all 'inputs'
 					if (template.hasAttribute("input")) {
 						mountInputs(template.content);
 						template.removeAttribute("input");
 					}
 
-					// Setup mount events for all script elements to run appropriately if this template is used
-					template.content.querySelectorAll("script").forEach(script => {
-						let mode = "mount";
-						if (script.hasAttribute("setup")) {
-							mode = "setup";
-							script.removeAttribute("setup");
-						}
-
+					template.content.querySelectorAll("style, script").forEach(templateItem => {
 						// Third parameter is 'scope', but I'm not sure that is every going to be needed, but maybe
 						// think about supporting a 'scope="{}"' attribute on script where it would be grabbing info
 						// from 'current scope' and passing it into this templates mount function, then remove scope attribute
-						addMountAttribute(script, "mounted", "_templateItemMounted('" + template.id + "', $el, '" + mode + "')");
-						addMountAttribute(script, "unmounted", "_templateItemUnmounted($el)");
+						addMountAttribute(templateItem, "mounted", `_templateItemMounted('${template.id}', $el)`);
+						if (templateItem.tagName == "SCRIPT") {
+							addMountAttribute(templateItem, "unmounted", `_templateItemUnmounted('${template.id}', $el)`);
+						}
 					});
 
 					kaResources.appendChild(template);
@@ -2138,5 +2182,11 @@ class KatApp implements IKatApp {
 					template.remove();
 				}
 			});
+	}
+}
+
+class ApiError extends Error {
+	constructor(message: string, public innerException: Error | undefined, public apiResponse: IApiErrorResponse) {
+		super(message);
 	}
 }
