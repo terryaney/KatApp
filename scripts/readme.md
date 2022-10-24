@@ -4007,23 +4007,23 @@ When a calculation is initiated via an [input change triggering a calculation](#
 1. updateCalculationOptions - allow Kaml View to update inputs and configuration used during calculation
 1. calculateStart
 1. inputsCache - allow Kaml View to provide additional inputs/information to cache before caching current inputs (if configured to cache)
-1. resultsProcessing - all Kaml View to inspect and/or modify the calculation results before they are [processed](#rbl-framework-result-processing-in-katapp-state)
-1. All events in [Api Lifecycle](#api-lifecycle) is `jwt-updates` result table is provided and processed
-1. configureUICalculation - if current calculation has an input of `iConfigureUI="1"`
-1. calculation - allow Kaml View to inspect/use the `ILastCalculation`
-1. calculationErrors - allow Kaml View to gracefully display information on calculation errors
+1. Success events
+    1. resultsProcessing - all Kaml View to inspect and/or modify the calculation results before they are [processed](#rbl-framework-result-processing-in-katapp-state)
+    1. All events in [Api Lifecycle](#api-lifecycle) if `jwt-updates` result table is provided and processed
+    1. configureUICalculation - if current calculation has an input of `iConfigureUI="1"`
+    1. calculation - allow Kaml Views to inspect/use the `ILastCalculation`
+1. Failure Event
+    1. calculationErrors - allow Kaml Views to handle exceptions gracefully
 1. calculateEnd
 
 #### Api Lifecycle
 
 When a submission to an api endpiont is initiated via [`v-ka-api`](#v-ka-api) or by a Kaml View calling [`application.apiAsync`](#ikatappapiasync), the following lifecycle occurs.
 
-1. updateApiOptions - allow Kaml View to update inputs and configuration used during an api submission
-1. apiStart - allow Kaml View to inspect and/or update the payload used during an api submission
-1. apiComplete - allow Kaml View to inspect/use results from an successful api submission
-1. apiFailed - allow Kaml View to inspect/use error response from a failed api submission
-
-
+1. updateApiOptions - allow Kaml Views to update inputs and configuration used during an api submission
+1. apiStart - allow Kaml Views to inspect and/or update the payload used during an api submission
+1. apiComplete - allow Kaml Views to inspect/use results from an successful api submission
+1. apiFailed - allow Kaml Views to inspect/use error response from a failed api submission
 
 #### IKatApp.initialized
 

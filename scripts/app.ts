@@ -3,11 +3,7 @@
 
 //	1. Global
 //		1. IDs: QnA - 011310302, ASU - 011103657
-//		1. Show inspector on v-if v-else-if - it screws up element order for 'if chain', have to put all of them BEFORE the v-if? :(
-//			1. Put a comment 'marker' with ID...can I just keep ref instead of 'looking for it'...put all template items at bottom of katapp inside 'inspectorTemplates' item
 //		1. ASU - 011103657 - ApiDataSource - dbRetireePaymentHistoryComponents - need to do 'table.field' value for inherited index field
-//		1. Review https://www.typescriptlang.org/play?target=8&ts=4.8.4#code/JYOwLgpgTgZghgYwgAgJIDED2nkG8CwAUMicgM6YCuUSAXMgDwAqyEAHpCACZnIBKEBJihcGZMFFABzADTkJ0gHyKAFGDgAjADYR64ySFnIEcLQgCih0BAD8ehYbnqNd+QaMAHKBC7ATkVxUoTAB3eiYASmQAXkVkDWwdOBAo2OQAQSgoOABPZkUAbiIAXyIiIRBxZCkIMCxMPlDeaOQYShAEMGBMEEYWdk4efkFhUX1pOXHDZTVNHXt3ORMzSylrVymjZw2HKSiCYlIANzgoZGCQgEZ6ASERMV3J3biW3GKiw5ITs4uAJhuRvdNk93C88O8iKRzrVqL0ANoXS5yP4AXWQcF4mWyeSYhRKZUIFSqGlO9Aw2BieEhpAo1CQzFYHAg3F4t1GD0WbiUqmc8y5jmMpgsVhAtgWE2Q23FAq8Pj8cAC9CCoXCqTiCUwSRSVM+UOhYFhyFlvn8EGper1NmqtXqjRCZHys20ECWQtW1icmgiADoYMAtJAoEEYnFjfLIEEIhFzRbSPQanVsHaHbinTpXSsRS7JV6PlDSoQCwSQHAALYQMgeRAoVDgZlcHw6mOgQPwJBoADClHEmFLdsZg1ZgLGj35UjiB1jxm7YF7AAVgh5rmO87GEDP54v-iuYwWoUSwNOe32mpSSVBvbSaBAGKgu8e7aoAETr49MOYQJ8RVckV+zk-2r6wjmIgAAWwZpJOa49BQOjelomBSCoAAGAAkuAXn+m6YEuxTIOhmEbqWC44b8xTId+u6UYWxZlhWVbtgA6qBCqoDATa6i20BtigADyYCgdATCgdIA71kOdwjpymwTjGUJeDh9BPmwT67jGB5Hv+yZnqcl5UNeDD8YJUDCUoKgvkR77Ol+P6ab2yZAVAIEIOBZyxHJpAqLgyBsEpmgIE+yDFBECLegpHgot6s4AKoeB40AdhiEAqFEAD0qWSiJvAhP6WjolopaYFUSBQOooBaDk8QoHA5ztF05asFkwgxtRJRAA
-//		1. Required<ReadOnly<>> - https://www.typescriptlang.org/docs/handbook/utility-types.html#readonlytype - maybe use this for 'input scope' objects that basically match inputs coming in?
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -249,12 +245,13 @@ class KatApp implements IKatApp {
 					}
 
 					// https://stackoverflow.com/a/74083606/166231
+					/*
 					type T = typeof predicate extends
 						((row: infer T) => boolean) | undefined ? T : never;
-
+					*/
 					const result = predicate
-						? getResultTableRows<T>(table, calcEngine, tab).filter(r => predicate!( r ))
-						: getResultTableRows<T>(table, calcEngine, tab);
+						? getResultTableRows<any>(table, calcEngine, tab).filter(r => predicate!( r ))
+						: getResultTableRows<any>(table, calcEngine, tab);
 
 					return result;
 				},
@@ -268,12 +265,15 @@ class KatApp implements IKatApp {
 						tab = undefined;
 					}
 
+					// https://stackoverflow.com/a/74083606/166231
+					/*
 					type T = typeof predicate extends
 						((row: infer T) => boolean) | undefined ? T : never;
+					*/
 
 					return predicate
-						? getResultTableRows<T>(table, calcEngine, tab).filter(r => predicate!(r)).length > 0
-						: getResultTableRows<T>(table, calcEngine, tab).length > 0;
+						? getResultTableRows<any>(table, calcEngine, tab).filter(r => predicate!(r)).length > 0
+						: getResultTableRows<any>(table, calcEngine, tab).length > 0;
 				}
 			},
 

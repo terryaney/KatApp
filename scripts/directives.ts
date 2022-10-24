@@ -430,9 +430,7 @@ ${JSON.stringify(scope, null, 2)}
 <${b.name} ${attributes}>${scopeInfo}`
 					});
 
-					commentContent += `
-
-Rendered Element(s) ↓↓↓↓`
+					commentContent += `Rendered Element(s) ↓↓↓↓`
 
 					const comment = new Comment(commentContent);
 
