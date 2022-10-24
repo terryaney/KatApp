@@ -381,65 +381,63 @@ class DirectiveKaInline implements IKaDirective {
 }
 class DirectiveKaInspector implements IKaDirective {
 	public name = "ka-inspector";
+
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			const el = ctx.el;
-			const kaId = ctx.el.getAttribute("v-ka-id") ?? Utils.generateId();
-			const attributes =
-				Array.from(el.attributes)
-					.filter(a => a.name != "v-ka-inspector")
-					.map(a => ({ name: a.name, value: a.name == "_class" ? a.value.replace("ka-inspector-value", "").trim() : a.value }))
-					.filter(a => a.name != "_class" || a.value != "")
-					.map(a => `${a.name.substring(1).replace("__at__", "@")}="${a.value}"`)
-					.join(" ");
-
 			ctx.effect(() => {
 				const info = ctx.get();
 
-				if (ctx.el.hasAttribute("v-ka-id")) {
-					if (ctx.el.nextSibling?.nodeType == 8 && (ctx.el.nextSibling.textContent?.indexOf(`KatApp Inspect ${kaId}`) ?? -1) > -1) {
-						ctx.el.nextSibling!.remove();
-					}
-					else {
-						console.log(`Unable to find inspector value with ID ${kaId}.  Updated comment will not be displayed.`);
-						return;
-					}
-				}
-				else {
-					ctx.el.setAttribute("v-ka-id", kaId)
-				}
-
+				const el = ctx.el;
+				const kaId = info.inspectorId;
 				const details = info.details;
-				const scope = info.scope;
+				const blocks: Array<IStringAnyIndexer> = info.blocks;
 
-				if (scope?.source != undefined && scope.source instanceof Array) {
-					scope.source = `Source is array. ${scope.source.length} rows.`
-				}
+				const inspectTarget = document.querySelector(`[ka-inspector-id='${kaId}']`);
 
-				const itemDetails = (details ?? "") != ""
-					? `
+				if (inspectTarget != undefined) {
+					if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaId}`) ?? -1) > -1) {
+						inspectTarget.previousSibling!.remove();
+					}
 
-Details: ${details}`
-					: '';
-
-				const scopeInfo = scope != undefined
-					? `
-
-Scope:
-${JSON.stringify(scope, null, 2)}`
-					: '';
-
-				const comment = new Comment(`
+					let commentContent = `
 KatApp Inspect ${kaId}
 --------------------------------------------------
-Element:
-<${info.name} ${attributes}>${itemDetails}${scopeInfo}
+${(details ?? "") != `Details: ${details}
 
-Rendered Element ↓↓↓↓
-`);
+` ? "" : ""}`;
 
-				ctx.el.after(comment);
-				// ctx.el.replaceWith(comment);
+					blocks.forEach(b => {
+						const scope = b.scope;
+						if (scope?.source != undefined && scope.source instanceof Array) {
+							scope.source = `Source is array. ${scope.source.length} rows.`
+						}
+
+						const scopeInfo = scope != undefined
+							? `
+
+Scope:
+${JSON.stringify(scope, null, 2)}
+
+`
+							: '';
+
+						const attributes =
+							Object.keys(b.attributes)
+								.map(k => (b.attributes[k] ?? "") != "" ? `${k}="${b.attributes[k]}"` : k)
+								.join(" ");
+
+						commentContent += `Element:
+<${b.name} ${attributes}>${scopeInfo}`
+					});
+
+					commentContent += `
+
+Rendered Element(s) ↓↓↓↓`
+
+					const comment = new Comment(commentContent);
+
+					inspectTarget.before(comment);
+				}
 			});
 		}
 	}

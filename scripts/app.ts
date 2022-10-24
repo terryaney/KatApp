@@ -3,10 +3,9 @@
 
 //	1. Global
 //		1. IDs: QnA - 011310302, ASU - 011103657
-//		1. ASU - 011103657 - ApiDataSource - dbRetireePaymentHistoryComponents - need to do 'table.field' value for inherited index field
 //		1. Show inspector on v-if v-else-if - it screws up element order for 'if chain', have to put all of them BEFORE the v-if? :(
 //			1. Put a comment 'marker' with ID...can I just keep ref instead of 'looking for it'...put all template items at bottom of katapp inside 'inspectorTemplates' item
-//		1. Debug Next - make it focus name, and 'enter' submits
+//		1. ASU - 011103657 - ApiDataSource - dbRetireePaymentHistoryComponents - need to do 'table.field' value for inherited index field
 //		1. Review https://www.typescriptlang.org/play?target=8&ts=4.8.4#code/JYOwLgpgTgZghgYwgAgJIDED2nkG8CwAUMicgM6YCuUSAXMgDwAqyEAHpCACZnIBKEBJihcGZMFFABzADTkJ0gHyKAFGDgAjADYR64ySFnIEcLQgCih0BAD8ehYbnqNd+QaMAHKBC7ATkVxUoTAB3eiYASmQAXkVkDWwdOBAo2OQAQSgoOABPZkUAbiIAXyIiIRBxZCkIMCxMPlDeaOQYShAEMGBMEEYWdk4efkFhUX1pOXHDZTVNHXt3ORMzSylrVymjZw2HKSiCYlIANzgoZGCQgEZ6ASERMV3J3biW3GKiw5ITs4uAJhuRvdNk93C88O8iKRzrVqL0ANoXS5yP4AXWQcF4mWyeSYhRKZUIFSqGlO9Aw2BieEhpAo1CQzFYHAg3F4t1GD0WbiUqmc8y5jmMpgsVhAtgWE2Q23FAq8Pj8cAC9CCoXCqTiCUwSRSVM+UOhYFhyFlvn8EGper1NmqtXqjRCZHys20ECWQtW1icmgiADoYMAtJAoEEYnFjfLIEEIhFzRbSPQanVsHaHbinTpXSsRS7JV6PlDSoQCwSQHAALYQMgeRAoVDgZlcHw6mOgQPwJBoADClHEmFLdsZg1ZgLGj35UjiB1jxm7YF7AAVgh5rmO87GEDP54v-iuYwWoUSwNOe32mpSSVBvbSaBAGKgu8e7aoAETr49MOYQJ8RVckV+zk-2r6wjmIgAAWwZpJOa49BQOjelomBSCoAAGAAkuAXn+m6YEuxTIOhmEbqWC44b8xTId+u6UYWxZlhWVbtgA6qBCqoDATa6i20BtigADyYCgdATCgdIA71kOdwjpymwTjGUJeDh9BPmwT67jGB5Hv+yZnqcl5UNeDD8YJUDCUoKgvkR77Ol+P6ab2yZAVAIEIOBZyxHJpAqLgyBsEpmgIE+yDFBECLegpHgot6s4AKoeB40AdhiEAqFEAD0qWSiJvAhP6WjolopaYFUSBQOooBaDk8QoHA5ztF05asFkwgxtRJRAA
 //		1. Required<ReadOnly<>> - https://www.typescriptlang.org/docs/handbook/utility-types.html#readonlytype - maybe use this for 'input scope' objects that basically match inputs coming in?
 
@@ -1886,25 +1885,40 @@ class KatApp implements IKatApp {
 			if (!this.options.debug.showInspector) return;
 
 			if (!el.classList.contains("ka-inspector-value")) {
+				const inspectorCommentId = Utils.generateId();
 				el.classList.add("ka-inspector-value");
+				el.setAttribute("ka-inspector-id", inspectorCommentId);
 
-				const inspector: Element = document.createElement("template");
+				const getBlockString = (blockEl: Element, blockScope: string | null | undefined): string => {
+					const attrs: IStringAnyIndexer = {};
+					Array.from(blockEl.attributes)
+						.filter(a => a.name != "ka-inspector-id")
+						.forEach(a => {
+							attrs[a.name] = a.value;
+						});
 
-				let currentScope = scope;
-
-				if (el.hasAttribute("v-for")) {
-					currentScope = el.getAttribute("v-for")!.substring(el.getAttribute("v-for")!.indexOf(" in ") + 4);
+					return `{ name: '${blockEl.tagName.toLowerCase()}', scope: ${blockScope?.replace(/"/g, '&quot;') ?? 'undefined' }, attributes: ${JSON.stringify(attrs)} }`;
 				}
 
-				const info = `{ name: '${el.tagName.toLowerCase()}', scope: ${currentScope?.replace(/"/g, '&quot;') ?? 'undefined'}, details: ${details != undefined ? `\'${details}\'` : 'undefined'} }`;
+				const blocks: Array<string> = [];
 
-				inspector.setAttribute("v-ka-inspector", info);
+				const currentScope = el.hasAttribute("v-for")
+					? el.getAttribute("v-for")!.substring(el.getAttribute("v-for")!.indexOf(" in ") + 4)
+					: scope;
 
-				Array.from(el.attributes)
-					.forEach(a => {
-						inspector.setAttribute("_" + a.name.replace("@", "__at__"), a.value);
-					});
+				blocks.push(getBlockString(el, currentScope));
 
+				let ifEl = el.nextElementSibling;
+				while (ifEl != undefined && (ifEl.hasAttribute("v-else-if") || ifEl.hasAttribute("v-else"))) {
+					ifEl.setAttribute("ka-inspector-id", inspectorCommentId);
+					blocks.push(getBlockString(ifEl, ifEl.getAttribute("v-else-if") ) );
+					ifEl = ifEl.nextElementSibling;
+				}
+
+				const inspectorScope = `{ inspectorId: '${inspectorCommentId}', details: ${details != undefined ? `\'${details}\'` : 'undefined'}, blocks: [${blocks.join(", ")}] }`;
+
+				const inspector: Element = document.createElement("template");
+				inspector.setAttribute("v-ka-inspector", inspectorScope);
 				el.before(inspector);
 			}
 		};
@@ -2076,17 +2090,19 @@ class KatApp implements IKatApp {
 
 			// PROBLEM: May have a problem here...if v-if contains templates that contain other v-ifs or helptips...the processing might not work right b/c selection doesn't
 			// span outside/inside of templates
-			container.querySelectorAll("[v-if]").forEach(ifDir => {
+			container.querySelectorAll("[v-if]").forEach(directive => {
 				// Only do the 'outer most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
 				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
 				// if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && ifDir.parentElement?.closest("[v-if]") == undefined) {
-				if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
-					addMountAttribute(ifDir, "mounted", "HelpTips.processHelpTips(KatApp.get($el), $($el))", existing => existing.indexOf("HelpTips.processHelpTips(KatApp") == -1);
+				if (directive.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
+					addMountAttribute(directive, "mounted", "HelpTips.processHelpTips(KatApp.get($el), $($el))", existing => existing.indexOf("HelpTips.processHelpTips(KatApp") == -1);
 				}
 
-				if (ifDir.querySelector("[v-ka-highchart]") != undefined) {
-					addMountAttribute(ifDir, "mounted", "KatApp.get($el).select('[data-highcharts-chart]', $($el)).each((i, c) => $(c).highcharts().reflow())", existing => existing.indexOf("KatApp.get($el).select('[data-highcharts-chart]'") == -1);
+				if (directive.querySelector("[v-ka-highchart]") != undefined) {
+					addMountAttribute(directive, "mounted", "KatApp.get($el).select('[data-highcharts-chart]', $($el)).each((i, c) => $(c).highcharts().reflow())", existing => existing.indexOf("KatApp.get($el).select('[data-highcharts-chart]'") == -1);
 				}
+
+				inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
 			});
 
 			if (that.options.debug.showInspector) {
@@ -2119,10 +2135,8 @@ class KatApp implements IKatApp {
 				});
 
 				// Common Vue directives
-				// Not battling v-else or v-else-if
-				container.querySelectorAll("[v-if][v-show]").forEach(directive => {
-					const scope = `{ condition: ${directive.getAttribute("v-show") ?? directive.getAttribute("v-if") } }`;
-					inspectElement(directive, scope);
+				container.querySelectorAll("[v-show]").forEach(directive => {
+					inspectElement(directive, `{ condition: ${directive.getAttribute("v-show")} }`);
 				});
 
 				container.querySelectorAll("[v-effect], [v-on]").forEach(directive => {
