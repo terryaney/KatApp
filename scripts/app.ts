@@ -1,9 +1,8 @@
-﻿// TODO: Nexgen Convert
-//	API Responses in DataSource - why are 'api=true' attributes in that?  Seems it should be empty until placed INSIDE xDS models
-
-//	1. Global
-//		1. IDs: QnA - 011310302, ASU - 011103657
-//		1. ASU - 011103657 - ApiDataSource - dbRetireePaymentHistoryComponents - need to do 'table.field' value for inherited index field
+﻿//	1. IDs: QnA - 011310302, ASU - 011103657
+//	1. Tom's Culture script
+//		1. Errors - maybe have a 'watcher' that catches assignments (pushes) and translate - or just helper to 'translate errors'
+//	1. Inspector - what happens for v-ka-template with data source and elements inside?
+//	1. API Responses in DataSource - why are 'api=true' attributes in that?  Seems it should be empty until placed INSIDE xDS models
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -282,6 +281,59 @@ class KatApp implements IKatApp {
 			components: {},
 
 			// Private
+			_inspectors: {},
+			_inspectorMounted: function (el, inspectorCommentId) {
+				/*
+				Problem: When something was inspected inside a template and that template was used in v-for, every render had a <template> created, but all had the same inspector id, so
+							each one kept finding the first rendered items 'comment' and updating it...so the comment was only visible on the first one and it had the last items information
+							applied.
+
+				Solution 1: In ka-inspector directive's ctx.effect, I tried to generate a *new* unique ID and find rendered element and change its ID, then let processing occur.
+				
+						Start:
+						<template>
+							<a v-ka-api="...">click</a>
+						<template>
+
+						After 'Compile'
+						<template>
+							<a v-ka-api="..." ka-inspector-id="unique1">click</a>
+						<template>
+
+						During ctx.effect (the ka-inspector scope had kaId = unique1)
+						uniqueInspectorId = uniqueInspectorId ?? Utils.generateId(); // create a unique Id if not already created for this 'rendered' element
+
+						// Find all rendered items with ka-inspector-id = (original) unique1 // was assuming I'd always only find one
+						document.querySelectorAll(`[ka-inspector-id='${kaId}']`).forEach(directive => {
+							// Change the value to new unique ID
+							directive.setAttribute("ka-inspector-id", uniqueInspectorId!);
+						});
+
+						kaId = uniqueInspectorId; // reassign and let rest of processing occur.
+
+					Failed: This didn't work because the 'first render' of an element, my document.querySelectorAll didn't return any hits...so ctx.effect() runs BEFORE the element is 
+							rendered.  But then the 'second' item rendered, would find the rendered element from the 'first item' and so on.  So each 'comment' was displaying information
+							from the 'next' item's scope.  And the last item would not have a comment since it hadn't been rendered yet.
+
+				Solution 2: During precompile, the scope for the v-ka-inspector injected for every element I'm inspecting has a reference to _inspectors[inspectorCommentId], so every time
+							that value changes, the v-ka-inspector.effect() will trigger.  I also attach a mounted event on the element that will be inspected and that is the code running
+							here.
+
+							During mount, I increment the count for this._inspectors[inspectorCommentId] (which will eventually retrigger .effect()).  Additionally, I add a 'target-id' to
+							the rendered v-ka-inspector element (the 'template' element found at el.previousElementSibling) and an 'id' to the rendered 'inspected element'.
+
+							During the ctx.effect() method, it only processes if the rendered v-ka-inspector element (ctx.el) has a ka-inspector-target-id attribute.  If it has that attribute
+							it finds the 'target' and injects the inspector comment.
+				*/
+
+				this._inspectors[inspectorCommentId] = (this._inspectors[inspectorCommentId] ?? 0) + 1;
+				const targetId = Utils.generateId();
+
+				// this is the 'element' with directives on it
+				el.setAttribute("ka-inspector-id", targetId);
+				// this is the 'template' that I injected during precompile
+				el.previousElementSibling!.setAttribute("ka-inspector-target-id", targetId);
+			},
 			_templateItemMounted: (templateId, el, scope?) => {
 				// Setup a mount event that will put <style> into markup or run <script> appropritately when this template is ever used
 				const mode = el.tagName == "STYLE" || el.hasAttribute("setup") ? "setup" : "mount";
@@ -359,6 +411,17 @@ class KatApp implements IKatApp {
 					return ce;
 				})
 				: [];
+
+			if (this.options.manualResultsEndpoint != undefined) {
+				const url = this.getApiUrl(this.options.manualResultsEndpoint);
+
+				try {
+					this.options.manualResults = await $.ajax({ method: "GET", url: url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
+				} catch (e) {
+					Utils.trace(this, "Error downloading manualResults " + this.options.manualResultsEndpoint, TraceVerbosity.None);
+					console.log(e);
+				}
+			}
 
 			if (this.options.manualResults != undefined) {
 				this.calcEngines.push(...this.toCalcEngines(this.options.manualResults));
@@ -1743,7 +1806,7 @@ class KatApp implements IKatApp {
 		if ((this.options.modalAppOptions != undefined || this.options.inputs?.iNestedApplication == 1) && this.options.view != undefined ) {
 			const view = this.options.view;
 
-			const url = this.getApiUrl(`rble/verify-katapp?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
+			const url = this.getApiUrl(`katapp/verify-katapp?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
 				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: url, dataType: "json" });
@@ -1882,12 +1945,8 @@ class KatApp implements IKatApp {
 
 		// Add mount event to dump comment with 'markup details'
 		const inspectElement = (el: Element, scope?: string | null, details?: string) => {
-			if (!this.options.debug.showInspector) return;
-
-			if (!el.classList.contains("ka-inspector-value")) {
-				const inspectorCommentId = Utils.generateId();
+			if (this.options.debug.showInspector && !el.classList.contains("ka-inspector-value")) {
 				el.classList.add("ka-inspector-value");
-				el.setAttribute("ka-inspector-id", inspectorCommentId);
 
 				const getBlockString = (blockEl: Element, blockScope: string | null | undefined): string => {
 					const attrs: IStringAnyIndexer = {};
@@ -1910,16 +1969,17 @@ class KatApp implements IKatApp {
 
 				let ifEl = el.nextElementSibling;
 				while (ifEl != undefined && (ifEl.hasAttribute("v-else-if") || ifEl.hasAttribute("v-else"))) {
-					ifEl.setAttribute("ka-inspector-id", inspectorCommentId);
+					ifEl.classList.add("ka-inspector-value");
 					blocks.push(getBlockString(ifEl, ifEl.getAttribute("v-else-if") ) );
 					ifEl = ifEl.nextElementSibling;
 				}
 
-				const inspectorScope = `{ inspectorId: '${inspectorCommentId}', details: ${details != undefined ? `\'${details}\'` : 'undefined'}, blocks: [${blocks.join(", ")}] }`;
-
+				const inspectorCommentId = Utils.generateId();
+				const inspectorScope = `{ inspectorTargetId: _inspectors[ '${inspectorCommentId}' ], details: ${details != undefined ? `\'${details}\'` : 'undefined'}, blocks: [${blocks.join(", ")}] }`;
 				const inspector: Element = document.createElement("template");
 				inspector.setAttribute("v-ka-inspector", inspectorScope);
 				el.before(inspector);
+				el.setAttribute("v-on:vue:mounted", `_inspectorMounted($el, '${inspectorCommentId}')`);
 			}
 		};
 
@@ -2112,7 +2172,7 @@ class KatApp implements IKatApp {
 					inspectElement(directive, scope);
 				});
 				container.querySelectorAll("[v-ka-api]").forEach(directive => {
-					let scope =directive.getAttribute("v-ka-api")!;
+					let scope = directive.getAttribute("v-ka-api")!;
 
 					if (!scope.startsWith("{")) {
 						scope = `{ endpoint: '${scope}' }`;

@@ -38,6 +38,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 
 	inputs?: ICalculationInputs;
 	manualResults?: IManualTabDef[];
+	manualResultsEndpoint?: string;
 	relativePathTemplates?: IStringIndexer<string>;
 
 	onKatAppNavigate?: (id: string, props: IModalOptions, el: HTMLElement) => void;
@@ -130,6 +131,8 @@ interface IApplicationData {
 	handlers?: IStringAnyIndexer;
 
 	// Private...
+	_inspectors: IStringIndexer<number>;
+	_inspectorMounted: (el: Element, inspectorCommentId: string) => void;
 	_templateItemMounted: (templateId: string, el: Element, scope?: any) => void;
 	_templateItemUnmounted: (templateId: string, el: Element, scope?: any) => void;
 

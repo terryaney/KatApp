@@ -37,15 +37,29 @@
 							data: JSON.stringify(submitData),
 							method: "POST",
 							// dataType: "json",
+							/*
+							// My attempt to get browser caching
+							headers: submitConfiguration.Token != undefined
+								? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined, 'Cache-Control': 'max-age=0' }
+								: { 'Cache-Control': 'max-age=0' }
+							*/
 							headers: submitConfiguration.Token != undefined
 								? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined }
 								: undefined
 						}).then(
 							function (response, status, jqXHR) {
-								let result: IRblCalculationSuccessResponse = jqXHR.responseJSON ?? response;
+								var rbleCacheKey = jqXHR.getResponseHeader("rble-cache-key");
+
+								let result: IRblCalculationSuccessResponse = status == "notmodified"
+									? sessionStorage.getItem(`RBLCache:${rbleCacheKey}`)
+									: jqXHR.responseJSON ?? response;
 
 								if (typeof result == "string") {
 									result = JSON.parse(result);
+								}
+
+								if (rbleCacheKey != undefined) {
+									sessionStorage.setItem(`RBLCache:${rbleCacheKey}`, JSON.stringify(result));
 								}
 
 								if (result.Diagnostics != null) {

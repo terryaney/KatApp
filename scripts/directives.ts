@@ -386,21 +386,20 @@ class DirectiveKaInspector implements IKaDirective {
 		return ctx => {
 			ctx.effect(() => {
 				const info = ctx.get();
+				const kaTargetId = ctx.el.getAttribute("ka-inspector-target-id");
 
-				const el = ctx.el;
-				const kaId = info.inspectorId;
-				const details = info.details;
-				const blocks: Array<IStringAnyIndexer> = info.blocks;
+				if (kaTargetId != undefined) {
+					// Only process if the ka-inspector-target-id has been set...
+					const details = info.details;
+					const blocks: Array<IStringAnyIndexer> = info.blocks;
 
-				const inspectTarget = document.querySelector(`[ka-inspector-id='${kaId}']`);
-
-				if (inspectTarget != undefined) {
-					if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaId}`) ?? -1) > -1) {
+					const inspectTarget = document.querySelector(`[ka-inspector-id='${kaTargetId}']`)!;
+					if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaTargetId}`) ?? -1) > -1) {
 						inspectTarget.previousSibling!.remove();
 					}
 
 					let commentContent = `
-KatApp Inspect ${kaId}
+KatApp Inspect ${kaTargetId}
 --------------------------------------------------
 ${(details ?? "") != `Details: ${details}
 

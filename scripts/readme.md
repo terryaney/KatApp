@@ -171,6 +171,10 @@ thisApplication .view-table {
 
 It is very important to keep Kaml View encapsulated as an isolated environment, or sandbox if you will. **The KatApp framework ensures that all input and calculation result processing are isolated to the KatApp/Kaml View in which they are specified.**  In the same manner, there are ways to ensure proper scoping for your markup and javascript so that Kaml Views do not interfere with Host Platform sites.
 
+- [Scoping CSS](#scoping-css) - Discusses how Kaml Views can ensure CSS styles do not adversely affect the Host Environment.
+- [Scoping IDs](#scoping-ids) - Discusses how Kaml Views can ensure `HTMLElement.id` assignments are guaranteed to be unique.
+- [Scoping jQuery Selection](#scoping-jquery-selection) - Discusses how Kaml Views can ensure jQuery DOM queries are isolated to *only* their markup and not other Kaml Views or the Host Environment.
+
 ### Scoping CSS
 
 In Kaml Views, if you include a `<style>` section to define some CSS for the view, make sure you prefix every class selector with `thisApplication`.
@@ -253,7 +257,10 @@ When Vue applications are created (which is done behind the scenes in the KatApp
 
 **This is probably the most important section of documentation since this object is used most often in the Vue directives used by Kaml Views when rendering pages.**
 
-## `IApplicationData`
+- [IApplicationData](#IApplicationData) - The 'state model' used in all Vue directives.
+- [RBLe Framework Result Processing in KatApp State](#rble-framework-result-processing-in-katapp-state) - Describes how RBLe Framework calculation results are turned into 'state model' results.
+
+## IApplicationData
 
 The `IApplicationData` interface represents the 'scope' that is passed in to all KatApp Framework Vue enabled applications. Any of the property types below that are not primitive types (i.e. `string`, `boolean`, `any`, etc.) are explained in more detail in the [Supporting Interfaces](#supporting-interfaces) section. 
 
@@ -278,52 +285,52 @@ application.state object.
 const nameFirst = application.state.rbl.value("name-first");
 ```
 
-### `IApplicationData.kaId`
+### IApplicationData.kaId
 
 Property Type: `string`  
 Current id of the running KatApp.  Typically only used in Template Files when a unique id is required.
 
-### `IApplicationData.uiBlocked`
+### IApplicationData.uiBlocked
 
 Property Type: `boolean`  
 Returns `true` when a RBL Calculation or Api Endpoint is being processed.  See [`IKatApp.blockUI`](#IKatApp.blockUI) and [`IKatApp.unblockUI`](#IKatApp.unblockUI) for more information. Typically used to show a 'blocker' on the rendered HTML to prevent the user from clicking anywhere.
 
-### `IApplicationData.needsCalculation`
+### IApplicationData.needsCalculation
 
 Property Type: `boolean`  
 Returns `true` when input that will trigger a calculation has been edited but has not triggered a calculation yet.  Typically used with [`v-ka-needs-calc`](#v-ka-needs-calc) directive which toggles 'submit button' state to indicate to the user that a calculation is needed before they can submit the current form.
 
-### `IApplicationData.model`
+### IApplicationData.model
 
 Property Type: `any`  
 Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
 
-### `IApplicationData.handlers`
+### IApplicationData.handlers
 
 Property Type: `IStringAnyIndexer`  
 Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
 
-### `IApplicationData.components`
+### IApplicationData.components
 
 Property Type: `IStringIndexer<IStringAnyIndexer>`  
 Kaml Views can pass in petite-vue components that can used in v-scope directives (i.e. v-scope="components.inputComponent({})"). See [`IKatApp.update`](#IKatApp.update) for more information.
 
-### `IApplicationData.inputs`
+### IApplicationData.inputs
 
 Property Type: `ICalculationInputs`  
 Inputs to pass along to each calculation during life span of KatApp
 
-### `IApplicationData.errors`
+### IApplicationData.errors
 
 Property Type: `Array<IValidation>`  
 Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 
-### `IApplicationData.warnings`
+### IApplicationData.warnings
 
 Property Type: `Array<IValidation>`  
 Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 
-### `IApplicationData.rbl.results`
+### IApplicationData.rbl.results
 
 Property Type: `IStringIndexer<IStringIndexer<Array<ITabDefRow>>>`  
 JSON object containing results of all assocatied CalcEngines.  Typically not used by Kaml developers.  Instead, use other methods of IRblApplicationData to grab results.  The `string` key to results is the concatenation of `CalcEngineKey.TabName`.
@@ -354,7 +361,7 @@ state: {
 }
 ```
 
-### `IApplicationData.rbl.source`  
+### IApplicationData.rbl.source
 
 **`source(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean) => Array<ITabDefRow>`**
 
@@ -375,7 +382,7 @@ application.state.rbl.source("resultTable", undefined, "RBLSecondTab");
 application.state.rbl.source("brdResultTable", "BRD", r => r.topic == 'head');
 ```
 
-### `IApplicationData.rbl.exists`
+### IApplicationData.rbl.exists
 
 **`exists(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean ) => boolean`**
 
@@ -394,7 +401,7 @@ A `predicate` can be passed to filter rows before checking for existence.
 </div>
 ```
 
-### `IApplicationData.rbl.value`
+### IApplicationData.rbl.value
 
 **`value(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined`**
 
@@ -424,7 +431,7 @@ const name = application.state.rbl.value("rbl-value", "name-first", undefined, u
 const name = application.state.rbl.value("custom-table", "name-first", "value2", "key", "BRD", "RBLResult2");
 ```
 
-### `IApplicationData.rbl.boolean`
+### IApplicationData.rbl.boolean
 
 **`boolean(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string, valueWhenMissing?: boolean) => boolean`**
 
@@ -479,19 +486,19 @@ since 'undefined' will be treated as 'false' in rbl.boolean() because valueWhenM
 <a href="#" :disabled="rbl.value('rbl-disabled', 'allowLink', false)">Click Here</a>
 ```
 
-### `IApplicationData.rbl.onAll`
+### IApplicationData.rbl.onAll
 
 **`onAll(...values: any[]) => boolean`**
 
 Returns `true` if **all** values passed in evaluate to `true` using same conditions described in `rbl.boolean()`.
 
-### `IApplicationData.rbl.onAny`
+### IApplicationData.rbl.onAny
 
 **`onAny(...values: any[]) => boolean`**
 
 Returns `true` if **any** value passed in evaluates to `true` using same conditions described in `rbl.boolean()`.
 
-### `IApplicationData.pushTo`
+### IApplicationData.pushTo
 
 **`pushTo(tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>, calcEngine?: string, tab?: string) => void`**
 
@@ -594,6 +601,13 @@ tabDef["table-output-control"].forEach(r => {
 # HTML Content Template Elements
 
 Vue is a template based javascript framework. Often all markup can be generated without the use of the [HTML Content Template element](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template), however there are times when reusable pieces of markup are required or simply developer preference to segregate html content into a template that will be rendered only when needed.
+
+- [HTML Template Element](#html-template-element) - Describes important role the `<template>` element plays in Vue / KatApps.
+- [Template Precedence](#template-precedence) - Describes the process used in locating the proper KatApp template based on name.
+- [Template Script and Style Tags](#template-script-and-style-tags) - When templates contain their own `<style>` and `<script>` elements, special processing is required.
+- [Input Templates](#input-templates) - When templates represent an 'input', special processing is required.
+
+## HTML Template Element
 
 It is important to understand how `<template>` elements function inside the DOM. From the Mozilla documentation:
 
@@ -860,6 +874,13 @@ When templates are used to render an input (or input group), they need to be des
 # Common Vue Directives
 
 Vue supports [many directives](#https://vuejs.org/api/built-in-directives.html), however, there are only a handful that commonly used in Kaml View files.  Below are the most common directives used and some examples of how to use them with the [IApplicationData scope object](#iapplicationdata).
+
+- [v-html / v-text](#v-html--v-text) - Update the element's `innerHTML` or text content.
+- [v-bind](#v-bind) - Dynamically bind one or more attributes to an expression.
+- [v-for](#v-for) - Render the element or template block multiple times based on the source data.
+- [v-on](#v-on) - Attach an event listener to the element.
+- [v-if / v-else / v-else-if](#v-if--v-else--v-else-if) - Conditionally render an element or a template fragment based on the truthy-ness of the expression value.
+- [v-show](#v-show) - Toggle the element's visibility based on the truthy-ness of the expression value.
 
 **Note:** Usually, 'inside' the actual directive markup, the content is simply 'valid javascript' with the given context/scope.
 
@@ -1353,6 +1374,20 @@ When an element is toggled, the element and its contained directives are destroy
 # Custom KatApp Directives
 
 Similiar to common Vue directives, the KatApp Framework provides custom directives that help rendering markup by leveraging/accessing RBLe Framework calculation results.  The majority of the KatApp Framework directives take a 'model' coming in describing how the directive should function. [`v-ka-template`](#v-ka-template), [`v-ka-input`](#v-ka-input) and [`v-ka-input-group`](#v-ka-input-group) take a model *and* return a 'scope' object that can be used by the markup contained by the template. [`v-ka-needs-calc`](#v-ka-needs-calc) and [`v-ka-inline`](#v-ka-inline) are 'marker' directives and do not take a model or return a scope.
+
+- [v-ka-value](#v-ka-value) - Update element's `innerHTML` from designated RBLe Framework result.
+- [v-ka-input](#v-ka-input) - Render input template or bind existing inputs to RBLe Framework calculations.
+- [v-ka-input-group](#v-ka-input-group) - Render template representing multiple inputs of the same type and bind to RBLe Framework calculations.
+- [v-ka-navigate](#v-ka-navigate) - Configure navigation within Kaml Views to other Kaml Views in Host Environment.
+- [v-ka-template](#v-ka-template) - Render template with or without a data source; the data source can be an array rendering template content multiple times.
+- [v-ka-api](#v-ka-api) - Configure a `HTMLElement` to submit to an api endpoint on click event.
+- [v-ka-modal](#v-ka-modal) - Configure a `HTMLElement` to open up a modal dialog (containing fixed markup or seperate Kaml View) on click.
+- [v-ka-app](#v-ka-app) - Nest an instance of a seperate Kaml View within the current Kaml View (the KatApps will be isolated from each other).
+- [v-ka-table](#v-ka-table) - Render HTML tables automatically from the calculation results based on `text*` and `value*` columns.
+- [v-ka-highchart](#v-ka-highchart) - Render Highcharts chart automatically from the calculation results.
+- [v-ka-attributes](#v-ka-attributes) - Accepts a key/value space delimitted `string` of attributes and applies them to the current `HTMLElement`.
+- [v-ka-needs-calc](#v-ka-needs-calc) - Control UI state when a submission form requires a RBLe Framework calculation before user can click the 'submit' button.
+- [v-ka-inline](#v-ka-inline) - Render *raw HTML* without the need for a `HTMLElement` 'container'.
 
 ## v-ka-value
 
@@ -3533,6 +3568,15 @@ row: {
 
 This section describes all the interfaces and their properties, methods and events present in the KatApp Framework.
 
+- [KatApp Static Methods](#katapp-static-methods)
+- [IKatAppOptions](#IKatAppOptions)
+- [IKatApp](#IKatApp)
+    - [IKatApp Properties](#ikatapp-properties)
+    - [IKatApp Methods](#ikatapp-methods)
+    - [IKatApp Lifecycles](#ikatapp-lifecycles)
+    - [IKatApp Events](#ikatapp-events)
+- [Supporting Interfaces](#supporting-interfaces)
+
 ## KatApp Static Methods
 
 To create and retrieve references to existing KatApps, there are static methods exposed on the `KatApp` interface.
@@ -3704,6 +3748,11 @@ The Host Environment can pass in 'manual results'.  These are results that are u
     }
 ]
 ```
+
+### IKatAppOptions.manualResultsEndpoint
+
+Property Type: `string`; Optional
+Similiar to `manualResults`, this endpoint should be called to retrieve a `manualResults` object from the Host Environment that is the same structure as described above.  Used to leverage browser caching.
 
 ### IKatAppOptions.relativePathTemplates
 
@@ -4723,6 +4772,11 @@ The configuration payload submitted to the most recent calculation.
 # RBLe Framework
 
 The RBLe Framework is the backbone of KatApps.  The service is able to marshall inputs and results in and out of RBLe CalcEngines.  These results drive the functionality of KatApps.
+
+- [Framework Inputs](#framework-inputs) - Discusses the set of inputs that are always passed to calculations automatically (and are not part of the UI).
+- [Input Table Management](#input-table-management) - Discusses how to pass 'input tables' to calculations.
+- [Result Tables](#result-tables) - Discusses the standard result table processing rules, structure, and features available in generating results for Kaml Views.
+- [Precalc Pipelines](#precalc-pipelines) - Discusses how multiple CalcEngines can be 'chained' together feedings the 'results' from one CalcEngine into the 'inputs' of the next CalcEngine in the pipeline before generating the final result.
 
 ## Framework Inputs
 
