@@ -43,6 +43,7 @@ class InputComponent {
 		defaultValue: (name: string) => string | undefined,
 		noCalc: (name: string) => boolean,
 		displayFormat: (name: string) => string | undefined,
+		mask: (name: string) => string | undefined,
 		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, refs: IStringIndexer<HTMLElement>
 	) {
 		input.setAttribute("name", name);
@@ -248,6 +249,59 @@ class InputComponent {
 					}
 				});
 			}
+
+
+			const inputMask = mask(name);
+
+			if (inputMask != undefined) {
+				const isNumericInput = (event: KeyboardEvent ) => {
+					const key = event.keyCode;
+					const valid = ((key >= 48 && key <= 57) || // Allow number line
+						(key >= 96 && key <= 105) // Allow number pad
+					);
+					return valid;
+				};
+
+				const isModifierKey = ( event: KeyboardEvent ) => {
+					const key = event.keyCode;
+					const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
+						(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
+						(key > 36 && key < 41) || // Allow left, up, right, down
+						(
+							// Allow Ctrl/Command + A,C,V,X,Z
+							(event.ctrlKey === true || event.metaKey === true) &&
+							(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
+						)
+					return value;
+				};
+
+				// Only support phone so far...
+				if (inputMask == "(###) ###-####") {
+					// Why can't I put .RBLe event namespace here??
+					input.addEventListener("keydown", (event: KeyboardEvent) => {
+						// Input must be of a valid number format or a modifier key, and not longer than ten digits
+						if (!isNumericInput(event) && !isModifierKey(event)) {
+							event.preventDefault();
+						}
+					});
+					
+					input.addEventListener("keyup", (event: KeyboardEvent) => {
+						if (isModifierKey(event)) { return; }
+
+						const target = event.target as HTMLInputElement;
+						const input = target.value.replace(/\D/g, '').substring(0, 10);
+
+						// First ten digits of input only
+						const area = input.substring(0, 3);
+						const middle = input.substring(3, 6);
+						const last = input.substring(6, 10);
+
+						if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
+						else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
+						else if (input.length > 0) { target.value = "(" + area; }
+					});
+				}
+			}
 		}
 
 		if (events != undefined) {
@@ -369,7 +423,7 @@ class InputComponent {
 
 		const base: IKaInputScopeBase = {
 			get display() { return getInputCeValue("display", "rbl-display", "v" + name) != "0"; },
-			get noCalc() { return getInputCeValue( "skip", "rbl-skip", name) == "1"; },
+			get noCalc() { return getInputCeValue( "skip-calc", "rbl-skip", name) == "1"; },
 			get disabled() {
 				// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
 				return /* application.state.uiBlocked || */ getInputCeValue( "disabled", "rbl-disabled", name) == "1";
@@ -378,6 +432,7 @@ class InputComponent {
 			get warning() { return application.state.warnings.find(v => v["@id"] == name)?.text; }
 		};
 
+		const mask = (name: string) => props.mask;
 		const defaultValue = (name: string) => application.state.inputs[name] ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
@@ -438,7 +493,7 @@ class InputComponent {
 			get css() {
 				return {
 					input: props?.css?.input ?? "",
-					container: props?.css?.container ?? ""
+					container: props?.css?.container
 				};
 			},
 			get error() { return base.error; },
@@ -480,7 +535,7 @@ class InputComponent {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, mask, props.events, refs);
 
 		return scope;
 	}
@@ -506,6 +561,7 @@ class TemplateMultipleInputComponent {
 		const hideLabels = props.hideLabels != undefined ? props.hideLabels : names.map(n => undefined);
 		const placeHolders = props.placeHolders != undefined ? props.placeHolders : names.map(n => '');		
 		const displayFormats = props.displayFormats != undefined ? props.displayFormats : names.map(n => undefined);
+		const masks = props.masks != undefined ? props.masks : names.map(n => undefined);
 		const helps = props.helps != undefined ? props.helps : names.map(n => undefined);
 		const css = props.css != undefined ? props.css : names.map(n => undefined);
 		const maxLengths = props.maxLengths != undefined ? props.maxLengths : names.map(n => undefined);
@@ -524,7 +580,7 @@ class TemplateMultipleInputComponent {
 		const base = {
 			name: ( index: number) => names[index],
 			display: (index: number) => getInputCeValue( index, "display", "rbl-display", "v" + names[ index ] ) != "0",
-			noCalc: (index: number) => getInputCeValue(index, "skip", "rbl-skip", names[index]) == "1",
+			noCalc: (index: number) => getInputCeValue(index, "skip-calc", "rbl-skip", names[index]) == "1",
 			disabled: (index: number) => getInputCeValue(index, "disabled", "rbl-disabled", names[index]) == "1",
 			error: (index: number) => application.state.errors.find(v => v["@id"] == names[index])?.text,
 			warning: (index: number) => application.state.warnings.find(v => v["@id"] == names[index])?.text
@@ -537,6 +593,10 @@ class TemplateMultipleInputComponent {
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
 			return application.state.inputs[names[index]] ?? values[index];
+		}
+		const mask = function (name: string) {
+			const index = names.indexOf(name);
+			return masks[index];
 		}
 		const displayFormat = function (name: string) {
 			const index = names.indexOf(name);
@@ -573,7 +633,7 @@ class TemplateMultipleInputComponent {
 				title: getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "",
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
 			}),
-			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container ?? "" }),
+			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
 			error: (index: number) => base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
@@ -607,7 +667,7 @@ class TemplateMultipleInputComponent {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, props.events, refs);
+			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, mask, props.events, refs);
 		};
 
 		return scope;

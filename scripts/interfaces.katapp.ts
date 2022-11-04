@@ -193,7 +193,7 @@ interface IModalOptions {
 		continue?: string;
 	};
 	size?: "xl" | "lg" | "md" | "sm";
-
+	scrollable?: boolean;
 	showCancel?: boolean;
 	buttonsTemplate?: string;
 	headerTemplate?: string;
@@ -283,6 +283,7 @@ interface IKaInputModel {
 	suffix?: string;
 	maxLength?: number;
 	displayFormat?: string;
+	mask?: string;
 
 	min?: number | string;
 	max?: number | string;
@@ -356,7 +357,7 @@ interface IKaInputScopeHelp {
 }
 interface IKaInputScopeCss {
 	readonly input: string;
-	readonly container: string;
+	readonly container: string | undefined;
 }
 
 interface IKaInputGroupModel {
@@ -370,6 +371,7 @@ interface IKaInputGroupModel {
 	helps?: IKaInputModelHelp[]
 	css?: IKaInputScopeCss[];
 	displayFormats?: string[];
+	masks?: string[];
 
 	maxLengths?: number[];
 	mins?: string[];

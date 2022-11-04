@@ -1,8 +1,39 @@
 ﻿//	1. IDs: QnA - 011310302, ASU - 011103657
+//	1. Demo site
+//		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/profile/address
+//		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/theme
+//	1. Athlon
+//		Finish banners
+//	1. DataSource - needs history navigator
+//	1. Documentation
+//		v-ka-nomount
+//		rbl-input in rble section of docs ??
+//		processKamlMarkupAsync (if I keep it public)
+//			- changed to call await application.triggerEventAsync("calculation", application.lastCalculation); from common.profile
+//	1. Should I add mount event for every v-if v-for to do automatic processing of markup? (anchors and helptips) and then maybe flush it if calculation processing happens - look at nexttick implementation in petite-vue
+//	1. Inspector
+//		- channel.pension doesn't work, throws error when turning switch on and off
+//		- Common.Profile doesn't work, change from addresses to email and back and get error
+//		- what happens for v-ka-template with data source and elements inside?
 //	1. Tom's Culture script
 //		1. Errors - maybe have a 'watcher' that catches assignments (pushes) and translate - or just helper to 'translate errors'
-//	1. Inspector - what happens for v-ka-template with data source and elements inside?
-//	1. API Responses in DataSource - why are 'api=true' attributes in that?  Seems it should be empty until placed INSIDE xDS models
+//	1. Help Tips
+//		Content is treated as it's own VUE app...but if data-bs-content-selector is used and it is just pointing to a hidden div
+//		VUE will have already mounted everything and any @eventHandlers would be lost. I made my v-ka directives work by using jquery.on()
+//		instead of addEventListener, so when helpTips gets the cotnent and 'clones' elements all the event handlers move with.  But there is a problem
+//		if I need unique 'scope values' AND @eventHandlers.  Because to use scope values, I'd have to render a hidden div when processing a scope row
+//		and use scope properties as needed.  But if @event or v-on was used, they would be lost.
+//
+//		To solve this, I think I need a v-ka-helptip directive that can expose an event for when the tip is inserted...then event handlers could be attached
+//		by selecting appropriate items inside the tip content.  If I make a directive, could make some assumptions about properties and auto add appropriate
+//		data-bs-* attributes to trigger helptips maybe.
+//
+//		I might want to consider supporting content-selector that also points to a template and then returns 'children' elements...vs default handling when
+//		assuming the matched item is simply a htmlelement.
+//
+//	1. v-ka-template
+//		- if element assigned is a <template> just replace inline?
+//		- look at v-ka-inline to get idea on how to handle
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -106,7 +137,9 @@ class KatApp implements IKatApp {
 		this.options = Utils.extend<IKatAppOptions>(
 			{},
 			defaultOptions,
-			options
+			options,
+			// for now, I want inspector disabled
+			{ debug: { showInspector: false } }
 		);
 
 		const selectorResults = options.modalAppOptions == undefined ? $(selector) : undefined;
@@ -492,13 +525,11 @@ class KatApp implements IKatApp {
 			await this.triggerEventAsync("initialized");
 
 			const that = this;
-			this.on("calculation", function () {
+			this.on("calculation", () => {
 				that.select("a[href='#']")
-					.off("click.ka")
-					.on("click.ka", function (e) {
+					.off("click.ka").on("click.ka", function (e) {
 						e.preventDefault();
 					});
-
 				HelpTips.processHelpTips(that, that.el);
 			})
 
@@ -567,6 +598,10 @@ class KatApp implements IKatApp {
 			this.el.removeAttr("ka-cloak");
 			await this.triggerEventAsync("rendered");
 
+			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == 1) {
+				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this);
+			}
+
 			// Can't do original reflow until view is 'visible' is removed...
 			if (this.hasHighChart) {
 				this.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
@@ -602,6 +637,7 @@ class KatApp implements IKatApp {
 				},
 				showCancel: true,
 				size: this.options.view != undefined ? "xl" : undefined,
+				scrollable: false,
 				calculateOnConfirm: false
 			},
 			this.options.modalAppOptions
@@ -614,7 +650,7 @@ class KatApp implements IKatApp {
 
 		const modal = $(
 			'<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static">\
-                <div class="modal-dialog modal-dialog-scrollable">\
+                <div class="modal-dialog">\
                     <div class="modal-content">\
                     <div class="modal-header d-none">\
                         <h5 class="modal-title"></h5>\
@@ -631,6 +667,9 @@ class KatApp implements IKatApp {
                 </div>\
             </div>');
 
+		if (options.scrollable) {
+			$(".modal-dialog", modal).addClass("modal-dialog-scrollable");
+		}
 		if (options.size != undefined) {
 			$(".modal-dialog", modal).addClass("modal-dialog-centered modal-" + options.size);
 		}
@@ -677,6 +716,8 @@ class KatApp implements IKatApp {
 
 		const options = this.options.modalAppOptions!;
 
+		// If response if of type Event, 'confirmedAsync/cancelled' was just attached to a button and default processing occurred and the first param was
+		// click event object.  Just pass undefined back as a response in that scenario.
 		options.confirmedAsync = async response => {
 			closeModal();
 
@@ -688,11 +729,11 @@ class KatApp implements IKatApp {
 				}
 			}
 
-			options.promise.resolve({ confirmed: true, response: response });
+			options.promise.resolve({ confirmed: true, response: response instanceof Event ? undefined : response });
 		};
 		options.cancelled = response => {
 			closeModal();
-			options.promise.resolve({ confirmed: false, response: response });
+			options.promise.resolve({ confirmed: false, response: response instanceof Event ? undefined : response });
 		};
 
 		const isInvalid = this.state.errors.length > 0;
@@ -780,13 +821,13 @@ class KatApp implements IKatApp {
 	}
 
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
+		const serviceUrl = /* this.options.registerDataWithService ? this.options.{what url should this be} : */ this.options.calculationUrl
 		const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 			async submitApiOptions => {
-				await this.triggerEventAsync("updateCalculationOptions", submitApiOptions);
+				await this.triggerEventAsync("updateApiOptions", submitApiOptions, serviceUrl);
 			},
 			customInputs
 		);
-		const serviceUrl = /* this.options.registerDataWithService ? this.options.{what url should this be} : */ this.options.calculationUrl
 
 		if (!processResults) {
 			return this.toTabDefs(
@@ -1276,6 +1317,10 @@ class KatApp implements IKatApp {
 	}
 
 	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
+		if (eventName == "calculation") {
+			await PetiteVue.nextTick();
+		}
+
 		// If event is cancelled, return false;
 		const eventArgs = [...args, this];
 
@@ -1669,7 +1714,7 @@ class KatApp implements IKatApp {
 							Object.keys(rows[0])
 								.forEach(p => {
 									if (r[p] == undefined) {
-										r[p] == "";
+										r[p] = "";
 									}
 								});
 						});
@@ -1926,7 +1971,7 @@ class KatApp implements IKatApp {
 			if (predicate?.(mountScript) ?? true) {
 				el.removeAttribute("v-on:vue:" + type);
 				el.removeAttribute("@vue:" + type);
-				el.setAttribute("v-on:vue:" + type, `${mountScript != '' ? ';' + mountScript + ';' : ''}${exp}`);
+				el.setAttribute("v-on:vue:" + type, `${exp}${mountScript != '' ? ';' + mountScript + ';' : ''}`);
 			}
 		};
 
@@ -2141,7 +2186,6 @@ class KatApp implements IKatApp {
 				inspectElement(directive, scope);
 
 				directive.removeAttribute("v-ka-template");
-
 				directive.setAttribute("v-scope", `components.template(${scope})`);
 			});
 

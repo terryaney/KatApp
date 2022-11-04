@@ -1645,7 +1645,7 @@ Provide the CalcEngine result tab name if all the values that automatically pull
 Property Type: `(base: IKaInputScopeBase) => boolean`; Optional
 Provide a delegate to the input scope that can be called to determine if an input should *not* trigger an RBLe Framework calculation.
 
-The value can also be provided via the `rbl-skip.value` or `rbl-input.skip` RBLe Framework calculation value.
+The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value.
 
 The `base` parameter passed into the delegate gives access a `base.noCalc` property configured by the default RBLe Framework calculation value processing described above.
 
@@ -1819,7 +1819,7 @@ The value can by provided by the model or a RBLe Framework calculation value.
 Returns value based on following precedence:
 
 1. `model.isNoCalc` delegate property
-1. `rbl-input.skip` RBLe Framework calculation value (if value is `1`)
+1. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)
 1. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)
 1. `false` if no value provided.
 
@@ -1923,9 +1923,9 @@ Returns value based on following precedence:
 1. `model.css.input` property
 1. `""` if no value provided.
 
-#### IKaInputScope.css.input
+#### IKaInputScope.css.container
 
-Property Type: `string`;  
+Property Type: `string | undefined`;  
 Gets the CSS class name to apply to the rendered `HTMLElement` considered the 'container'.
 
 The value can by provided by the model.
@@ -2300,7 +2300,7 @@ Provide the CalcEngine result tab name if all the values that automatically pull
 Property Type: `(index: number, base: IKaInputGroupScopeBase) => boolean`; Optional
 Provide a delegate to the input group scope that can be called to determine if an input should *not* trigger an RBLe Framework calculation.
 
-The value can also be provided via the `rbl-skip.value` or `rbl-input.skip` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
+The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 
 The `index` parameter can be used to know which 'item' of the group is being queried.
 
@@ -2438,7 +2438,7 @@ The value can by provided by the model or a RBLe Framework calculation value.
 Returns value based on following precedence:
 
 1. `model.isNoCalc` delegate property
-1. `rbl-input.skip` RBLe Framework calculation value (if value is `1`)
+1. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)
 1. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)
 1. `false` if no value provided.
 
@@ -4048,12 +4048,13 @@ When a KatApp is being created via the [`KatApp.createAppAsync`](#katappcreateap
 1. nestedAppInitialized - if application is a nested application
 1. All events in the [Calculation Lifecycle](#calculation-lifecycle) - if any CalcEngines are [configured to all iConfigureUI calculations](#configuring-calcengines-and-template-files)
 1. rendered
+1. nestedAppRendered - if application is a nested application
 
 #### Calculation Lifecycle
 
 When a calculation is initiated via an [input change triggering a calculation](#v-ka-input) or by a Kaml View calling [`application.calculateAsync`](#ikatappcalculateasync), the following lifecycle occurs.
 
-1. updateCalculationOptions - allow Kaml View to update inputs and configuration used during calculation
+1. updateApiOptions - allow Kaml View to update inputs and configuration used during calculation
 1. calculateStart
 1. inputsCache - allow Kaml View to provide additional inputs/information to cache before caching current inputs (if configured to cache)
 1. Success events
@@ -4084,7 +4085,7 @@ Triggered after KatApp Framework has finished injecting the  Kaml View and any d
 
 **`modalAppInitialized(event: Event, modalApplication: IKatApp, hostApplication: IKatApp )`**
 
-This event is triggered after a modal application has been initialized. It occurs at the same time as host application's `initialized` event but allows for host application to assign events to the modal application if needed or retain a reference to the modalApplication for later use.
+This event is triggered after a modal application has been initialized. It allows for a host application to assign events to the modal application if needed or retain a reference to the modalApplication for later use.
 
 ```javascript
 // Code that shows a modal, and uses all inputs from the modal/irp application
@@ -4111,7 +4112,7 @@ if (response.confirmed) {
 
 **`nestedAppInitialized(event: Event, nestedApplication: IKatApp, hostApplication: IKatApp )`**
 
-This event is triggered after a nested application has been initialized. It occurs at the same time as host application's `initialized` event but allows for host application to assign events to the modal application if needed or retain a reference to the nestedApplication for later use.
+This event is triggered after a nested application has been initialized. It allows for a host application to assign events to the nested application if needed or retain a reference to the nestedApplication for later use.
 
 ```html
 <!-- 
@@ -4138,14 +4139,30 @@ application.on("nestedAppInitialized.ka", (e, nestedApplication) => {
 
 Triggered after Kaml View has been made visible to the user (will wait for CSS transitions to complete).
 
-#### IKatApp.updateCalculationOptions
+#### IKatApp.nestedAppRendered
 
-**`updateCalculationOptions( event: Event, submitApiOptions: IGetSubmitApiOptions, application: IKatApp )`**
+**`nestedAppRendered(event: Event, nestedApplication: IKatApp, hostApplication: IKatApp )`**
 
-This event is triggered during RBLe Framework calculations immediately before submission to RBLe Framework.  It allows Kaml Views to massage the [`IGetSubmitApiOptions.configuration`](#igetsubmitapioptionsconfiguration) or the [`IGetSubmitApiOptions.inputs`](#icalculationinputs) before being submitted.  Use this method to add custom inputs/tables to the submission that wouldn't normally be processed by the KatApp Framework.
+This event is triggered after a nested application has been rendered. It for host application to remove any UI blockers that might have been in place during initialization.
+
+```html
+<script>
+application.on("nestedAppRendered.ka", () => {
+    application.select(".nestedApp.ui-blocker").remove();
+});
+</script>
+```
+
+#### IKatApp.updateApiOptions
+
+**`updateApiOptions( event: Event, submitApiOptions: IGetSubmitApiOptions, endpoint: string, application: IKatApp )`**
+
+This event is triggered during RBLe Framework calculations immediately before submission to RBLe Framework and/or during api endpoint submission immediately before submitting to the Host Environment.  It allows Kaml Views to massage the [`IGetSubmitApiOptions.configuration`](#igetsubmitapioptionsconfiguration) or the [`IGetSubmitApiOptions.inputs`](#icalculationinputs) before being submitted.  Use this method to add custom inputs/tables to the submission that wouldn't normally be processed by the KatApp Framework.
+
+The `endpoint` parameter will contain the endpoint the KatApp Framework is going to submit to.  When processing a RBLe Framework calculation, the url will be the same as [`options.calculationUrl`](#ikatappoptions.calculationurl).
 
 ```javascript
-application.on("updateCalculationOptions.ka", (event, submitOptions) => {
+application.on("updateApiOptions.ka", (event, submitOptions) => {
     // Create custom coverage table
     var coverageTable = {
         name: "coverage",
@@ -4182,7 +4199,7 @@ application.on("updateCalculationOptions.ka", (event, submitOptions) => {
 
 **`calculateStart( event: Event, submitApiOptions: IGetSubmitApiOptions, application: IKatApp ) => boolean`**
 
-This event is triggered at the start of a RBLe Framework calculation after the `updateCalculationOptions` has been triggered.  Use this event to perform any actions that need to occur before the calculation is submitted (i.e. custom processing of UI blockers or enabled state of inputs).  If the handler returns `false` or calls `e.preventDefault()`, then the calculation is immediately cancelled and only the `calculateEnd` event will be triggered.
+This event is triggered at the start of a RBLe Framework calculation after the `updateApiOptions` has been triggered.  Use this event to perform any actions that need to occur before the calculation is submitted (i.e. custom processing of UI blockers or enabled state of inputs).  If the handler returns `false` or calls `e.preventDefault()`, then the calculation is immediately cancelled and only the `calculateEnd` event will be triggered.
 
 #### IKatApp.inputsCache
 
@@ -4241,17 +4258,6 @@ Note: If calculation contains 'jwt data updating' instructions and an exception 
 **`calculateEnd( event: Event, application: IKatApp )`**
 
 This event is triggered to signal the 'end' of a RBLe Framework calculation regardless of whether the calculation succeeds, fails, or is cancelled.  Use this event to perform any actions that need to occur after a calculation is completely finished (i.e. UI blockers, processing indicators, etc.).
-
-
-#### IKatApp.updateApiOptions
-
-**`updateApiOptions( event: Event, submitApiOptions: IGetSubmitApiOptions, endpoint: string, application: IKatApp )`**
-
-This event is triggered during api endpoint submission immediately before submitting to the Host Environment.  It allows Kaml Views to massage the [`IGetSubmitApiOptions.configuration`](#igetsubmitapioptionsconfiguration) or the [`IGetSubmitApiOptions.inputs`](#icalculationinputs) before being submitted.  Use this method to add custom inputs/tables to the submission that wouldn't normally be processed by the KatApp Framework.
-
-The `endpoint` parameter will contain the endpoint the KatApp Framework is going to submit to.
-
-See [`IKatApp.updateCalculationOptions`](#ikatappupdatecalculationoptions) for sample usage of updating the `submitApiOptions`.
 
 #### IKatApp.apiStart
 
@@ -4354,7 +4360,7 @@ If the `@id` property of an `IValidation` item inside [state.errors](#errors:-Ar
 
 `ICalculationInputs` represents an object containing all the inputs that should be sent to a RBL calculation.  Inputs can be passed in during initialization as a property of [`IKatAppOptions`](#IKatAppOptions), as a parameter to the [application.calculateAsync](#calculateAsync) method, or as a model property used by [v-ka-api](#v-ka-api), [v-ka-app](#v-ka-app), [v-ka-modal](#v-ka-modal), or [v-ka-navigate](#v-ka-navigate) directives.
 
-Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istringindexert--istringanyindexer) object with key/value items for each inputs.  However, it also contains 'input tables' as well that can only be set via the [`IKatApp.updateCalculationOptions` event](#IKatApp.updateCalculationOptions).  The object can be visualized as follows.
+Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istringindexert--istringanyindexer) object with key/value items for each inputs.  However, it also contains 'input tables' as well that can only be set via the [`IKatApp.updateApiOptions` event](#IKatApp.updateApiOptions).  The object can be visualized as follows.
 
 ```javascript
 {
@@ -4368,7 +4374,7 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
     "iNestedApplication": 0, 
 	// Framework sets this to 1 if running via v-ka-modal
     "iModalApplication": 0, 
-	// Only assignable from Kaml Views in onUpdateCalculationOptions
+	// Only assignable from Kaml Views in updateApiOptions
     "tables": [ 
         {
             "name": "InputTableA",
@@ -4459,8 +4465,13 @@ By default, the 'continue' button will have set css class of 'btn btn-primary'. 
 
 #### IModalOptions.size
 
-Property Type: `"xl" | "lg" | "sm" | undefined`; Optional  
+Property Type: `"xl" | "lg" | "md" | "sm" | undefined`; Optional  
 By default, if a modal is rendering a Kaml View, the size will be `xl`, otherwise `undefined`.  The modal size is based on the value passed in.  See [Bootstrap Modal Sizes](#https://getbootstrap.com/docs/5.0/components/modal/#optional-sizes) for more information.
+
+#### IModalOptions.scrollable
+
+Property Type: `boolean | undefined`; Optional  
+By default, modal content will not be scrollable; only the *entire* modal dialogis scrollable.  If a modal dialog should have its own vertical scrollbar for its body/content, pass `true`.
 
 #### IModalOptions.showCancel
 
@@ -4793,11 +4804,11 @@ iEnvironment | Specifies the environment in which the RBLe Service is executing.
 
 ## Input Table Management
 
-RBLe Framework has the concept of input tables that allow for tabular input data to be sent to the CalcEngine.  If input tables are expected from the CalcEngine, they can be supplied via the [`IKatApp.updateCalculationOptions` event](#IKatApp.updateCalculationOptions).
+RBLe Framework has the concept of input tables that allow for tabular input data to be sent to the CalcEngine.  If input tables are expected from the CalcEngine, they can be supplied via the [`IKatApp.updateApiOptions` event](#IKatApp.updateApiOptions).
 
 ```javascript
 // Append custom table to the CalculationInputs object instead of sending an input for each 'table cell' of data
-application.on("updateCalculationOptions.ka", (event, submitOptions) => {
+application.on("updateApiOptions.ka", (event, submitOptions) => {
     // Create custom coverage table
     var coverageTable = {
         name: "coverage",

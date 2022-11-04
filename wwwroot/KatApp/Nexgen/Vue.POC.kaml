@@ -25,7 +25,7 @@
 					}
 				}
 			}
-		).on("onUpdateCalculationOptions.ka", function (e, calculationOptions, _app) {
+		).on("updateApiOptions.ka", function (e, calculationOptions, _app) {
 			// POC: How to add custom inputs/tables
 			calculationOptions.inputs.iMyCustomInput = "POC";
 			calculationOptions.inputs.tables.push({

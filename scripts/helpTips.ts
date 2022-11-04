@@ -3,6 +3,18 @@
 	private static visiblePopoverApp: KatApp | undefined;
 
 	public static processHelpTips(application: KatApp, container: JQuery, selector?: string): void {
+
+		// Wanted to enable helptip rendering/processing *outside* of a KatApp, so if container does not have a parent
+		// katapp, just let the selection be regular jquery.  Should probably restrict this from going INSIDE a katapp
+		const select = ( search: string ): JQuery => {
+			if (container.closest("[ka-id]").length == 0) {
+				return container.find(search);
+			}
+			else {
+				return application.select(search, container);
+			}
+		};
+
 		// Code to hide tooltips if you click anywhere outside the tooltip
 		// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
 		// This one looked interesting too: https://stackoverflow.com/a/24289767/166231 but I didn't test this one yet
@@ -40,9 +52,10 @@
 				.on("show.bs.popover.ka", () => hideVisiblePopover())
 				.on("inserted.bs.tooltip.ka", e => {
 					const target = $(e.target);
+
 					const tipId = "#" + target.attr("aria-describedby");
 					const tip = $(tipId);
-					tip.removeClass("error warning");
+					
 					if (target.hasClass("error")) {
 						tip.addClass("error");
 					}
@@ -68,7 +81,7 @@
 		const getTipTitle = function (h: JQuery<Element>) {
 			const titleSelector = h.data('bs-content-selector');
 			if (titleSelector != undefined) {
-				const title = application.select(titleSelector + "Title").html();
+				const title = select(titleSelector + "Title").html();
 				if ((title ?? "") != "") {
 					return title;
 				}
@@ -77,25 +90,26 @@
 		};
 
 		const getTipContent = function (h: JQuery<Element>) {
-			// See if they specified data-content directly on trigger element.
-			const dataContent: string | undefined = h.data('bs-content');
 			const dataContentSelector = h.data('bs-content-selector');
-			let content = dataContent == undefined
-				? dataContentSelector == undefined ? h.next().html() : application.select(dataContentSelector, container).html()
-				: dataContent;
+
+			if (dataContentSelector != undefined) {
+				const selectorContent = $("<div/>");
+				selectorContent.append(select(dataContentSelector).children().clone(true));
+				return selectorContent;
+			}
+
+			// See if they specified data-content directly on trigger element.
+			const content = h.data('bs-content') ?? h.next().html();
 
 			// Replace {Label} in content with the trigger provided...used in Error Messages
 			const labelFix = h.data("label-fix");
 
-			if (labelFix != undefined) {
-				content = content.replace(/\{Label}/g, application.select("." + labelFix, container).html());
-			}
-
-			return content;
+			return labelFix != undefined
+				? content.replace(/\{Label}/g, select("." + labelFix).html())
+				: content;
 		};
 
-		application
-			.select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container)
+		select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']")
 			.not('[ka-init="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);
@@ -152,7 +166,7 @@
 						return placement;
 					},
 					title: function () {
-						return isTooltip ? getTipContent($(this)) : getTipTitle($(this));
+						return getTipTitle($(this));
 					},
 					content: function () {
 						return getTipContent($(this));

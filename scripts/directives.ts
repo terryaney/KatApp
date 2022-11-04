@@ -123,10 +123,10 @@ class DirectiveKaApi implements IKaDirective {
 			};
 
 			ctx.el.setAttribute("href", "#");
-			ctx.el.addEventListener("click", submitApi);
+			$(ctx.el).on("click.ka-api", submitApi);
 
 			return () => {
-				ctx.el.removeEventListener("click", submitApi);
+				$(ctx.el).off("click.ka-api");
 			}
 		};
 	}
@@ -215,10 +215,10 @@ class DirectiveKaNavigate implements IKaDirective {
 			};
 
 			ctx.el.setAttribute("href", "#");
-			ctx.el.addEventListener("click", navigate);
+			$(ctx.el).on("click.ka-navigate", navigate);
 
 			return () => {
-				ctx.el.removeEventListener("click", navigate);
+				$(ctx.el).off("click.ka-navigate");
 			}
 		};
 	}
@@ -276,10 +276,10 @@ class DirectiveKaModal implements IKaDirective {
 			};
 
 			ctx.el.setAttribute("href", "#");
-			ctx.el.addEventListener("click", showModal);
+			$(ctx.el).on("click.ka-modal", showModal);
 
 			return () => {
-				ctx.el.removeEventListener("click", showModal);
+				$(ctx.el).off("click.ka-modal");
 			}
 		};
 	}
@@ -303,13 +303,14 @@ class DirectiveKaApp implements IKaDirective {
 			);
 			delete nestedAppOptions.inputs!.iModalApplication;
 
-			const selector = scope.selector ?? "kaNested" + Utils.generateId;
-			ctx.el.classList.add(selector);
+			const selector = scope.selector ?? ".kaNested" + Utils.generateId();
+			ctx.el.classList.add(selector.substring(1));
 
 			let nestedApp: KatApp | undefined;
 
 			(async () => {
 				try {
+					await PetiteVue.nextTick(); // Make sure the classList.add() method above finishes
 					nestedApp = await KatApp.createAppAsync(selector, nestedAppOptions);
 				}
 				catch (e) {
@@ -384,6 +385,8 @@ class DirectiveKaInspector implements IKaDirective {
 
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
+			let comment: Comment | undefined = undefined;
+
 			ctx.effect(() => {
 				const info = ctx.get();
 				const kaTargetId = ctx.el.getAttribute("ka-inspector-target-id");
@@ -394,9 +397,6 @@ class DirectiveKaInspector implements IKaDirective {
 					const blocks: Array<IStringAnyIndexer> = info.blocks;
 
 					const inspectTarget = document.querySelector(`[ka-inspector-id='${kaTargetId}']`)!;
-					if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaTargetId}`) ?? -1) > -1) {
-						inspectTarget.previousSibling!.remove();
-					}
 
 					let commentContent = `
 KatApp Inspect ${kaTargetId}
@@ -431,11 +431,26 @@ ${JSON.stringify(scope, null, 2)}
 
 					commentContent += `Rendered Element(s) ↓↓↓↓`
 
-					const comment = new Comment(commentContent);
+					if (inspectTarget == undefined) {
+						console.log("Unable to find inspector target:")
+						console.log(commentContent);
+					}
+					else {
+						if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaTargetId}`) ?? -1) > -1) {
+							inspectTarget.previousSibling!.remove();
+						}
+						comment = new Comment(commentContent);
 
-					inspectTarget.before(comment);
+						inspectTarget.before(comment);
+					}
 				}
 			});
+
+			return () => {
+				if (comment !== undefined) {
+					comment.remove();
+				}
+			}
 		}
 	}
 }
