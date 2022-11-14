@@ -8,14 +8,10 @@
 //		Finish banners
 //		- hamburger not showing in mobile
 //		- mobile - go to profile - beneficiaries - 'edit a benefit' the padding on left slowly indents more and more for elements the further down the page...figure out
-//	1. Ret Planning
-//		1. Clicking IRP icon doesn't show spinner and disable link
-//		1. DST - when you cancel one of the worksheets the chart is rendered too big
-//		1. Currently - entire label for worksheet is 'click' target for opening, only want it to be the icon
 //	1. Profile
 //		1. Add bank from han/db side should use same modal as profile does
 //	1. RBL
-//		1. Configure-ui on column
+//		1. configure-ui on column
 //		1. Ability to put flag on table for expression, iValidate=1
 //		1. Cache header allowed yet?
 //	1. Tom's Culture script
@@ -2276,7 +2272,7 @@ class KatApp implements IKatApp {
 				inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
 			});
 
-			container.querySelectorAll("[v-for]").forEach(directive => {
+			container.querySelectorAll("[v-for], [v-else-if], [v-else]").forEach(directive => {
 				addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
 			});
 
