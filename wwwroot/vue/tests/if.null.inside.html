@@ -1,0 +1,14 @@
+<script type="module">
+  // https://github.com/vuejs/petite-vue/discussions/169
+  import { createApp } from 'https://unpkg.com/petite-vue?module'
+
+  createApp().mount('#app')
+</script>
+
+<div id="app" v-scope="{ open: true, elseOpen: true, model: { benefit: { name: 'Terry Benefit' } } }">
+	<button @click="model.benefit = undefined">toggle model</button>
+
+	<div v-if="model.benefit != undefined">
+		<div v-html="model.benefit.name"></div>
+	</div>
+</div>

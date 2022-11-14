@@ -149,6 +149,10 @@ class DirectiveKaNavigate implements IKaDirective {
 			}
 			*/
 
+			// TODO: I think I want this all inside an .effect method.  Because when view only had manual result, it rendered everything when
+			//		I did mount.  Then later on, when I updated the BRD/manual result info, other things tied to those results (i.e. v-html for links)
+			//		were automatically reactive and updated correctly, but my navigate remained with old values
+
 			let scope: IKaNavigateModel = ctx.get();
 
 			try {

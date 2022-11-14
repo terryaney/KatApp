@@ -13,16 +13,6 @@ class InputComponent {
 	constructor(private props: IKaInputModel) {
 	}
 
-	/*
-	public static unmounted(application: KatApp, input: HTMLInputElement) {
-		throw new Error("Currently not used because if you hide an input and I remove the value in state inputs, then re-render input it cannot restore previous value.");		
-		const name = input.getAttribute("name");
-		if (name != undefined) {
-			delete application.state.inputs[name];
-		}
-	}
-	*/
-
 	// My impl of Vue's cacheStringFunction
 	private static stringCache: Record<string, string> = Object.create(null);
 
@@ -33,7 +23,15 @@ class InputComponent {
 		}) as any;
 	}
 
-	static percentFormat = /([/s/S]*?){0:p\d*}/;
+	public static unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
+		// input is always 'isConnected = false' so don't need to use scoped application.closest, just use DOM input.closest event
+		if (clearOnUnmount || input.classList.contains("rbl-clear-on-unmount") || input.closest(".rbl-clear-on-unmount") != undefined) {
+			const name = input.getAttribute("name");
+			if (name != undefined) {
+				delete application.state.inputs[name];
+			}
+		}
+	}
 
 	public static mounted(
 		application: KatApp,
@@ -44,7 +42,8 @@ class InputComponent {
 		noCalc: (name: string) => boolean,
 		displayFormat: (name: string) => string | undefined,
 		mask: (name: string) => string | undefined,
-		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, refs: IStringIndexer<HTMLElement>
+		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>,
+		refs: IStringIndexer<HTMLElement>
 	) {
 		input.setAttribute("name", name);
 		input.classList.add(name);
@@ -56,31 +55,34 @@ class InputComponent {
 		const checkValue = type == "checkbox" ? (input.hasAttribute("checked") ? "1" : "0" ) : undefined;
 		const textValue = type == "text" ? input.getAttribute("value") : undefined;
 
-		let value = defaultValue(name) ?? checkValue ?? radioValue ?? textValue;
-		if (application.state.inputs[name] == undefined && value != undefined) {
-			application.state.inputs[name] = value;
-		}
+		const exclude = input.classList.contains("rbl-exclude") || application.closest(input, ".rbl-exclude").length != 0;
+		const skipCalc = input.classList.contains("rbl-nocalc") || application.closest(input, ".rbl-nocalc").length != 0;
 
-		value = application.state.inputs[name];
-		if (value != undefined) {
-			// If just attaching v-ka-input to a raw input, they might not be using :value="value", so when mounted, just assign it...
-			application.setInputValue(name, value);
+		if (!exclude) {
+			let value = defaultValue(name) ?? checkValue ?? radioValue ?? textValue;
+
+			if (application.state.inputs[name] == undefined && value != undefined) {
+				application.state.inputs[name] = value;
+			}
+
+			value = application.state.inputs[name];
+
+			if (value != undefined) {
+				// If just attaching v-ka-input to a raw input, they might not be using :value="value", so when mounted, just assign it...
+				application.setInputValue(name, value);
+			}
 		}
 
 		const removeError = () => application.state.errors = application.state.errors.filter(r => r["@id"] != name);
 
 		const inputEventAsync = async (calculate: boolean) => {
 			removeError();
-			application.state.inputs[name] = application.getInputValue(name);
 
-			if (!noCalc(name)) {
-				// Don't trigger calc if rbl-nocalc/rbl-exclude class as well
-				if (
-					["rbl-nocalc", "rbl-exclude"].filter(c => input.classList.contains(c)).length == 0 &&
-					application.closest(input, ".rbl-nocalc").length == 0 &&
-					application.closest(input, ".rbl-exclude").length == 0
-				) {
+			if (!exclude) {
+				application.state.inputs[name] = application.getInputValue(name);
 
+				if (!skipCalc && !noCalc(name)) {
+					// Don't trigger calc if rbl-nocalc/rbl-exclude class as well
 					if (calculate) {
 						application.state.inputs.iInputTrigger = name;
 						await application.calculateAsync();
@@ -93,217 +95,240 @@ class InputComponent {
 		}
 
 		if (type == "date") {
-			// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
+			this.bindDateEvents(application, name, input, removeError, inputEventAsync);
+		}
+		else if (type == "range") {
+			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
+		}
+		else {
+			this.bindInputEvents(application, name, input, type, mask, removeError, inputEventAsync);
+		}
 
-			// So flow:
-			//	1. Create action to do calculation if the stored input value is different than date input value.
-			//	2. Bind action to change
-			//	3. Bind to keydown (so delete/backspace caught too)
-			//		- Remove change event and bind action to blur
-			//	3. Bind to keypress
-			//		- When typing, remove error if present
-			//		- If keyCode=13 (enter), fire action
-			//	4. Bind to click event (to get calendar change event)
-			//	5. Remove blur and change, re-add change event
+		this.bindCustomEvents(application, input, events, scope);
+	}
 
-			const dateChangeAsync = async ( e: Event ) => {
-				// Since we might be triggered on a blur vs a change, a blur would happen every time they 'tab' through
-				// an input or if they type a value and change it back to same value before tabbing out (normal inputs
-				// automatically handle this and doesn't trigger change event)
-				const v = application.getInputValue(name);
+	private static bindInputEvents(application: KatApp, name: string, input: HTMLInputElement, type: string | null, mask: (name: string) => string | undefined, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void>): void {
+		input.addEventListener("change", async () => await inputEventAsync(true));
 
-				if (application.state.inputs[name] != v) {
-					// To give ability to hook events to it.
-					( e.currentTarget as HTMLInputElement ).dispatchEvent(new Event('value.ka'));
-
-					removeError();
-					application.state.inputs[name] = v;
-
-					await inputEventAsync(true);
-				}
-			};
-
-			input.addEventListener("change", dateChangeAsync);
-
-			input.addEventListener("keypress", async e => {
-				removeError();
-				if (e.keyCode == 13) {
-					await dateChangeAsync(e);
-				}
-			});
-			input.addEventListener("keydown", () => {
-				input.removeEventListener("change", dateChangeAsync);
-				input.addEventListener("blur", dateChangeAsync);
-			});
-
-			input.addEventListener("click", () => {
-				input.removeEventListener("blur", dateChangeAsync);
-				input.removeEventListener("change", dateChangeAsync);
-				input.addEventListener("change", dateChangeAsync);
-			});
-
+		if (type != "file" && type != "checkbox" && input.tagName != "SELECT") {
+			input.addEventListener("input", async () => await inputEventAsync(false));
 			input.addEventListener("blur", () => {
 				if (!application.isCalculating) {
 					application.state.needsCalculation = false;
 				}
 			});
+
+			// Textbox...
+			if (type != "radio" && input.tagName == "INPUT") {
+				input.addEventListener("keypress", async e => {
+					removeError();
+					if (e.keyCode == 13) {
+						await inputEventAsync(true);
+					}
+				});
+			}
 		}
-		else if (type == "range") {
-			// https://css-tricks.com/value-bubbles-for-range-inputs/
-			let bubbleTimer: number | undefined;
-			const bubble = refs.bubble != undefined ? $(refs.bubble) : undefined;
-			const bubbleValue = refs.bubbleValue != undefined ? $(refs.bubbleValue) : bubble;
-			
-			const display = refs.display != undefined ? $(refs.display) : undefined;
-			
-			const setRangeValues = ( showBubble: boolean ) => {
+
+		const inputMask = mask(name);
+
+		if (inputMask != undefined) {
+			const isNumericInput = (event: KeyboardEvent) => {
+				const key = event.keyCode;
+				const valid = ((key >= 48 && key <= 57) || // Allow number line
+					(key >= 96 && key <= 105) // Allow number pad
+				);
+				return valid;
+			};
+
+			const isModifierKey = (event: KeyboardEvent) => {
+				const key = event.keyCode;
+				const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
+					(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
+					(key > 36 && key < 41) || // Allow left, up, right, down
+					(
+						// Allow Ctrl/Command + A,C,V,X,Z
+						(event.ctrlKey === true || event.metaKey === true) &&
+						(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
+					)
+				return value;
+			};
+
+			// Only support phone so far...
+			if (inputMask == "(###) ###-####") {
+				// Why can't I put .RBLe event namespace here??
+				input.addEventListener("keydown", (event: KeyboardEvent) => {
+					// Input must be of a valid number format or a modifier key, and not longer than ten digits
+					if (!isNumericInput(event) && !isModifierKey(event)) {
+						event.preventDefault();
+					}
+				});
+
+				input.addEventListener("keyup", (event: KeyboardEvent) => {
+					if (isModifierKey(event)) { return; }
+
+					const target = event.target as HTMLInputElement;
+					const input = target.value.replace(/\D/g, '').substring(0, 10);
+
+					// First ten digits of input only
+					const area = input.substring(0, 3);
+					const middle = input.substring(3, 6);
+					const last = input.substring(6, 10);
+
+					if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
+					else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
+					else if (input.length > 0) { target.value = "(" + area; }
+				});
+			}
+		}
+	}
+
+	static percentFormat = /([/s/S]*?){0:p\d*}/;
+
+	private static bindRangeEvents(name: string, input: HTMLInputElement, refs: IStringIndexer<HTMLElement>, displayFormat: (name: string) => string | undefined, inputEventAsync: (calculate: boolean) => Promise<void>): void {
+		// https://css-tricks.com/value-bubbles-for-range-inputs/
+		let bubbleTimer: number | undefined;
+		const bubble = refs.bubble != undefined ? $(refs.bubble) : undefined;
+		const bubbleValue = refs.bubbleValue != undefined ? $(refs.bubbleValue) : bubble;
+
+		const display = refs.display != undefined ? $(refs.display) : undefined;
+
+		const setRangeValues = (showBubble: boolean) => {
+			if (bubbleTimer) {
+				clearTimeout(bubbleTimer);
+			}
+
+			const range = $(input);
+
+			const
+				value = range.val()!,
+				valueFormat = displayFormat(name),
+				displayValue = valueFormat != undefined
+					? String.localeFormat(valueFormat, valueFormat.match(InputComponent.percentFormat) ? +value / 100 : +value)
+					: value.toString(),
+				max = +(range.attr("max"))!,
+				min = +(range.attr("min"))!,
+				newValue = Number((+value - min) * 100 / (max - min)),
+				newPosition = 10 - (newValue * 0.2);
+
+			if (display != undefined) {
+				display.html(displayValue);
+			}
+			if (bubble != undefined) {
+				bubbleValue!.html(displayValue);
+
+				if (showBubble) {
+					let displayWidth = 30;
+					if (display != undefined) {
+						// displayWidth = display[0].clientWidth;
+
+						// https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
+						const element = display[0];
+						const cs = getComputedStyle(element);
+
+						const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+						const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+						const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+						const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
+						// Element width and height minus padding and border
+						displayWidth = element.offsetWidth - paddingX - borderX;
+						// elementHeight = element.offsetHeight - paddingY - borderY;
+					}
+
+					bubbleValue!.css("width", `${displayWidth}px`);
+
+					bubble
+						.css("left", `calc(${newValue}% + (${newPosition}px))`)
+						.addClass("active");
+				}
+			}
+
+			range.css("backgroundSize", `${((+value - min) * 100) / (max - min)}% 100%`);
+		};
+
+		// Initial render
+		setRangeValues(false);
+
+		input.addEventListener("input", async () => {
+			setRangeValues(true);
+		});
+		input.addEventListener("rangeset.ka", async () => {
+			setRangeValues(false);
+		});
+		input.addEventListener("change", async () => {
+			await inputEventAsync(true);
+		});
+
+		if (bubble != undefined) {
+			input.addEventListener("mouseenter", () => {
+				bubbleTimer = setTimeout(() => {
+					setRangeValues(true);
+				}, 750);
+			});
+			input.addEventListener("mouseleave", () => {
 				if (bubbleTimer) {
 					clearTimeout(bubbleTimer);
 				}
-
-				const range = $(input);
-
-				const
-					value = range.val()!,
-					valueFormat = displayFormat( name ),
-					displayValue = valueFormat != undefined
-						? String.localeFormat(valueFormat, valueFormat.match(InputComponent.percentFormat) ? +value / 100 : +value)
-						: value.toString(),
-					max = +(range.attr("max"))!,
-					min = +(range.attr("min"))!,
-					newValue = Number((+value - min) * 100 / (max - min)),
-					newPosition = 10 - (newValue * 0.2);
-
-				if (display != undefined) {
-					display.html(displayValue);
-				}
-				if (bubble != undefined) {
-					bubbleValue!.html(displayValue);
-
-					if (showBubble) {
-						let displayWidth = 30;
-						if (display != undefined) {
-							// displayWidth = display[0].clientWidth;
-
-							// https://stackoverflow.com/questions/25197184/get-the-height-of-an-element-minus-padding-margin-border-widths
-							const element = display[0];
-							const cs = getComputedStyle(element);
-
-							const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-							const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-
-							const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-							const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-
-							// Element width and height minus padding and border
-							displayWidth = element.offsetWidth - paddingX - borderX;
-							// elementHeight = element.offsetHeight - paddingY - borderY;
-						}
-
-						bubbleValue!.css("width", `${displayWidth}px`);
-
-						bubble
-							.css("left", `calc(${newValue}% + (${newPosition}px))`)
-							.addClass("active");
-					}
-				}
-
-				range.css("backgroundSize", `${((+value - min) * 100) / (max - min)}% 100%`);
-			};
-
-			// Initial render
-			setRangeValues(false);
-
-			input.addEventListener("input", async () => {
-				setRangeValues(true);
+				bubble.removeClass("active");
 			});
-			input.addEventListener("set.ka", async () => {
-				setRangeValues(false);
-			});
-			input.addEventListener("change", async () => {
+		}
+	}
+
+	private static bindDateEvents(application: KatApp, name: string, input: HTMLInputElement, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void> ): void {
+		// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
+
+		// So flow:
+		//	1. Create action to do calculation if the stored input value is different than date input value.
+		//	2. Bind action to change
+		//	3. Bind to keydown (so delete/backspace caught too)
+		//		- Remove change event and bind action to blur
+		//	3. Bind to keypress
+		//		- When typing, remove error if present
+		//		- If keyCode=13 (enter), fire action
+		//	4. Bind to click event (to get calendar change event)
+		//	5. Remove blur and change, re-add change event
+
+		const dateChangeAsync = async (e: Event) => {
+			// Since we might be triggered on a blur vs a change, a blur would happen every time they 'tab' through
+			// an input or if they type a value and change it back to same value before tabbing out (normal inputs
+			// automatically handle this and doesn't trigger change event)
+			const v = application.getInputValue(name);
+
+			if (application.state.inputs[name] != v) {
+				// To give ability to hook events to it.
+				(e.currentTarget as HTMLInputElement).dispatchEvent(new Event('value.ka'));
 				await inputEventAsync(true);
-			});
-
-			if (bubble != undefined) {
-				input.addEventListener("mouseenter", () => {
-					bubbleTimer = setTimeout(() => {
-						setRangeValues(true);
-					}, 750);
-				});
-				input.addEventListener("mouseleave", () => {
-					if (bubbleTimer) {
-						clearTimeout(bubbleTimer);
-					}
-					bubble.removeClass("active");
-				});
 			}
-		}
-		else {
-			input.addEventListener("change", async () => await inputEventAsync(true));
+		};
 
-			if (type != "file" && type != "checkbox" && input.tagName != "SELECT") {
-				input.addEventListener("input", async () => await inputEventAsync(false));
-				input.addEventListener("blur", () => {
-					if (!application.isCalculating) {
-						application.state.needsCalculation = false;
-					}
-				});
+		input.addEventListener("change", dateChangeAsync);
+
+		input.addEventListener("keypress", async e => {
+			removeError();
+			if (e.keyCode == 13) {
+				await dateChangeAsync(e);
 			}
+		});
+		input.addEventListener("keydown", () => {
+			input.removeEventListener("change", dateChangeAsync);
+			input.addEventListener("blur", dateChangeAsync);
+		});
 
+		input.addEventListener("click", () => {
+			input.removeEventListener("blur", dateChangeAsync);
+			input.removeEventListener("change", dateChangeAsync);
+			input.addEventListener("change", dateChangeAsync);
+		});
 
-			const inputMask = mask(name);
-
-			if (inputMask != undefined) {
-				const isNumericInput = (event: KeyboardEvent ) => {
-					const key = event.keyCode;
-					const valid = ((key >= 48 && key <= 57) || // Allow number line
-						(key >= 96 && key <= 105) // Allow number pad
-					);
-					return valid;
-				};
-
-				const isModifierKey = ( event: KeyboardEvent ) => {
-					const key = event.keyCode;
-					const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
-						(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
-						(key > 36 && key < 41) || // Allow left, up, right, down
-						(
-							// Allow Ctrl/Command + A,C,V,X,Z
-							(event.ctrlKey === true || event.metaKey === true) &&
-							(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
-						)
-					return value;
-				};
-
-				// Only support phone so far...
-				if (inputMask == "(###) ###-####") {
-					// Why can't I put .RBLe event namespace here??
-					input.addEventListener("keydown", (event: KeyboardEvent) => {
-						// Input must be of a valid number format or a modifier key, and not longer than ten digits
-						if (!isNumericInput(event) && !isModifierKey(event)) {
-							event.preventDefault();
-						}
-					});
-					
-					input.addEventListener("keyup", (event: KeyboardEvent) => {
-						if (isModifierKey(event)) { return; }
-
-						const target = event.target as HTMLInputElement;
-						const input = target.value.replace(/\D/g, '').substring(0, 10);
-
-						// First ten digits of input only
-						const area = input.substring(0, 3);
-						const middle = input.substring(3, 6);
-						const last = input.substring(6, 10);
-
-						if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
-						else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
-						else if (input.length > 0) { target.value = "(" + area; }
-					});
-				}
+		input.addEventListener("blur", () => {
+			if (!application.isCalculating) {
+				application.state.needsCalculation = false;
 			}
-		}
+		});
+	}
 
+	private static bindCustomEvents(application: KatApp, input: HTMLInputElement, events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, scope: IStringAnyIndexer ): void {
 		if (events != undefined) {
 			// Would love to use VUE's v-on code as base, but no access, so I have to duplicate bunch here.
 			// Cant' just put @ event handlers into templates b/c someone might call them without handlers attached.  Also,
@@ -432,7 +457,7 @@ class InputComponent {
 			get warning() { return application.state.warnings.find(v => v["@id"] == name)?.text; }
 		};
 
-		const mask = (name: string) => props.mask;
+		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
 		const defaultValue = (name: string) => application.state.inputs[name] ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
@@ -473,6 +498,23 @@ class InputComponent {
 			//			KatApp.setInput() method that assigned textbox, state.inputs, and (conditionally) dispatches a change event
 			// 4. Went back to method #2 and KatApp.setInput() so that I could support 'range' inputs, b/c v-model currently issue with range support
 			get value() { return application.state.inputs[name] ?? props.value ?? ""; },
+
+			/*
+			// Keeping code here...was going to make it possible to detect if property is reactive or not and use it, but it didn't keep
+			// state.inputs in sync with the object I was maintaining outside of state.input (i.e. item.percent for nexgen.beneficiaries)
+			// so I just used rbl-exclude for now for those inputs
+			get value() {
+				// Currently not supported in inputGroup...it has a 'values' properties, but expected to just be values...would
+				// have to made introduce a function/object that somehow could be used in reactive way
+
+				const hasGetter = Object.getOwnPropertyDescriptor(props, 'value')?.get != undefined;
+				// If property is a getter, it is 'reactive' and probably don't want to always default to state.inputs.  Wanted this so that
+				// I could have an input with 'calculated' value that I managed outside of state.inputs, but still wanted the input available
+				// in state.inputs for other parts of code to use
+				return (hasGetter ? props.value : application.state.inputs[name]) ?? application.state.inputs[name] ?? "";
+			},
+			*/
+
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
 
@@ -481,7 +523,7 @@ class InputComponent {
 			get noCalc() { return noCalc(name) },
 			get label() { return getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? ""; },
 			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
-			get placeHolder() { return getInputCeValue("placeholder", "rbl-value", "ph" + name) ?? props.placeHolder; },
+			get placeHolder() { return getInputCeValue("placeholder") ?? props.placeHolder; },
 			get help() {
 				return {
 					content: getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content,
@@ -515,7 +557,7 @@ class InputComponent {
 				return (v != undefined ? +v : undefined) ?? props.step ?? 1;
 			},
 
-			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted( application, input ),
+			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input, props.clearOnUnmount),
 			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder, assigned below so that 'scope' can be passed to handlers */ },
 			uploadAsync: async () => {
 				if (props.uploadEndpoint == undefined) {
@@ -596,7 +638,7 @@ class TemplateMultipleInputComponent {
 		}
 		const mask = function (name: string) {
 			const index = names.indexOf(name);
-			return masks[index];
+			return getInputCeValue(index, "mask") ?? masks[index];
 		}
 		const displayFormat = function (name: string) {
 			const index = names.indexOf(name);
@@ -656,7 +698,7 @@ class TemplateMultipleInputComponent {
 			prefix: (index: number) => getInputCeValue(index, "prefix") ?? prefixes[index],
 			suffix: (index: number) => getInputCeValue(index, "suffix") ?? suffixes[index],
 
-			// inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input),
+			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input, props.clearOnUnmount),
 			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder */ }
 		};
 
@@ -691,23 +733,22 @@ class TemplateComponent {
 			return {};
 		}
 
-		const scope = this.props.source ?? {};
-		const that = this;
-
 		TemplateComponent.templateRenderedCount[templateId] = TemplateComponent.templateRenderedCount[templateId] == undefined
 			? 1
 			: TemplateComponent.templateRenderedCount[templateId] + 1;
 
-		if (scope instanceof Array) {
+		if (this.props.source instanceof Array) {
+			const that = this;
 			return {
 				"$template": templateId,
 				application: application,
 				modalAppOptions: application.options.modalAppOptions,
-				rows: scope,
+				get rows() { return that.props.source; },
 				$renderId: `${templateId.substring(1)}_${TemplateComponent.templateRenderedCount[templateId]}`
 			};
 		}
 		else {
+			const scope = this.props.source ?? {};
 			scope["$template"] = templateId;
 			scope.application = application;
 			scope.modalAppOptions = application.options.modalAppOptions;

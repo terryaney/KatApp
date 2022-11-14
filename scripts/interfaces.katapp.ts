@@ -57,6 +57,7 @@ interface ITabDef extends IStringIndexer<ITabDefTable> {
 }
 interface ITabDefTable extends Array<ITabDefRow> { };
 interface ITabDefRow extends IStringIndexer<string> { };
+interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { };
 
 interface KatApp {
 	createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp>;
@@ -133,6 +134,7 @@ interface IApplicationData {
 	// Private...
 	_inspectors: IStringIndexer<number>;
 	_inspectorMounted: (el: Element, inspectorCommentId: string) => void;
+	_domElementMounted: (el: HTMLElement) => void;
 	_templateItemMounted: (templateId: string, el: Element, scope?: any) => void;
 	_templateItemUnmounted: (templateId: string, el: Element, scope?: any) => void;
 
@@ -208,6 +210,9 @@ interface IModalAppOptions extends IModalOptions {
 	confirmedAsync?: (response?: any) => Promise<void>;
 	cancelled?: (response?: any) => void;
 	triggerLink?: JQuery;
+
+	// If a dialog does its own buttons and is a 'step' based dialog and at the final step hides all but 'ok', the 'X' at the top of the dialog needs to trigger 'confirm' as well.
+	closeButtonTrigger?: string; 
 }
 interface IModalResponse {
 	confirmed: boolean;
@@ -269,6 +274,7 @@ interface IKaTableModel {
 }
 interface IKaInputModel {
 	name: string;
+	clearOnUnmount?: boolean;
 
 	type?: string;
 	value?: string;
@@ -342,6 +348,7 @@ interface IKaInputScope {
 
 	uploadAsync: () => void;
 	inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => void;
+	inputUnmounted: (input: HTMLInputElement) => void;
 }
 interface IKaInputScopeBase {
 	readonly display: boolean;
@@ -363,6 +370,7 @@ interface IKaInputScopeCss {
 interface IKaInputGroupModel {
 	names: string[];
 	type: string;
+	clearOnUnmount?: boolean;
 
 	values?: string[];
 	labels?: string[];
@@ -422,6 +430,7 @@ interface IKaInputGroupScope {
 	warning: (index: number) => string | undefined;
 
 	inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => void;
+	inputUnmounted: (input: HTMLInputElement) => void;
 }
 interface IKaInputGroupScopeBase {
 	display: ( index: number ) => boolean;

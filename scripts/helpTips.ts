@@ -4,16 +4,13 @@
 
 	public static processHelpTips(application: KatApp, container: JQuery, selector?: string): void {
 
+		const isContainerKatApp = container.closest("[ka-id]").length == 1;
+
 		// Wanted to enable helptip rendering/processing *outside* of a KatApp, so if container does not have a parent
 		// katapp, just let the selection be regular jquery.  Should probably restrict this from going INSIDE a katapp
-		const select = ( search: string ): JQuery => {
-			if (container.closest("[ka-id]").length == 0) {
-				return container.find(search);
-			}
-			else {
-				return application.select(search, container);
-			}
-		};
+		const select = (search: string, context?: JQuery): JQuery => !isContainerKatApp
+			? container.find(search)
+			: application.select(search, context);
 
 		// Code to hide tooltips if you click anywhere outside the tooltip
 		// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
@@ -79,6 +76,10 @@
 		}
 
 		const getTipTitle = function (h: JQuery<Element>) {
+			if (h.data('bs-toggle') == "tooltip") {
+				return getTipContent(h);
+			}
+
 			const titleSelector = h.data('bs-content-selector');
 			if (titleSelector != undefined) {
 				const title = select(titleSelector + "Title").html();
@@ -93,8 +94,13 @@
 			const dataContentSelector = h.data('bs-content-selector');
 
 			if (dataContentSelector != undefined) {
+				const selectContent = select(dataContentSelector);
+
+				if (selectContent.length == 0) return undefined;
+
 				const selectorContent = $("<div/>");
-				selectorContent.append(select(dataContentSelector).children().clone(true));
+				// Use this instead of .html() so I keep my bootstrap events
+				selectorContent.append(selectContent.contents().clone(true));
 				return selectorContent;
 			}
 
@@ -109,7 +115,7 @@
 				: content;
 		};
 
-		select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']")
+		select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container)
 			.not('[ka-init="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);
@@ -124,15 +130,11 @@
 					});
 				}
 
-				let placement = tipElement.data('bs-placement') || "top";
-				const trigger = tipElement.data('bs-trigger') || "hover";
-				const container = tipElement.data('bs-container') || "body";
-
 				const options: BootstrapTooltipOptions = {
 					html: true,
 					sanitize: false,
-					trigger: trigger,
-					container: container,
+					trigger: tipElement.data('bs-trigger') || "hover",
+					container: tipElement.data('bs-container') || "body",
 					template: isTooltip
 						? '<div class="tooltip katapp-css" role="tooltip"><div class="tooltip-arrow arrow"></div><div class="tooltip-inner"></div></div>'
 						: '<div v-scope class="popover katapp-css" role="tooltip"><div class="popover-arrow arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
@@ -157,13 +159,7 @@
 
 						}
 
-						// Bootstrap 4 no longer supports 'left auto' (two placements) so just in case any markup has that still
-						// remove it (unless it is only thing specified - which 'popper' supports.)
-						const autoToken = /\s?auto?\s?/i
-						const autoPlace = autoToken.test(placement)
-						if (autoPlace) placement = placement.replace(autoToken, '') || 'auto';
-
-						return placement;
+						return tipElement.data('bs-placement') || "auto";
 					},
 					title: function () {
 						return getTipTitle($(this));

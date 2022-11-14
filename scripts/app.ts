@@ -2,21 +2,34 @@
 //	1. Demo site
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/profile/address
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/theme
+//	1. KatApp - test input being removed via 'display' in calc or something and see if v-if still works on unmount...stating that it shouldn't
+
 //	1. Athlon
 //		Finish banners
+//		- hamburger not showing in mobile
+//		- mobile - go to profile - beneficiaries - 'edit a benefit' the padding on left slowly indents more and more for elements the further down the page...figure out
+//	1. Ret Planning
+//		1. Clicking IRP icon doesn't show spinner and disable link
+//		1. DST - when you cancel one of the worksheets the chart is rendered too big
+//		1. Currently - entire label for worksheet is 'click' target for opening, only want it to be the icon
+//	1. Profile
+//		1. Add bank from han/db side should use same modal as profile does
+//	1. RBL
+//		1. Configure-ui on column
+//		1. Ability to put flag on table for expression, iValidate=1
+//		1. Cache header allowed yet?
+//	1. Tom's Culture script
+//		1. Errors - maybe have a 'watcher' that catches assignments (pushes) and translate - or just helper to 'translate errors'
 //	1. DataSource - needs history navigator
-//	1. Documentation
-//		v-ka-nomount
-//		rbl-input in rble section of docs ??
-//		processKamlMarkupAsync (if I keep it public)
-//			- changed to call await application.triggerEventAsync("calculation", application.lastCalculation); from common.profile
-//	1. Should I add mount event for every v-if v-for to do automatic processing of markup? (anchors and helptips) and then maybe flush it if calculation processing happens - look at nexttick implementation in petite-vue
+
+
 //	1. Inspector
 //		- channel.pension doesn't work, throws error when turning switch on and off
 //		- Common.Profile doesn't work, change from addresses to email and back and get error
 //		- what happens for v-ka-template with data source and elements inside?
-//	1. Tom's Culture script
-//		1. Errors - maybe have a 'watcher' that catches assignments (pushes) and translate - or just helper to 'translate errors'
+//	1. v-ka-template
+//		- if element assigned is a <template> just replace inline?
+//		- look at v-ka-inline to get idea on how to handle
 //	1. Help Tips
 //		Content is treated as it's own VUE app...but if data-bs-content-selector is used and it is just pointing to a hidden div
 //		VUE will have already mounted everything and any @eventHandlers would be lost. I made my v-ka directives work by using jquery.on()
@@ -30,10 +43,6 @@
 //
 //		I might want to consider supporting content-selector that also points to a template and then returns 'children' elements...vs default handling when
 //		assuming the matched item is simply a htmlelement.
-//
-//	1. v-ka-template
-//		- if element assigned is a <template> just replace inline?
-//		- look at v-ka-inline to get idea on how to handle
 
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
@@ -115,6 +124,32 @@ class KatApp implements IKatApp {
 	private uiBlockCount = 0;
 	private hasHighChart = false;
 
+	private domElementQueued = false;
+	private domElementQueue: Array<HTMLElement> = [];
+	private updateDomPromise = Promise.resolve();
+
+	private async processDomElementsAsync() {
+		// console.log(this.selector + " domUpdated: " + this.domElementQueue.length);
+		for (const el of this.domElementQueue) {
+			// console.log(this.selector + " charts: " + this.select('[data-highcharts-chart]', $(el)).length + ", hasCloak: " + el.hasAttribute("ka-cloak"));
+
+			// Default markup processing...think about creating a public method that triggers calculation
+			// in case KAMLs have code that needs to run inside calculation handler? Or create another
+			// event that is called from this new public method AND from calculation workflow and then
+			// KAML could put code in there...b/c this isn't really 'calculation' if they just call
+			// 'processModel'
+			this.select("a[href='#']", el).off("click.ka").on("click.ka", e => e.preventDefault());
+			HelpTips.processHelpTips(this, $(el));
+			this.select('[data-highcharts-chart]', $(el))
+				.each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
+		}
+		const elementsProcessed = [...this.domElementQueue];
+		this.domElementQueue.length = 0;
+		this.domElementQueued = false;		
+		await this.triggerEventAsync("domUpdated", elementsProcessed);
+	}
+
+
 	private constructor(public selector: string, options: IKatAppOptions) {
 		const id = this.id = "ka" + Utils.generateId();
 		this.applicationCss = ".katapp-" + this.id.substring(2);
@@ -151,6 +186,9 @@ class KatApp implements IKatApp {
 		}
 
 		this.el = selectorResults ?? this.createModalContainer();
+
+		// Initialize to process entire container one time...
+		this.domElementQueue = [this.el[0]];
 
 		this.el.attr("ka-id", this.id);
 		this.el.addClass("katapp-css " + this.applicationCss.substring(1));
@@ -367,6 +405,39 @@ class KatApp implements IKatApp {
 				// this is the 'template' that I injected during precompile
 				el.previousElementSibling!.setAttribute("ka-inspector-target-id", targetId);
 			},
+			_domElementMounted(el) {
+
+				// If still rendering the first time...then don't add any elements during the first render
+				if (that.el[0].hasAttribute("ka-cloak")) return;
+
+				if (!that.domElementQueue.includes(that.el[0]) && !that.domElementQueue.includes(el)) {
+					let queueElement = true;
+
+					// https://stackoverflow.com/a/9882349
+					var i = that.domElementQueue.length;
+					while (i--) {
+						const q = that.domElementQueue[i];
+						if (el.contains(q)) {
+							// console.log(`${that.selector} _domElementMounted index ${i} was contained by el, remove ${i}`);
+							that.domElementQueue.splice(i, 1);
+						}
+						else if (q.contains(el)) {
+							// console.log(`${that.selector} _domElementMounted index ${i} contained el, don't queue el`);
+							queueElement = false;
+							i = 0;
+						}
+					}
+
+					if (queueElement) {
+						// console.log(that.selector + " _domElementMounted, count: " + that.domElementQueue.length);
+						that.domElementQueue.push(el);
+					}
+				}
+				if (!that.domElementQueued) {
+					that.domElementQueued = true;
+					that.updateDomPromise.then(async () => await that.processDomElementsAsync.apply(that));
+				}
+			},
 			_templateItemMounted: (templateId, el, scope?) => {
 				// Setup a mount event that will put <style> into markup or run <script> appropritately when this template is ever used
 				const mode = el.tagName == "STYLE" || el.hasAttribute("setup") ? "setup" : "mount";
@@ -402,7 +473,6 @@ class KatApp implements IKatApp {
 					that.mountedTemplates[oneTimeId] = true;
 				}
 
-				console.log(el);
 				new Function("_a", "_s", el.textContent + "\nif ( typeof unmounted !== 'undefined' ) unmounted(_a, _s);")(that, scope);
 			}
 		};
@@ -456,24 +526,6 @@ class KatApp implements IKatApp {
 				}
 			}
 
-			if (this.options.manualResults != undefined) {
-				this.calcEngines.push(...this.toCalcEngines(this.options.manualResults));
-
-				this.toTabDefs(this.options.manualResults as unknown as IRbleTabDef[]).forEach(t => {
-					Object.keys(t)
-						.filter(k => !k.startsWith("@") && "_ka" != k)
-						.forEach(k => {
-							const rows = t[k] as ITabDefTable;
-
-							// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
-							const firstRow = Utils.clone<ITabDefRow>(rows[0], () => "");
-							t[k] = rows.map(r => Utils.extend<ITabDefRow>({}, firstRow, Utils.clone(r, (k, v) => v ?? "")));
-
-							this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, k);
-						});
-				});
-			}
-
 			if (viewElement != undefined) {
 				// Need to append() so script runs to call update() inside Kaml
 				if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1) {
@@ -524,14 +576,27 @@ class KatApp implements IKatApp {
 			}
 			await this.triggerEventAsync("initialized");
 
-			const that = this;
-			this.on("calculation", () => {
-				that.select("a[href='#']")
-					.off("click.ka").on("click.ka", function (e) {
-						e.preventDefault();
-					});
-				HelpTips.processHelpTips(that, that.el);
-			})
+			if (this.options.manualResults != undefined) {
+				const hasCalcEngines = this.calcEngines.length > 0;
+				this.calcEngines.push(...this.toCalcEngines(this.options.manualResults));
+
+				const manualResultTabDefs = this.toTabDefs(this.options.manualResults as unknown as IRbleTabDef[]);
+
+				// Some Kaml's without a CE have manual results only.  They will be processed one time during
+				// mount since they theoretically never change.  However, resultsProcessing is used to inject some
+				// rbl-value rows, so need to call this event to allow that processing to occur
+				if (!hasCalcEngines) {
+					const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
+						async submitApiOptions => {
+							await this.triggerEventAsync("updateApiOptions", submitApiOptions, this.options.calculationUrl);
+						},
+						{}
+					);
+
+					await this.triggerEventAsync("resultsProcessing", manualResultTabDefs, getSubmitApiConfigurationResults.inputs, getSubmitApiConfigurationResults.configuration);
+				}
+				await this.processResultsAsync(manualResultTabDefs);
+			}
 
 			if (this.options.debug.showInspector) {
 				$(document.body)
@@ -543,20 +608,16 @@ class KatApp implements IKatApp {
 					});
 			}
 
-			const waitForCalculation = this.options.view != undefined && this.calcEngines.filter(c => !c.manualResult).length > 0;
 			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1;
 			let configureUiException: any = undefined;
 
-			if (waitForCalculation) {
+			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
+			if (isConfigureUICalculation) {
 				this.on("calculationErrors", async (_e, key, ex) => {
 					if (key == "SubmitCalculation.ConfigureUI") {
 						configureUiException = ex;
 					}
 				});
-			}
-
-			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && !c.manualResult && c.enabled).length > 0;
-			if (isConfigureUICalculation) {
 				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
 				await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
 			}
@@ -570,11 +631,9 @@ class KatApp implements IKatApp {
 					this.vueApp.directive(propertyName, this.updateOptions.directives[propertyName]);
 				}
 			}
+
 			this.vueApp.mount(this.selector);
 			this.isMounted = true;
-
-			// Make sure everything is processed from vue before raising event to ensure onMounted code that looks for elements aren't missed
-			await PetiteVue.nextTick();
 
 			// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
 			if (isConfigureUICalculation && this.lastCalculation) {
@@ -594,19 +653,13 @@ class KatApp implements IKatApp {
 			if (isModalApplication) {
 				await this.showModalApplicationAsync();
 			}
-
 			this.el.removeAttr("ka-cloak");
+			await this.processDomElementsAsync(); // process main application
 			await this.triggerEventAsync("rendered");
 
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == 1) {
 				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this);
 			}
-
-			// Can't do original reflow until view is 'visible' is removed...
-			if (this.hasHighChart) {
-				this.select("[data-highcharts-chart]").each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
-			}
-
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
 				Utils.trace(
@@ -675,6 +728,7 @@ class KatApp implements IKatApp {
 		}
 
 		const title = options.labels!.title;
+
 		if (title != undefined) {
 			$(".modal-title", modal).html(title);
 			$(".modal-header", modal).removeClass("d-none");
@@ -708,7 +762,10 @@ class KatApp implements IKatApp {
 		this.el.on("shown.bs.modal", () => d.resolve(true));
 
 		const that = this;
+		let katAppModalClosing = false;
+
 		const closeModal = function () {
+			katAppModalClosing = true;
 			modalBS5.hide();
 			that.el.remove();
 			KatApp.remove(that);
@@ -717,7 +774,7 @@ class KatApp implements IKatApp {
 		const options = this.options.modalAppOptions!;
 
 		// If response if of type Event, 'confirmedAsync/cancelled' was just attached to a button and default processing occurred and the first param was
-		// click event object.  Just pass undefined back as a response in that scenario.
+		// click event object.  Just pass undefined back as a response in that scenario.		
 		options.confirmedAsync = async response => {
 			closeModal();
 
@@ -775,17 +832,32 @@ class KatApp implements IKatApp {
 
 
 		if (showCancel || options.headerTemplate != undefined) {
+
 			if (options.headerTemplate == undefined) {
 				this.select('.modal-header .btn-close').on("click.ka", function (e) {
 					e.preventDefault();
-					options.cancelled!();
+
+					if (options.closeButtonTrigger != undefined) {
+						that.select(options.closeButtonTrigger).trigger("click");
+					}
+					else {
+						options.cancelled!();
+					}
 				});
 			}
 
 			if (this.select('.modal-header .btn-close').length > 0) {
-				$(this.el).on("hidden.bs.modal", function () {
-					// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
-					options.cancelled!();
+				// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
+				$(this.el).on("hide.bs.modal", e => {
+					if (!katAppModalClosing) {
+						e.preventDefault();
+						if (options.closeButtonTrigger != undefined) {
+							that.select(options.closeButtonTrigger).trigger("click");
+						}
+						else {
+							options.cancelled!();
+						}
+					}
 				});
 			}
 		}
@@ -798,6 +870,8 @@ class KatApp implements IKatApp {
 			options.triggerLink.prop("disabled", false).removeClass("disabled kaModalInit");
 			$("body").removeClass("kaModalInit kaModalInit");
 		}
+
+		this.options.hostApplication!.unblockUI();
 
 		return d;
 	}
@@ -870,20 +944,6 @@ class KatApp implements IKatApp {
 					)
 				);
 
-				// Some Kaml's without a CE have manual results only.  They were processed one time during
-				// mount since they theoretically never change.  However, onResultsProcessing injects some
-				// rbl-values that need to be processed, so I make this dummy tabdef that should only affect
-				// stuff if items are added.  Don't append manual results here b/c then all the reactive code
-				// will get reassigned and processed.
-				if (results.length == 0) {
-					results.push({
-						_ka: {
-							calcEngineKey: "_ResultProcessing",
-							name: "RBLResult"
-						}
-					});
-				}
-
 				await this.cacheInputsAsync(inputs);
 
 				await this.triggerEventAsync("resultsProcessing", results, inputs, submitApiConfiguration);
@@ -892,11 +952,9 @@ class KatApp implements IKatApp {
 
 				this.lastCalculation = {
 					inputs: inputs,
-					results: results.filter(r => r._ka.calcEngineKey != "_ResultProcessing") as Array<ITabDef>,
+					results: results as Array<ITabDef>,
 					configuration: submitApiConfiguration
 				};
-
-				await PetiteVue.nextTick(); // Need to make sure all VUE processing is handled
 
 				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
 				if (!isConfigureUICalculation) {
@@ -1210,7 +1268,9 @@ class KatApp implements IKatApp {
 			delete this.state.inputs[name];
 		}
 		else {
-			this.state.inputs[name] = value;
+			this.state.inputs[name] = typeof value == 'boolean'
+				? (value ? "1" : "0") // support true/false for checkboxes
+				: value;
 		}
 
 		const el = this.select<HTMLInputElement>("." + name);
@@ -1235,17 +1295,16 @@ class KatApp implements IKatApp {
 				}
 			}
 			else if (el[0].getAttribute("type") == "checkbox") {
-				el[0].checked = value == "1";
+				el[0].checked = typeof value == 'boolean' ? value : value == "1";
 			}
 			else {
 				el.val(value ?? "");
 			}
 
+
 			if (el[0].getAttribute("type") == "range") {
-				el[0].dispatchEvent(new Event('set.ka'));
+				el[0].dispatchEvent(new Event('rangeset.ka'));
 			}
-
-
 			if (calculate) {
 				const target = isCheckboxList ? el.find("input")[0] : el[0];
 				target.dispatchEvent(new Event('change'));
@@ -1274,7 +1333,7 @@ class KatApp implements IKatApp {
 	}
 
 	public select<T extends HTMLElement>(selector: string, context?: JQuery | HTMLElement | undefined): JQuery<T> {
-		const container = context instanceof jQuery
+		const container = !(context instanceof jQuery) && context != undefined
 			? $(context)
 			: context as JQuery ?? $(this.el);
 
@@ -1317,7 +1376,7 @@ class KatApp implements IKatApp {
 	}
 
 	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
-		if (eventName == "calculation") {
+		if (eventName == "calculation" || eventName == "configureUICalculation") {
 			await PetiteVue.nextTick();
 		}
 
@@ -1460,6 +1519,8 @@ class KatApp implements IKatApp {
 			throw new Error("You can not use the showModalAsync method if you have markup on the page already containing the class kaModal.");
 		}
 
+		this.blockUI();
+
 		if (triggerLink != undefined) {
 			triggerLink.prop("disabled", true).addClass("disabled kaModalInit");
 			$("body").addClass("kaModalInit");			
@@ -1499,6 +1560,8 @@ class KatApp implements IKatApp {
 
 			return d;
 		} catch (e) {
+			this.unblockUI();
+
 			if (triggerLink != undefined) {
 				triggerLink.prop("disabled", false).removeClass("disabled kaModalInit");
 				$("body").removeClass("kaModalInit kaModalInit");
@@ -1518,8 +1581,14 @@ class KatApp implements IKatApp {
     }
 
 	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: IGetSubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<ISubmitApiOptions> {
+		const currentInputs = this.getInputs(customInputs);
+
+		if (currentInputs.tables == undefined) {
+			currentInputs.tables = [];
+		}
+
 		const submitApiOptions: IGetSubmitApiOptions = {
-			inputs: Utils.extend<ICalculationInputs>(this.getInputs(customInputs), { tables: [] }),
+			inputs: currentInputs,
 			configuration: {}
 		}
 		
@@ -1707,14 +1776,31 @@ class KatApp implements IKatApp {
 				.filter(k => !k.startsWith("@") && k != "_ka" && k != "ItemDefs")
 				.forEach(tableName => {
 					const rows = t[tableName] as ITabDefTable ?? [];
+					const isRblInputTable = tableName == "rbl-input";
 
 					if (rows.length > 0) {
+						if (isRblInputTable) {
+							// For rbl-input (which is special table), I want any 'blanks' to be returned as undefined, any other table, I always want '' in there
+							// so Kaml Views don't always have to code undefined protection code
+							Object.keys(rows[0])
+								.forEach(p => {
+									if (rows[0][p] == "") {
+										(rows[0] as ITabDefRblInputRow)[p] = undefined;
+									}
+								});
+						}
+
 						// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
 						rows.forEach(r => {
 							Object.keys(rows[0])
 								.forEach(p => {
 									if (r[p] == undefined) {
-										r[p] = "";
+										if (isRblInputTable) {
+											( r as ITabDefRblInputRow)[p] = undefined;
+										}
+										else {
+											r[p] = "";
+										}
 									}
 								});
 						});
@@ -1971,7 +2057,7 @@ class KatApp implements IKatApp {
 			if (predicate?.(mountScript) ?? true) {
 				el.removeAttribute("v-on:vue:" + type);
 				el.removeAttribute("@vue:" + type);
-				el.setAttribute("v-on:vue:" + type, `${exp}${mountScript != '' ? ';' + mountScript + ';' : ''}`);
+				el.setAttribute("v-on:vue:" + type, `${mountScript != '' ? mountScript + ';' : ''}${exp}`);
 			}
 		};
 
@@ -1979,7 +2065,7 @@ class KatApp implements IKatApp {
 		const mountInputs = function (container: Element | DocumentFragment) {
 			container.querySelectorAll("input:not([v-ka-nomount]), select:not([v-ka-nomount]), textarea:not([v-ka-nomount])").forEach(input => {
 				addMountAttribute(input, "mounted", "inputMounted($el, $refs)");
-				// addMountAttribute(input, "unmounted", "inputUnmounted($el)");
+				addMountAttribute(input, "unmounted", "inputUnmounted($el)");
 			});
 
 			// If a template contains a template/v-for (i.e. radio button list) need to drill into each one and look for inputs
@@ -2080,11 +2166,9 @@ class KatApp implements IKatApp {
 					const isInput = ['INPUT', 'SELECT', 'TEXTAREA'].indexOf(directive.tagName) > -1;
 
 					if (isInput) {
-						if (!directive.hasAttribute("v-ka-nomount")) {
-							// Just binding a raw input
-							addMountAttribute(directive, "mounted", "inputMounted($el, $refs)");
-							// addMountAttribute(inputComponent, "unmounted", "inputUnmounted($el)");
-						}
+						// Just binding a raw input
+						addMountAttribute(directive, "mounted", "inputMounted($el, $refs)");
+						addMountAttribute(directive, "unmounted", "inputUnmounted($el)");
 					}
 					else {
 						// If v-ka-input was on a 'container' element that contains inputs...drill into content and mount inputs
@@ -2175,6 +2259,27 @@ class KatApp implements IKatApp {
 				directive.setAttribute("v-scope", `components.inputGroup(${scope})`);
 			});
 
+			// Also automatically setup helptips again if the item is removed/added via v-if and the v-if contains tooltips (popup config is lost on remove)
+			// Used to occur inside template[id] processing right after mountInputs(); call, but I think this should happen all the time
+
+			// PROBLEM: May have a problem here...if v-if contains templates that contain other v-ifs or helptips...the processing might not work right b/c selection doesn't
+			// span outside/inside of templates
+			container.querySelectorAll("[v-if]").forEach(directive => {
+				// Only do the 'outer most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
+				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
+				// directive.parentElement?.closest("[v-if]") == undefined
+
+				if (directive.getAttribute("v-if") != "uiBlocked" || directive.hasChildNodes()) {
+					addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
+				}
+
+				inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
+			});
+
+			container.querySelectorAll("[v-for]").forEach(directive => {
+				addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
+			});
+
 			// Turn v-ka-template="templateId, scope" into v-scope="components.template(templateId, scope)"
 			container.querySelectorAll("[v-ka-template]").forEach(directive => {
 				const exp = directive.getAttribute("v-ka-template")!;
@@ -2187,26 +2292,6 @@ class KatApp implements IKatApp {
 
 				directive.removeAttribute("v-ka-template");
 				directive.setAttribute("v-scope", `components.template(${scope})`);
-			});
-
-			// Also automatically setup helptips again if the item is removed/added via v-if and the v-if contains tooltips (popup config is lost on remove)
-			// Used to occur inside template[id] processing right after mountInputs(); call, but I think this should happen all the time
-
-			// PROBLEM: May have a problem here...if v-if contains templates that contain other v-ifs or helptips...the processing might not work right b/c selection doesn't
-			// span outside/inside of templates
-			container.querySelectorAll("[v-if]").forEach(directive => {
-				// Only do the 'outer most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
-				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
-				// if (ifDir.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined && ifDir.parentElement?.closest("[v-if]") == undefined) {
-				if (directive.querySelector("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']") != undefined) {
-					addMountAttribute(directive, "mounted", "HelpTips.processHelpTips(KatApp.get($el), $($el))", existing => existing.indexOf("HelpTips.processHelpTips(KatApp") == -1);
-				}
-
-				if (directive.querySelector("[v-ka-highchart]") != undefined) {
-					addMountAttribute(directive, "mounted", "KatApp.get($el).select('[data-highcharts-chart]', $($el)).each((i, c) => $(c).highcharts().reflow())", existing => existing.indexOf("KatApp.get($el).select('[data-highcharts-chart]'") == -1);
-				}
-
-				inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
 			});
 
 			if (that.options.debug.showInspector) {
