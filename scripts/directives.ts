@@ -232,55 +232,57 @@ class DirectiveKaModal implements IKaDirective {
 	public name = "ka-modal";
 	public getDefinition(application: KatApp): Directive<Element> {
 		return ctx => {
-			let scope: IKaModalModel = ctx.get();
-
-			try {
-				if (scope.model != undefined) {
-					scope = ctx.get(scope.model);
-				}
-			} catch (e) {
-				console.log({ e });
-			}
-
-			const showModal = async function (e: Event) {
-				e.preventDefault();
-				const triggerLink = $(e.currentTarget as HTMLInputElement);
+			ctx.effect(() => {
+				let scope: IKaModalModel = ctx.get();
 
 				try {
-					const response = await application.showModalAsync(
-						Utils.clone(scope, (k, v) => ["confirmed", "cancelled", "catch"].indexOf(k) > -1 ? undefined : v),
-						triggerLink
-					);
-
-					if (response.confirmed) {
-						if (scope.confirmed != undefined) {
-							scope.confirmed(response.response, application);
-						}
-						else {
-							console.log({ message: "Modal App " + scope.view + " confirmed.", response: response.response });
-						}
-					}
-					else {
-						if (scope.cancelled != undefined) {
-							scope.cancelled(response.response, application);
-						}
-						else {
-							console.log({ message: "Modal App " + scope.view + " cancelled.", response: response.response });
-						}
+					if (scope.model != undefined) {
+						scope = ctx.get(scope.model);
 					}
 				} catch (e) {
-					if (scope.catch != undefined) {
-						scope.catch(e, application);
-					}
-					else {
-						console.log("Modal App " + scope.view + " failed.");
-						console.log({ e });
-					}
+					console.log({ e });
 				}
-			};
 
-			ctx.el.setAttribute("href", "#");
-			$(ctx.el).on("click.ka-modal", showModal);
+				const showModal = async function (e: Event) {
+					e.preventDefault();
+					const triggerLink = $(e.currentTarget as HTMLInputElement);
+
+					try {
+						const response = await application.showModalAsync(
+							Utils.clone(scope, (k, v) => ["confirmed", "cancelled", "catch"].indexOf(k) > -1 ? undefined : v),
+							triggerLink
+						);
+
+						if (response.confirmed) {
+							if (scope.confirmed != undefined) {
+								scope.confirmed(response.response, application);
+							}
+							else {
+								console.log({ message: "Modal App " + scope.view + " confirmed.", response: response.response });
+							}
+						}
+						else {
+							if (scope.cancelled != undefined) {
+								scope.cancelled(response.response, application);
+							}
+							else {
+								console.log({ message: "Modal App " + scope.view + " cancelled.", response: response.response });
+							}
+						}
+					} catch (e) {
+						if (scope.catch != undefined) {
+							scope.catch(e, application);
+						}
+						else {
+							console.log("Modal App " + scope.view + " failed.");
+							console.log({ e });
+						}
+					}
+				};
+
+				ctx.el.setAttribute("href", "#");
+				$(ctx.el).off("click.ka-modal").on("click.ka-modal", showModal);
+			});
 
 			return () => {
 				$(ctx.el).off("click.ka-modal");
@@ -909,20 +911,21 @@ class DirectiveKaTable implements IKaDirective {
 							{
 								Name: k,
 								Element: tableConfigRow[k],
-								Width: tableConfigRow[k][hasResponsiveTable ? "@r-width" : "@width"]
+								Meta: tableConfigRow["@" + k] ?? {},
+								Width: tableConfigRow["@" + k]?.[hasResponsiveTable ? "@r-width" : "@width"]
 							})
 						)
 						.forEach(e => {
 							const config = {
 								name: e.Name,
 								isTextColumn: e.Name.startsWith("text"),
-								cssClass: e.Element["@class"],
+								cssClass: e.Meta["@class"],
 								width: e.Width !== undefined && !e.Width.endsWith("%") ? + e.Width : undefined,
 								widthPct: e.Width !== undefined && e.Width.endsWith("%") ? e.Width : undefined,
-								xsColumns: (e.Element["@xs-width"] != undefined ? e.Element["@xs-width"] * 1 : undefined) || (hasResponsiveTable && e.Element["@width"] != undefined ? e.Element["@width"] * 1 : undefined),
-								smColumns: e.Element["@sm-width"] != undefined ? e.Element["@sm-width"] * 1 : undefined,
-								mdColumns: e.Element["@md-width"] != undefined ? e.Element["@md-width"] * 1 : undefined,
-								lgColumns: e.Element["@lg-width"] != undefined ? e.Element["@lg-width"] * 1 : undefined
+								xsColumns: (e.Meta["@xs-width"] != undefined ? e.Meta["@xs-width"] * 1 : undefined) || (hasResponsiveTable && e.Meta["@width"] != undefined ? e.Meta["@width"] * 1 : undefined),
+								smColumns: e.Meta["@sm-width"] != undefined ? e.Meta["@sm-width"] * 1 : undefined,
+								mdColumns: e.Meta["@md-width"] != undefined ? e.Meta["@md-width"] * 1 : undefined,
+								lgColumns: e.Meta["@lg-width"] != undefined ? e.Meta["@lg-width"] * 1 : undefined
 							};
 
 							if (config.xsColumns !== undefined || config.smColumns !== undefined || config.mdColumns !== undefined || config.lgColumns !== undefined) {
@@ -939,8 +942,6 @@ class DirectiveKaTable implements IKaDirective {
 						return (code === "h" || code.startsWith("header") || code.startsWith("hdr")) ||
 							(id === "h" || id.startsWith("header") || id.startsWith("hdr"));
 					};
-					const getCellValue = (row: IStringAnyIndexer, columnName: string) =>
-						typeof (row[columnName]) === "object" ? row[columnName]["#text"] ?? "" : row[columnName] ?? "";
 
 					const getHeaderSpanCell = (row: IStringAnyIndexer, isHeader: boolean, span: string, getBootstrapSpanColumnCss?: (start: number, length: number) => string ) => {
 						if (!isHeader || span != "") return undefined;
@@ -952,7 +953,7 @@ class DirectiveKaTable implements IKaDirective {
 							.filter(k => k.startsWith("text") || k.startsWith("value"))
 							.map(k => ({
 								Name: k,
-								Value: getCellValue(row, k),
+								Value: row[k] ?? "",
 								Class: `${columnConfiguration[k].isTextColumn ? "text" : "value"} span-${scope.name}-${k} ${getBootstrapSpanColumnCss?.(0, tableColumns.length - 1) ?? ""}`
 							}))
 							.filter(c => c.Value !== "");
@@ -973,7 +974,7 @@ class DirectiveKaTable implements IKaDirective {
 								const spanConfig = columnConfiguration[colSpanName];
 								const _class = `${spanConfig.isTextColumn ? "text" : "value"} ${spanConfig.cssClass ?? ""} span-${scope.name}-${colSpan} ${getBootstrapSpanColumnCss?.(currentCol, colSpan - 1) ?? ""}`;
 
-								spanItems.push({ Value: getCellValue(row, colSpanName), Class: _class, Span: colSpan});
+								spanItems.push({ Value: row[colSpanName] ?? "", Class: _class, Span: colSpan});
 							}
 						}
 
@@ -1018,7 +1019,7 @@ class DirectiveKaTable implements IKaDirective {
 							const row = document.createElement("div");
 							addClass(row, `${r["@class"] ?? r["class"] ?? ""} row tr-row ${isHeader ? "h-row" : ""}`);
 
-							const span = getCellValue(r, "span");
+							const span = r["span"] ?? "";
 							const headerSpanCell = getHeaderSpanCell(r, isHeader, span, getBootstrapSpanColumnCss);
 
 							if (headerSpanCell != undefined) {
@@ -1042,7 +1043,7 @@ class DirectiveKaTable implements IKaDirective {
 								tableColumns.forEach(c => {
 									const col = document.createElement("div");
 									addClass(col, `${getBootstrapColumnCss(c)} ${c.isTextColumn ? "text" : "value"} ${scope.name}-${c.name}`);
-									col.innerHTML = getCellValue(r, c.name);
+									col.innerHTML = r[c.name] ?? "";
 									row.append(col);
 								})
 							}
@@ -1101,7 +1102,7 @@ class DirectiveKaTable implements IKaDirective {
 							addClass(row, `${r["@class"] ?? r["class"] ?? ""} ${isHeader && rowContainer!.tagName == "TBODY" ? "h-row" : ""}`);
 
 							const elementName = isHeader ? "th" : "td";
-							const span = getCellValue(r, "span");
+							const span = r["span"] ?? "";
 							const headerSpanCell = getHeaderSpanCell(r, isHeader, span);
 
 							if (headerSpanCell != undefined) {
@@ -1126,7 +1127,7 @@ class DirectiveKaTable implements IKaDirective {
 								tableColumns.forEach(c => {
 									const col = document.createElement(elementName);
 									addClass(col, `${c.cssClass ?? ""} ${c.isTextColumn ? "text" : "value"} ${scope.name}-${c.name}`);
-									col.innerHTML = getCellValue(r, c.name);
+									col.innerHTML = r[c.name] ?? "";
 									row.append(col);
 								})
 							}

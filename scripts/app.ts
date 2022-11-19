@@ -118,33 +118,10 @@ class KatApp implements IKatApp {
 
 	private calcEngines: ICalcEngine[] = [];
 	private uiBlockCount = 0;
-	private hasHighChart = false;
 
 	private domElementQueued = false;
 	private domElementQueue: Array<HTMLElement> = [];
 	private updateDomPromise = Promise.resolve();
-
-	private async processDomElementsAsync() {
-		// console.log(this.selector + " domUpdated: " + this.domElementQueue.length);
-		for (const el of this.domElementQueue) {
-			// console.log(this.selector + " charts: " + this.select('[data-highcharts-chart]', $(el)).length + ", hasCloak: " + el.hasAttribute("ka-cloak"));
-
-			// Default markup processing...think about creating a public method that triggers calculation
-			// in case KAMLs have code that needs to run inside calculation handler? Or create another
-			// event that is called from this new public method AND from calculation workflow and then
-			// KAML could put code in there...b/c this isn't really 'calculation' if they just call
-			// 'processModel'
-			this.select("a[href='#']", el).off("click.ka").on("click.ka", e => e.preventDefault());
-			HelpTips.processHelpTips(this, $(el));
-			this.select('[data-highcharts-chart]', $(el))
-				.each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
-		}
-		const elementsProcessed = [...this.domElementQueue];
-		this.domElementQueue.length = 0;
-		this.domElementQueued = false;		
-		await this.triggerEventAsync("domUpdated", elementsProcessed);
-	}
-
 
 	private constructor(public selector: string, options: IKatAppOptions) {
 		const id = this.id = "ka" + Utils.generateId();
@@ -214,15 +191,17 @@ class KatApp implements IKatApp {
 		const that = this;
 
 		const getResultTableRows = function <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string) {
-			const ce = calcEngine
-				? that.calcEngines.find(c => c.key == calcEngine)
+			const ceKey = calcEngine ?? that.state.rbl.options?.calcEngine;
+
+			const ce = ceKey
+				? that.calcEngines.find(c => c.key == ceKey)
 				: that.calcEngines[0];
 
 			if (ce == undefined) {
 				throw new Error(String.formatTokens("Can not find CalcEngine {ce} in rbl-config.", { ce: calcEngine }));
 			}
 
-			const tabName = tab ?? ce.resultTabs[0];
+			const tabName = tab ?? that.state.rbl.options?.tab ?? ce.resultTabs[0];
 
 			if (ce.resultTabs.indexOf(tabName) == -1) {
 				throw new Error(String.formatTokens("Can not find Tab {tab} for {ce} in rbl-config.", { ce: calcEngine, tab: tabName }));
@@ -267,8 +246,8 @@ class KatApp implements IKatApp {
 			warnings: [],
 			rbl: {
 				results: {},
-
-				pushTo(tabDef, table, rows, calcEngine, tab) {
+				options: {},
+				pushTo(tabDef, table, rows) {
 					const t = (tabDef[table] ?? (tabDef[table] = [])) as ITabDefTable;
 					const toPush = rows instanceof Array ? rows : [rows];
 
@@ -277,10 +256,10 @@ class KatApp implements IKatApp {
 					t.push(...toPush);
 				},
 				onAll(...values: any[]) {
-					return values.find(v => !isTrue(v) ) != undefined;
+					return values.find(v => (v ?? "") == "" || !isTrue(v) ) == undefined;
 				},
 				onAny(...values: any[]) {
-					return values.find(v => isTrue(v)) != undefined;
+					return values.find(v => (v ?? "") != "" && isTrue(v)) != undefined;
 				},
 				boolean() {
 					const argList = Array.from(arguments);
@@ -1228,6 +1207,44 @@ class KatApp implements IKatApp {
 		*/
 	}
 
+	private async processDomElementsAsync() {
+		// console.log(this.selector + " domUpdated: " + this.domElementQueue.length);
+		for (const el of this.domElementQueue) {
+			// console.log(this.selector + " charts: " + this.select('[data-highcharts-chart]', $(el)).length + ", hasCloak: " + el.hasAttribute("ka-cloak"));
+
+			// Default markup processing...think about creating a public method that triggers calculation
+			// in case KAMLs have code that needs to run inside calculation handler? Or create another
+			// event that is called from this new public method AND from calculation workflow and then
+			// KAML could put code in there...b/c this isn't really 'calculation' if they just call
+			// 'processModel'
+			this.select("a[href='#']", el).off("click.ka").on("click.ka", e => e.preventDefault());
+			HelpTips.processHelpTips(this, $(el));
+			this.select('[data-highcharts-chart]', $(el)).each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
+
+			if (el.classList.contains("ui-blocker")) {
+				if (el.parentElement != undefined) {
+					el.parentElement.classList.add("ui-blocker-wrapper");
+				}
+			}
+			else {
+				this.select(".ui-blocker", $(el)).each((i, e) => {
+					if (e.parentElement != undefined) {
+						e.parentElement.classList.add("ui-blocker-wrapper");
+					}
+				});
+			}
+		}
+
+		const elementsProcessed = [...this.domElementQueue];
+		this.domElementQueue.length = 0;
+		this.domElementQueued = false;
+		await this.triggerEventAsync("domUpdated", elementsProcessed);
+	}
+
+	public async nextDomUpdate(): Promise<void> {
+		await PetiteVue.nextTick();
+	}
+
 	public getInputValue(name: string, allowDisabled = false): string | undefined {
 		const el = this.select<HTMLInputElement>("." + name);
 
@@ -1434,21 +1451,32 @@ class KatApp implements IKatApp {
 	}
 
 	private get nextCalculation(): INextCalculation {
-		const cacheValue =
-			sessionStorage.getItem("katapp:debugNext:" + this.selector) ??
-			sessionStorage.getItem("katapp:debugNext:" + this.options.hostApplication?.selector);
+		let cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
+		let from = "app";
+
+		if (cacheValue == undefined) {
+			cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.options.hostApplication?.selector);
+			from = cacheValue != undefined ? "host" : "default";
+		}
 		
 		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
+		debugNext.from = from;
+
 		return debugNext;
 	}
 	private set nextCalculation(value: INextCalculation | undefined) {
-		const debugKey = "katapp:debugNext:" + this.selector;
+		const appDebugKey = "katapp:debugNext:" + this.selector;
+		const hostDebugKey = "katapp:debugNext:" + this.options.hostApplication?.selector;
+
 		if (value == undefined) {
-			sessionStorage.removeItem(debugKey);
-			sessionStorage.removeItem("katapp:debugNext:" + this.options.hostApplication?.selector);
+			sessionStorage.removeItem(appDebugKey);
+			sessionStorage.removeItem(hostDebugKey);
 		}
 		else {
-			sessionStorage.setItem(debugKey, JSON.stringify(value));
+			var debugKey = value.from == "host" ? hostDebugKey : appDebugKey;
+			var saveValue = Utils.clone<INextCalculation>(value);
+			delete saveValue.from;
+			sessionStorage.setItem(debugKey, JSON.stringify(saveValue));
 		}
 	}
 
@@ -1766,39 +1794,89 @@ class KatApp implements IKatApp {
 	private async processResultsAsync(results: IKaTabDef[]): Promise<void> {
 		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
 
+		const processResultColumn = (row: ITabDefRow, colName: string, isRblInputTable: boolean) => {
+			if (typeof (row[colName]) === "object") {
+				const metaRow: ITabDefMetaRow = row;
+				const metaSource = metaRow[colName] as IStringIndexer<string>;
+				const metaDest = (metaRow["@" + colName] = {}) as IStringIndexer<string>;
+
+				// For the first row of a table, if there was a width row in CE, then each 'column' has text and @width attribute,
+				// so row[columnName] is no longer a string but a { #text: someText, @width: someWidth }.  This happens during process
+				// turning the calculation into json.  http://www.newtonsoft.com/json/help/html/convertingjsonandxml.htm
+				Object.keys(metaSource)
+					.filter(k => k != "#text")
+					.forEach(p => {
+						metaDest[p] = metaSource[p];
+					});
+
+				row[colName] = metaSource["#text"] ?? "";
+			}
+
+			const value = row[colName];
+
+			if (isRblInputTable && value == "" && (row["@" + colName] as unknown as IStringIndexer<string>)?.["@text-forced"] != "true") {
+				// For rbl-input (which is special table), I want any 'blanks' to be returned as undefined, any other table, I always want '' in there
+				// so Kaml Views don't always have to code undefined protection code
+				(row as ITabDefRblInputRow)[colName] = undefined;
+			}
+
+			// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
+			if (value == undefined && !isRblInputTable) {
+				row[colName] = "";
+			}
+		};
+
 		results.forEach(t => {
 			Object.keys(t)
 				// No idea how ItemDefs is in here, but not supporting going forward, it was returned by IRP CE but the value was null so it blew up the code
 				.filter(k => !k.startsWith("@") && k != "_ka" && k != "ItemDefs")
 				.forEach(tableName => {
 					const rows = t[tableName] as ITabDefTable ?? [];
-					const isRblInputTable = tableName == "rbl-input";
 
 					if (rows.length > 0) {
-						if (isRblInputTable) {
-							// For rbl-input (which is special table), I want any 'blanks' to be returned as undefined, any other table, I always want '' in there
-							// so Kaml Views don't always have to code undefined protection code
-							Object.keys(rows[0])
-								.forEach(p => {
-									if (rows[0][p] == "") {
-										(rows[0] as ITabDefRblInputRow)[p] = undefined;
-									}
-								});
-						}
+						const isRblInputTable = tableName == "rbl-input";
+						const colNames = Object.keys(rows[0]);
 
-						// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
 						rows.forEach(r => {
-							Object.keys(rows[0])
-								.forEach(p => {
-									if (r[p] == undefined) {
-										if (isRblInputTable) {
-											( r as ITabDefRblInputRow)[p] = undefined;
-										}
-										else {
-											r[p] = "";
-										}
+							colNames.forEach(c => processResultColumn(r, c, isRblInputTable))
+
+							switch (tableName) {
+								case "rbl-defaults":
+									this.setInputValue(r["@id"], r["value"]);
+									break;
+
+								case "rbl-input":
+									if (r["value"] != undefined) {
+										this.setInputValue(r["@id"], r["value"]);
 									}
-								});
+									if ((r["error"] ?? "") != "") {
+										const v: IValidation = { "@id": r["@id"], text: r["error"] };
+										this.state.errors.push(v);
+									}
+									if ((r["warning"] ?? "") != "") {
+										const v: IValidation = { "@id": r["@id"], text: r["warning"] };
+										this.state.warnings.push(v);
+									}
+									break;
+
+								case "errors":
+									this.state.errors.push(r as unknown as IValidation);
+									break;
+
+								case "warnings":
+									this.state.warnings.push(r as unknown as IValidation);
+									break;
+
+								case "table-output-control":
+									// If table control says they want to export, but no rows are returned, then need to re-assign to empty array
+									// export = -1 = don't export table and also clear out in Vue state
+									// export = 0 = don't export table but leave Vue state
+									// export = 1 = try export table and if empty, clear Vue state
+									if ((r["export"] == "-1" || r["export"] == "1") && t[r["@id"]] == undefined) {
+										this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, r["@id"]);
+									}
+									break;
+							}
 						});
 					}
 
@@ -1809,44 +1887,6 @@ class KatApp implements IKatApp {
 						this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[tableName] as ITabDefTable, tableName);
 					}
 				});
-
-			(t["rbl-defaults"] as ITabDefTable ?? []).forEach(r => this.setInputValue(r["@id"], r["value"]) );
-
-			// Only set 'value', 'error', 'warning' column is returned in rbl-input table
-			const hasRblInputValue = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].value != undefined;
-			const hasRblInputError = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].error != undefined;
-			const hasRblInputWarning = t["rbl-input"] != undefined && (t["rbl-input"] as ITabDefTable)[0].warning != undefined;
-
-			(t["rbl-input"] as ITabDefTable ?? []).forEach(r => {
-				if (hasRblInputValue) {
-					this.setInputValue(r["@id"], r["value"]);
-				}
-				if (hasRblInputError && (r["error"] ?? "") != "") {
-					const v: IValidation = { "@id": r["@id"], text: r["error"] };
-					this.state.errors.push(v);
-				}
-				if (hasRblInputWarning && (r["warning"] ?? "") != "") {
-					const v: IValidation = { "@id": r["@id"], text: r["warning"] };
-					this.state.warnings.push(v);
-				}
-			});
-
-			(t["errors"] as ITabDefTable ?? []).forEach(r => {
-				this.state.errors.push(r as unknown as IValidation);
-			});
-			(t["warnings"] as ITabDefTable ?? []).forEach(r => {
-				this.state.warnings.push(r as unknown as IValidation);
-			});
-
-			// If table control says they want to export, but no rows are returned, then need to re-assign to empty array
-			(t["table-output-control"] as ITabDefTable ?? []).forEach(r => {
-				// export = -1 = don't export table and also clear out in Vue state
-				// export = 0 = don't export table but leave Vue state
-				// export = 1 = try export table and if empty, clear Vue state
-				if ((r["export"] == "-1" || r["export"] == "1") && t[r["@id"]] == undefined ) {
-					this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, r["@id"]);
-				}
-			});
 		});
 
 		try {
@@ -2048,11 +2088,18 @@ class KatApp implements IKatApp {
 
 		// Add mounted/unmounted attributes and safely keep any previously assigned values.
 		const addMountAttribute = (el: Element, type: string, exp: string, predicate?: (existingScript: string) => boolean ) => {
-			const mountScript = el.getAttribute("v-on:vue:" + type) ?? el.getAttribute("@vue:" + type) ?? ""
+			let mountScript = el.getAttribute("v-on:vue:" + type) ?? el.getAttribute("@vue:" + type) ?? ""
 
 			if (predicate?.(mountScript) ?? true) {
 				el.removeAttribute("v-on:vue:" + type);
 				el.removeAttribute("@vue:" + type);
+
+				if (mountScript.startsWith("handlers.") && mountScript.indexOf("(") == -1) {
+					// the @vue:mounted simply pointed to a handlers.function...but since we are appending more
+					// script to it, need to change it into a function call...
+					mountScript += "($event)"
+				}
+
 				el.setAttribute("v-on:vue:" + type, `${mountScript != '' ? mountScript + ';' : ''}${exp}`);
 			}
 		};
@@ -2175,8 +2222,6 @@ class KatApp implements IKatApp {
 
 			// Fix v-ka-highchart 'short hand' of data or data.options string into a valid {} scope
 			container.querySelectorAll("[v-ka-highchart]").forEach(directive => {
-				that.hasHighChart = true;
-
 				let exp = directive.getAttribute("v-ka-highchart")!;
 
 				if (!exp.startsWith("{")) {
@@ -2265,10 +2310,7 @@ class KatApp implements IKatApp {
 				// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
 				// directive.parentElement?.closest("[v-if]") == undefined
 
-				if (directive.getAttribute("v-if") != "uiBlocked" || directive.hasChildNodes()) {
-					addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
-				}
-
+				addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
 				inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
 			});
 

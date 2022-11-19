@@ -30,6 +30,7 @@ interface INextCalculation {
 	saveLocations: { location: string, serverSideOnly: boolean }[];
 	expireCache: boolean;
 	trace: boolean;
+	from?: string;
 }
 interface IStringIndexer<T> extends Record<string, T> { }
 interface IStringAnyIndexer extends IStringIndexer<any> { } // eslint-disable-line @typescript-eslint/no-explicit-any

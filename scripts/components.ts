@@ -48,6 +48,13 @@ class InputComponent {
 		input.setAttribute("name", name);
 		input.classList.add(name);
 
+		// Issue with nested v-if directives and reactivity - see tests/if.nested.reactive.html, https://stackoverflow.com/questions/74497174/petite-vue-mount-and-unmount-events-with-nested-v-if
+
+		if (!input.isConnected) {
+			console.log(`Skipping input mount on ${name} because the input is not connected, consider the order of model properties being set.`);
+			return;
+		}
+
 		const type = input.getAttribute("type");
 
 		// If just attaching v-ka-input to 'raw' input that already has markup values, grab the values to assign during mount

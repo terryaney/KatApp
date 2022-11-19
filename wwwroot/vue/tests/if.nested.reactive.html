@@ -1,0 +1,99 @@
+<script type="module">
+  // https://github.com/vuejs/petite-vue/discussions/169
+	import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
+
+	const state = reactive({
+		setMode: function (benefit) {
+			var beneficiaries = benefit == undefined ? [] : [ "Spouse", "Son" ];
+			this.model.beneficiaries = beneficiaries;
+			this.model.currentBenefit = benefit;
+			this.model.showConfirm = false;
+		},
+		startEdit: function (benefit) {
+			console.log("Edit Clicked");
+			this.setMode(benefit);
+		},
+		cancelEdit: function () {
+			console.log("Cancel Clicked");
+			this.setMode();
+		},
+		saveBenefit: function () {
+			console.log("Save Clicked");
+			this.model.showConfirm = true;
+		},
+		acceptBenefit: function () {
+			console.log("Accept Clicked");
+			this.model.acceptClicks++;
+			this.setMode();
+		},
+		model: {
+			acceptClicks: 0,
+			currentBenefit: undefined,
+			showConfirm: false,
+			beneficiaries: []
+		}
+	});
+
+	createApp(state).mount('#app')
+</script>
+
+<div id="app" v-scope>
+	<p>Scenarios</p>
+	<ul>
+		<li>
+			Scenario 1
+			<ul>
+				<li>Click Edit, then Cancel: Why two unmounts for the v-for="item in model.beneficiaries"?</li>
+			</ul>
+		</li>
+		<li>
+			Scenario 2
+			<ul>
+				<li>Click Edit, then Save: All OK</li>
+				<li>Click Accept: Why isConnected = false mount on 'Edit Screen'?</li>
+			</ul>
+		</li>
+		<li>
+			Scenario 3
+			<ul>
+				<li>Repeat cycles of Edit, Cancel or Edit Save, then Accept and read notes about acceptClicks</li>
+			</ul>
+		</li>
+	</ul>
+
+	<div>State:</div>
+	<div>currentBenefit: {{model.currentBenefit == undefined ? 'undefined' : 'set'}}</div>
+	<div>showConfirm: {{model.showConfirm}}</div>
+	<div>beneficiaries: {{model.beneficiaries.length}}</div>
+	<div>acceptClicks: {{model.acceptClicks}}</div>
+	<div v-if="model.acceptClicks > 0">
+		<div>After each Accept</div>
+		<ul>
+			<li>When clicking Edit, {{model.acceptClicks}} isConnected=false mounts for 'Has Beneficiaries', 'Spouse' and 'Son'</li>
+			<li>When clicking Edit, then Cancel, {{2 + model.acceptClicks * 2}} unmounts for 'Spouse' and 'Son'; {{1 + model.acceptClicks}} unmounts for 'Has Beneficiaries'</li>
+		</ul>
+	</div>
+
+	<div v-if="model.currentBenefit != undefined">
+		<h3>Editing {{model.currentBenefit?.name}}</h3>
+		<div v-if="!model.showConfirm">
+			<div @vue:mounted="console.log('Mount: ' + $el.innerHTML + ', isConnected: ' + $el.isConnected)" @vue:unmounted="console.log('Unmount: ' + $el.innerHTML)">Edit Screen</div>
+			<div v-if="model.beneficiaries.length > 0">
+				<div @vue:mounted="console.log('Mount: ' + $el.innerHTML + ', isConnected: ' + $el.isConnected)" @vue:unmounted="console.log('Unmount: ' + $el.innerHTML)">Has Beneficiaries</div>
+				<div v-for="item in model.beneficiaries">
+					<div @vue:mounted="console.log('Mount: ' + $el.innerHTML + ', isConnected: ' + $el.isConnected)" @vue:unmounted="console.log('Unmount: ' + $el.innerHTML)">{{item}}</div>
+				</div>
+			</div>
+
+			<button type="button" @click.prevent="cancelEdit">Cancel</button>
+			<button type="button" @click.prevent="saveBenefit">Save Benefit</button>
+		</div>
+		<div v-if="model.showConfirm">
+			<button type="button" @click.prevent="acceptBenefit">Accept Confirm</button>
+		</div>
+	</div>
+	<div v-if="model.currentBenefit == undefined">
+		<h3>No Benefit</h3>
+		<button type="button" @click.prevent="startEdit($event, { name: 'Health Benefit' })">Edit Benefit</button>
+	</div>
+</div>

@@ -58,6 +58,7 @@ interface ITabDef extends IStringIndexer<ITabDefTable> {
 interface ITabDefTable extends Array<ITabDefRow> { };
 interface ITabDefRow extends IStringIndexer<string> { };
 interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { };
+interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { };
 
 interface KatApp {
 	createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp>;
@@ -153,6 +154,7 @@ interface IValidation {
 
 interface IRblApplicationData {
 	results: IStringIndexer<IStringIndexer<Array<ITabDefRow>>>;
+	options: { calcEngine?: string, tab?: string };
 
 	source: <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string, predicate?: (row: T) => boolean) => Array<T>;
 	exists: <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string, predicate?: (row: T) => boolean) => boolean;
@@ -162,7 +164,7 @@ interface IRblApplicationData {
 	onAll: (...values: Array<undefined | string | number>) => boolean;
 	onAny: (...values: Array<undefined | string | number>) => boolean;
 
-	pushTo: (tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>, calcEngine?: string, tab?: string) => void;
+	pushTo: (tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>) => void;
 }
 
 

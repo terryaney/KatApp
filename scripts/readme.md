@@ -31,7 +31,7 @@ RBLe Results | Calculation results from RBLe Service (stored in KatApp state for
 KatApp element | The HTML element that is target/container for the KatApp.  Example: `<div id="KatApp"></div>`
 Vue Directive | Special attributes indicating that the attribute content should be processed by Vue and its rendering engine. 
 Host Platform | Web Application hosting the KatApp.
-Kaml View CMS | System for updating Kaml View when Kaml files are not hosted directly by Host Platform.
+KAT CMS | System for updating CalcEngines and Kaml Views when Kaml files are not hosted directly by Host Platform.
 Kaml&nbsp;Template&nbsp;Files | Kaml file containing *only* templates, css, and javascript for generating common markup/controls used in KatApp's.  Kaml Template Files are never the 'main view' of a KatApp.
 Template | A reuseable piece of a markup found in Kaml Template file.
 
@@ -100,7 +100,7 @@ Inside each Kaml View file is a required `<rbl-config>` element; This should be 
 </rbl-config>
 ```
 
-When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), or [v-ka-highchart](#v-ka-highchart) directives or the [`rbl.source()`](#rbl-source) method for more information on specifying non-default CalcEngine results.
+When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See the [`rbl.source()`](#iapplicationdatarblsource) method for more information on how the appropriate CalcEngine/Tab name combination is determined specifying non-default CalcEngine results and how they are used in the [`rbl.exists()`](#iapplicationdatarblexists), [`rbl.boolean()`](#iapplicationdatarblboolean) and [`rbl.value()`](#iapplicationdatarblvalue) methods and the [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), and [v-ka-highchart](#v-ka-highchart) directives.
 
 **Important** - Whenever multiple CalcEngines are used, you must provide a `key` attribute; minimally on CalcEngines 2...N, but ideally on all of them.  Note that the first CalcEngine will be assigned a key value of `default` if no `key` is provided.
 
@@ -365,22 +365,73 @@ state: {
 
 **`source(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean) => Array<ITabDefRow>`**
 
-Returns table rows from `results`.  The CalcEngine key and `ITabDef` name can be passed in if not using the default CalcEngine and result tab. 
+The core method that returns table rows from `results` (and is leveraged internally by other `IApplicationData.rbl` methods).  The CalcEngine key and `ITabDef` name can be passed in if not using the 'default' CalcEngine and result tab. 
 
-A `predicate` can be passed to filter rows before returning them.
+When the `calcEngine` and/or `tab` parameter is not provided, a 'default' location has to be determined.  This can be set via the the `IApplicationData.rbl.options` object.
+
+1. CalcEngine is determined by `calcEngine` param, then [`rbl.options.calcEngine`](#iapplicationdatarbloptionscalcengine) setting.
+1. Tab name is determined by `tab` param, then [`rbl.options.tab`](#iapplicationdatarbloptionstab) setting.
+
+The `predicate` parameter indicates how the result rows should be filtered before returning them.
 
 ```javascript
 // Return all resultTable rows
 application.state.rbl.source("resultTable");
+
 // Return all resultTable rows where category = 'red'
 application.state.rbl.source("resultTable", r => r.category == 'red');
+
 // Return all brdResultTable rows from the BRD CalcEngine
 application.state.rbl.source("brdResultTable", "BRD");
+
 // Return all resultTable rows from the 'RBLSecondTab' tab def
 application.state.rbl.source("resultTable", undefined, "RBLSecondTab");
+application.state.rbl.source("resultTable", , "RBLSecondTab");
+
 // Return all brdResultTable rows from the BRD CalcEngine where topic = 'head'
 application.state.rbl.source("brdResultTable", "BRD", r => r.topic == 'head');
 ```
+
+### IApplicationData.rbl.options
+
+Default configuration settings to be applied when working with the `IApplicationData.rbl` object and its methods.
+
+#### IApplicationData.rbl.options.calcEngine
+
+Property Type: `string`; Optional  
+The CalcEngine key to use as the default source when the CalcEngine key is not provided in methods that access RBLe Framework results.  If not provided, the *first* CalcEngine key defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
+
+#### IApplicationData.rbl.options.tab
+
+Property Type: `string`; Optional  
+The `ITabDef` name to use as the default source when not the tab name is not provided in methods that access RBLe Framework results.  If not provided, the *first* result tab for the *default* CalcEngine defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
+
+#### IApplicationData.rbl.options Samples
+
+Given the following configuration for multiple CalcEngines and tabs, the `rbl.options` object can be used in the following scenarios.  Note, that when `options.calcEngine` or `options.tab` are set, all KatApp directives (`v-ka-value`, `v-ka-template`, `v-ka-table`, `v-ka-highchart`, etc.) that access RBLe Results will also obey the settings.
+
+```html
+<rbl-config templates="Standard_Templates,LAW:Law_Templates">
+    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult"></calc-engine>
+    <calc-engine key="shared" name="LAW_Shared_CE" input-tab="RBLInput" result-tabs="RBLResult,RBLHelpers"></calc-engine>
+</rbl-config>
+```
+
+```javascript
+// Start: application.state.rbl.options.calcEngine is 'undefined'
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "shared";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "default";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "shared";
+application.state.rbl.options.tab = "RBLHelpers";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLHelpers tab
+```
+
 
 ### IApplicationData.rbl.exists
 
@@ -948,13 +999,18 @@ Note: Given that `v-html` used with `rbl.value` renders the 'undefined' in the m
 
 > [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-bind:style` auto-prefixing
 
+The `v-bind` directive *does* have a `:` shorthand syntax that allows for more terse markup.
+
+- [v-bind Examples](#v-bind-examples) - Samples doing general `v-bind` instructions.
+- [v-bind `class` and `style` Examples](#v-bind-class-and-style-examples) - Samples explaining the special processing that occurs when binding `class` or `style` attributes.
+
 Also note, features from Vue documentation that petite-vue does not support:
 1. `.prop` - force a binding to be set as a DOM property.
 1. `.attr` - force a binding to be set as a DOM attribute.
 1. `<button :[key]="value"></button>` - dynamic attribute name.
 1. `style` auto-prefixing - when a CSS property that requires [vendor prefix](#https://developer.mozilla.org/en-US/docs/Glossary/Vendor_Prefix) (i.e. `transform`)
 
-The `v-bind` directive *does* have a `:` shorthand syntax that allows for more terse markup.
+### v-bind Examples
 
 ```html
 <!-- The following are equivalent -->
@@ -995,7 +1051,7 @@ In the simplest sense, `v-bind` takes an 'expression' that returns a `string` an
 <div data-calculation-id="123"></div>
 ```
 
-### v-bind class and style Attributes
+### v-bind `class` and `style` Examples
 
 The `class` and `style` attributes have special processing that occurs.
 
@@ -1139,6 +1195,7 @@ model: {
 
 > [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-for` deep destructure
 
+
 There are two allowed syntaxes for `v-for`. 
 
 1. `v-for="item in array"` where `item` is just a 'variable name' representing each item in the iterable source.  In this case, the `array` value, usually `rbl.source()`, represents the iterable source.
@@ -1157,6 +1214,11 @@ results: {
     ]
 }
 ```
+
+- [v-for With rbl.source](#v-for-with-rblsource) - Most common syntax of using `v-for` directive with results from a CalcEngine.
+- [v-for With template Element](#v-for-with-template-element) - Describes the benefit of using a HTML Template element with `v-for` to eliminate the rendering of a parent HTML element if not desired.
+- [v-for With v-bind Attributes](#v-for-with-v-bind-attributes) - Example using both `v-for` and `v-bind` directives on the same element.
+
 ### v-for With rbl.source
 
 The most common and basic syntax used will be:
@@ -1261,6 +1323,10 @@ When an element has `v-for` directive applied, [v-bind](#v-bind) attributes can 
 The `v-on` directive allows Kaml Views to bind events to elements.  The directive expects a `function` reference or an `inline statement`.
 
 The `v-on` directive *does* have a `@` shorthand syntax that allows for more terse markup.
+
+- [v-on Modifiers](#v-on-modifiers) - Explains the 'modifier' feature that can be used to modify how events are processed (i.e. automatically calling the `preventDefault()` method of the `Event` object).
+- [v-on Element Lifecycle Events](#v-on-element-lifecycle-events) - Discusses the Vue specific `mounted` and `unmounted` events that are triggered when HTML elements are added to or removed from the DOM.
+
 
 ```html
 <!-- 
@@ -1395,6 +1461,10 @@ Similiar to common Vue directives, the KatApp Framework provides custom directiv
 
 The `v-ka-value` directive is responsible assigning element HTML content from the calculation results.  It is simply a shorthand syntax to use in place of [`v-html`](#v-html--v-text) and [`rbl.value()`](#iapplicationdatarblvalue).
 
+- [v-ka-value Model](#v-ka-value-model) - Discusses the properties that can be passed in to configure the `v-ka-value` directive.
+- [v-ka-value Samples](#v-ka-value-samples) - Various use examples of how to use `v-ka-value`.
+- [v-ka-value Model Segments With Periods](#v-ka-value-model-segments-with-periods) - Displays how to use `v-ka-value` if the `keyValue` contains one or more periods (which would break the default `.` delimitted segment string usually passed in for configuration).
+
 ### v-ka-value Model
 
 The model used to configure how a `v-ka-value` will find the appropriate calculation result value is simply a `.` delimitted `string`.
@@ -1464,6 +1534,13 @@ The `v-ka-input` directive can be used in three scenarios.
 1. Applied to a 'container' `HTMLElement` without a `template`. Similar to when a `template` is provided, the container will be searched for any `HTMLInputElement`s and automatically added events and bindings. The container will be given access to the scope. This can be envisioned as an 'inline template' so to speak where all the markup for an input is manually provided and only available to the current input.
 
 Internally, KatApp Framework leverages the [`v-scope`](#https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by inputs or templates.
+
+- [v-ka-nomount](#v-ka-nomount) - Control whether or not the associated HTML input element allows for the KatApp framework to wire up all automatic processing.
+- [rbl-input Table](#rbl-input-table) - Discusses RBLe Framework `rbl-input` table layout that can be used to automatically control many of the `v-ka-input` model properties.
+- [v-ka-input Model](#v-ka-input-model) - Discusses the properties that can be passed in to configure the `v-ka-input` directive.
+- [v-ka-input Model Samples](#v-ka-input-model-samples) - Examples illustrating the different properties that can be assigned on the `v-ka-input` model object.
+- [v-ka-input Scope](#v-ka-input-scope) - Discusses the properties that are exposed on the `v-ka-input` scope and can be used in Kaml View markup.
+- [v-ka-input Scope Samples](#v-ka-input-scope-samples) - Examples illustrating uses of the different properties returned by the `v-ka-input` scope object.
 
 ### v-ka-nomount
 
@@ -2285,6 +2362,13 @@ The `v-ka-input-group` directive can only be used when a `template` is assigned.
 
 Internally, KatApp Framework leverages the [`v-scope`](#https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by the template.
 
+- [v-ka-input-group Model](#v-ka-input-group-model) - Discusses the properties that can be passed in to configure the `v-ka-input` directive.
+- [v-ka-input-group Model Samples](#v-ka-input-group-model-samples) - Examples illustrating the different properties that can be assigned on the `v-ka-input-group` model object.
+- [v-ka-input-group Scope](#v-ka-input-group-scope) - Discusses the properties that are exposed on the `v-ka-input-group` scope and can be used in Kaml View markup.
+- [v-ka-input-group Scope Samples](#v-ka-input-group-scope-samples) - Examples illustrating uses of the different properties returned by the `v-ka-input-group` scope object.
+
+See [v-ka-nomount](#v-ka-nomount) and [rbl-input Table](#rbl-input-table) to learn more about controlling whether or not the associated HTML input elements allow for the KatApp framework to wire up all automatic processing and information about the RBLe Framework `rbl-input` that can be used to automatically control many of the `v-ka-input` model properties.
+
 ### v-ka-input-group Model
 
 The `IKaInputGroupModel` represents the model type containing the properties that configure the initialization of inputs and the returned [`v-ka-input-group` scope](#v-ka-input-group-scope). All properties of the `IKaInputGroupModel` will be present as *read only* properties on the scope. See the scope documentation for more information.
@@ -2828,7 +2912,7 @@ Given an input index, gets the warning message associated with the current input
 
 The value can only by provided the `state.warnings` property.
 
-### v-ka-input-group Scope Sample
+### v-ka-input-group Scope Samples
 
 ```html
 <!--
@@ -2932,6 +3016,10 @@ If the *entire* `IKaNavigateModel` parameter is being provided by a CalcEngine v
 ## v-ka-template
 
 The `v-ka-template` directive is responsible for manually rendering a template with or without a data source. The data source can be a simple javascript object or it can be an array of data (usually obtained via [rbl.source()](#iapplicationdatarblsource)).  When the source is an `Array<>`, the template can get access to this property via the scope's `rows` properties.
+
+- [v-ka-template Model](#v-ka-template-model) - Discusses the properties that can be passed in to configure the `v-ka-template` directive.
+- [v-ka-template Scope](#v-ka-template-scope) - Discusses how/which properties are exposed on the `v-ka-template` scope and can be used in Kaml View markup.
+- [v-ka-template Samples](#v-ka-template-samples) - Examples illustrating different scenario usages for `v-ka-template` directive.
 
 ### v-ka-template Model
 
@@ -3224,6 +3312,15 @@ If inputs should be passed to the rendered nested application's Kaml View, provi
 
 The `v-ka-table` directive is responsible for creating HTML tables automatically from the calculation results.
 
+- [v-ka-table Model](#v-ka-table-model) - Discusses the properties that can be passed in to configure the `v-ka-table` directive.
+- [v-ka-table Result Table Columns](#v-ka-table-result-table-columns) - Discusses how konwn RBLe result table columns are processed to automatically render a table.
+- [v-ka-table colgroup Processing](#v-ka-table-colgroup-processing) - Discusses how a `v-ka-table` colgroup is built from results.
+- [v-ka-table Header Rows](#v-ka-table-header-rows) - Explains how to identify RBLe Calculation result rows as 'header' rows and when they appear in `thead` versus `tbody`.
+- [v-ka-table Automatic Column Spanning](#v-ka-table-automatic-column-spanning) - Explains when automatic column spanning occurs in the rendered table.
+- [v-ka-table Manual Column Spanning](#v-ka-table-manual-column-spanning) - Explains how the RBLe CalcEngine can control column spanning in each row via the `span` column.
+- [v-ka-table Column Widths](#v-ka-table-column-widths) - Describes the different ways the RBLe CalcEngine can control column widths of the table.
+- [v-ka-table Row Processing](#v-ka-table-row-processing) - Explains the logic used when generating the `tr` HTML element to append to the table.
+
 ### v-ka-table Model
 
 The `IKaTableModel` represents the model type containing the properties that configure how a `v-ka-table` will render.
@@ -3267,7 +3364,7 @@ If the RBLe Framework results to process is not part of the default result tab (
 
 ### v-ka-table Result Table Columns
 
-In addition to the rules for all [result tables](#Result-Tables), all tables rendered by `v-ka-table` elements use the rules described below. Simply put, only columns starting with `text` or `value` are rendered, however, there are flags, columns, or names available for use that control how results are generated and returned for each table from the CalcEngine.
+In addition to the rules for all [result tables](#rble-calcengine-result-tabs), all tables rendered by `v-ka-table` elements use the rules described below. Simply put, only columns starting with `text` or `value` are rendered, however, there are flags, columns, or names available for use that control how results are generated and returned for each table from the CalcEngine.
 
 Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Location&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description
 ---|---|---
@@ -3283,7 +3380,7 @@ class | Row ID | Similar to the `class` Column, to provide a class on a specific
 
 ### v-ka-table colgroup Processing
 
-The first row returned by the `rbl-source` table is used to build the `colgroup` element inside the `table` element.  For each `text*` and `value*` column it generates a `col` element as`<col class="{table}-{column}">`.  Additional width processing is desribed in the [v-ka-table Columns Widths](#v-ka-table-Columns-Widths) section.
+The first row returned by the `model.name` table is used to build the `colgroup` element inside the `table` element.  For each `text*` and `value*` column it generates a `col` element as`<col class="{table}-{column}">`.  Additional width processing is desribed in the [v-ka-table Columns Widths](#v-ka-table-Columns-Widths) section.
 
 ### v-ka-table Header Rows
 
@@ -3327,9 +3424,12 @@ When using absolute or percentage widths, the `width` value is applied to the `c
 <!-- 
   foundingfathers: [{ 
         id: "header", 
-        text1: { #test: "First", width: "100" }, 
-        text2 { #test: "Last", width: "200" }, 
-        value1: { #test: "DOB", width: "100" }
+        text1: "First", 
+        @text1: { width: "100" }, 
+        text2: "Last", 
+        @text2: { width: "200" }, 
+        value1: "DOB",
+        @value1: { width: "100" }
     }, ...
     ]
 -->
@@ -3347,9 +3447,12 @@ When using bootstrap widths, the `width` value is applied to the `col` element i
 <!-- 
   foundingfathers: [{ 
         id: "header", 
-        text1: { #test: "First", xs-width: "12", lg-width="3" }, 
-        text2 { #test: "Last", xs-width: "12", lg-width="3" }, 
-        value1: { #test: "DOB", xs-width: "12", lg-width="3" }
+        text1: "First", 
+        @text1: { xs-width: "12", lg-width="3" }, 
+        text2: "Last", 
+        @text2: { xs-width: "12", lg-width="3" }, 
+        value1: "DOB",
+        @value1: { xs-width: "12", lg-width="3" }
     }, ...
     ]
 -->
@@ -3367,6 +3470,15 @@ In addition to the header row, spanning, and column width processing described a
 ## v-ka-highchart
 
 The `v-ka-highchart` directive is responsible for creating HTML/javascript based chart objects (using the Highcharts API) from the calculation results.  There are three types of chart information rows returned from CalcEngines: KatApp specific `config-*` option rows, chart and series option rows (with `id` matching the names of [Highcharts API](https://api.highcharts.com/highcharts/) properties), and data rows to be used as the chart data source.
+
+- [v-ka-highchart Model](#v-ka-highchart-model) - Discusses the properties that can be passed in to configure the `v-ka-highchart` directive.
+- [v-ka-highchart Table Layouts](#v-ka-highchart-table-layouts) - Discusses the three tables in the RBLe CalcEngine used to render the chart.
+- [v-ka-highchart Custom Options](#v-ka-highchart-custom-options) - Discusses custom options processed by RBLe Framework that do *not* map directly to HighCharts options.
+- [v-ka-highchart Standard Options](#v-ka-highchart-standard-options) - Discusses the standard options processed by RBLe Framework that *map directly* to Highcharts options.
+- [v-ka-highchart Custom Series Options](#v-ka-highchart-custom-series-options) - Discusses custom series options processed by RBLe Framework that do *not* map directly to Highcharts series options.
+- [v-ka-highchart Standard Series Options](#v-ka-highchart-standard-series-options) - Discusses the standard options processed by RBLe Framework that *map directly* to Highcharts series options.
+- [v-ka-highchart Property Value Parsing](#v-ka-highchart-property-value-parsing) - Explains how the RBLe Framework parses values from the CalcEngine to convert them into Highcharts property values.
+- [v-ka-highchart Language Support](#v-ka-highchart-language-support) - Explains how to control the UI culture/localization of the chart.
 
 ### v-ka-highchart Model
 
@@ -3844,7 +3956,7 @@ The default value is `false`.
 ### IKatAppOptions.debug.useTestView
 
 Property Type: `boolean | undefined`; Optional  
-Whether or not the KatApp Framework should use the test versions of any requested Kaml Views or Kaml Template Files that are hosted in the Kaml View CMS instead of by the Host Environment.  A `boolean` value can be passed in or using the querystring of `testview=1` will enable the settings.
+Whether or not the KatApp Framework should use the test versions of any requested Kaml Views or Kaml Template Files that are hosted in the KAT CMS instead of by the Host Environment.  A `boolean` value can be passed in or using the querystring of `testview=1` will enable the settings.
 
 The default value is `false`.
 
@@ -3860,7 +3972,7 @@ The default value is `false`.
 ### IKatAppOptions.debug.debugResourcesDomain
 
 Property Type: `string | undefined`; Optional  
-Whether or not the KatApp Framework should attempt to find requested Kaml Views or Kaml Template Files from the 'domain' passed in before checking the Kaml View CMS or Host Environment.  A `string` value providing a local web server address can be provided via `"debugResourcesDomain": "localhost:8887"` to enable the feature.
+Whether or not the KatApp Framework should attempt to find requested Kaml Views or Kaml Template Files from the 'domain' passed in before checking the KAT CMS or Host Environment.  A `string` value providing a local web server address can be provided via `"debugResourcesDomain": "localhost:8887"` to enable the feature.
 
 The default value is `undefined`.
 
@@ -3928,7 +4040,7 @@ Similiar to `manualResults`, this endpoint should be called to retrieve a `manua
 ### IKatAppOptions.relativePathTemplates
 
 Property Type: `IStringIndexer<string>`; Optional  
-If the Host Environment hosts all its own Kaml Views and Kaml Template files, instead of the Kaml View CMS, all the relative paths to existing Kaml Template files can be provided, instructing KatApp Framework to request it via relative path.
+If the Host Environment hosts all its own Kaml Views and Kaml Template files, instead of the KAT CMS, all the relative paths to existing Kaml Template files can be provided, instructing KatApp Framework to request it via relative path.
 
 ```javascript
 // The 'Rel:' prefix is required and informs KatApp Framework that is is a relative path.
@@ -4971,85 +5083,249 @@ The configuration payload submitted to the most recent calculation.
 
 The RBLe Framework is the backbone of KatApps.  The service is able to marshall inputs and results in and out of RBLe CalcEngines.  These results drive the functionality of KatApps.
 
+- [RBLe Tab Structure](#rble-tab-structure) - Discusses the standard RBLe table processing rules, structure, and features available in generating results for Kaml Views.
 - [Framework Inputs](#framework-inputs) - Discusses the set of inputs that are always passed to calculations automatically (and are not part of the UI).
 - [Input Table Management](#input-table-management) - Discusses how to pass 'input tables' to calculations.
-- [Result Tables](#result-tables) - Discusses the standard result table processing rules, structure, and features available in generating results for Kaml Views.
 - [Precalc Pipelines](#precalc-pipelines) - Discusses how multiple CalcEngines can be 'chained' together feedings the 'results' from one CalcEngine into the 'inputs' of the next CalcEngine in the pipeline before generating the final result.
 
-## Framework Inputs
+## RBLe Tab Structure
 
-Every calculation sends back a set of framework inputs that are set programmatically via the `KatAppOptions`, versus an actual input on the page.
+RBLe CalcEngine tabs are either input, result, or update tabs.
 
-Input | Description
+- [Required RBLe Tab Named Ranges](#required-rble-tab-named-ranges) - Describes the *required* named ranges on a CalcEngine worksheet to enable it for RBLe processing.
+- [RBLe CalcEngine General Table Rules](#rble-calcengine-general-table-rules) - Discusses features available via 'switches', special column and table names, or special values within a table that apply to both input and result tables.
+- [RBLe CalcEngine Input Tabs](#rble-calcengine-input-tabs) - Discusses features available via 'switches', special column and table names, or special values within a table that apply to *only* input tables.
+- [RBLe CalcEngine Result Tabs](#rble-calcengine-result-tabs) - Discusses features available via 'switches', special column and table names, or special values within a table that apply to *only* result tables.
+- [RBLe CalcEngine Table Samples](#rble-calcengine-table-samples) - Samples illustrating usages of the features available via 'switches', special column and table names, or special values within a  CalcEngine tables.
+
+### Required RBLe Tab Named Ranges
+
+Every RBLe CalcEngine tab requires the following named ranges to be properly identified as a RBLe tab.
+
+Name | Description
 ---|---
-iConfigureUI | A value of `1` indicates that this is the first calculation called after the markup has been rendered.  Can be turned off via `IKatAppOptions.runConfigureUICalculation`
-iDataBind | A value of `1` indicates that all `rbl-listcontrol` and `rbl-defaults` should be processed to set default data bound values (note, this happens on the same calculation that sends `iConfigureUI=1`).
-iInputTrigger | The name of the input that triggered the calculation (if any) will be passed.
-iCurrentPage | Describes which page the calculation is being submitted from.  Passed from `IKatAppOptions.currentPage`
-iCurrentUICulture | Specifies which culture should be when generating results.  Passed from `IKatAppOptions.currentUICulture`
-iEnvironment | Specifies the environment in which the RBLe Service is executing.  Passed from `IKatAppOptions.environment` (`PITT.PROD`, `PITT.UAT`, or `WN.PROD`)
+SheetType | The type of sheet; `Input`, `ResultXml`, `FolderItem` or `Update`.  The `FolderItem` and `Update` sheet types are only used in administration systems. `FolderItem` sheet results are automatically saved to the xDS data store and `Update` sheet types are used to provide instructions on how to update data during a batch 'calculated data load'.
+FolderItemType | When the sheet type is `FolderItem`, specify the type to use when saving the results.  If blank, then the tab will *not* be processed.
+FolderItemReplace | Control how previous results of the same type are processed when saving the results.<br/><br/>`true` - Replace all previously saved results with current.<br/>`false` - Keep all previous results when saving current.<br/>`KeepN` - `N` is a number of previous results to keep (newest to oldest) before saving current results.
+StartData | Indicates the start of 'data' elements and 'input' elements on `Input` tabs.  Must be in column `A` of a worksheet and appear *before* `StartTables`.  This cell appears one row before the first data or input element.  This named range is required on non-input tabs as well, even though there are never any items in this section; only tables are present in non-input tabs.<br/><br/>The section ends when the `StartTables` named range is encountered or when two blank rows are encountered.
+StartTables | Indicates the start of 'table' configurations on RBLe CalcEngine tabs.  Must be in column `A` of a worksheet and appear *after* `StartData`.  This cell appears one row before the configuration of the first table.<br/><br/>Tables are configured with a table name and any configuration switches in one cell, then in the row immediately following, all the column names are defined until a blank column is encountered.  The RBLe Framework then continues to look for additional table configurations with only a single blank column seperating tables until two blank columns are encountered.
+Inputs | `ResultXml` tabs only; RBLe Framework calculations allow specifications of *one* input tab and *one or more* result tabs.  When a CalcEngine has several result tabs, the single input tab can become quite large and cluttered.  To help encapsulate functionality, the 'input' tab in CalcEngines can be configured to only contain 'shared' information for all types of calculations (i.e. profile and history data, framework inputs, and/or shared inputs) while each result tab can contain a section to receive inputs that are specific to its tab.  To enable this feature, create a worksheet scoped named range called `Inputs` that appears in column `A` and *before* `StartData`.  It will be processed in the same manner as `StartData`; namely each row will be processed until two blank rows are encountered or `StartData` is encountered.
 
-## Input Table Management
+### RBLe CalcEngine General Table Rules
 
-RBLe Framework has the concept of input tables that allow for tabular input data to be sent to the CalcEngine.  If input tables are expected from the CalcEngine, they can be supplied via the [`IKatApp.updateApiOptions` event](#IKatApp.updateApiOptions).
+There are many features available during RBLe Framework processing that are controlled via 'switches', special column and table names, or special values within a table.  All tables processed by RBLe Framework follow the rules described below.
 
-```javascript
-// Append custom table to the CalculationInputs object instead of sending an input for each 'table cell' of data
-application.on("updateApiOptions.ka", (event, submitOptions) => {
-    // Create custom coverage table
-    var coverageTable = {
-        name: "coverage",
-        rows: []
-    };
+Name | Location | Description
+---|---|---
+Case Specific | General | All configuration information (input name, table names, column names, switches) are case specific.
+`/work-table`<br/>`/off` | Table Switch | By default, all tables on a CalcEngine tab are processed (until two blank columns are encountered).  To flag a table as simply a temp/work table that doesn't need to be processed, use the `/work-table` or `/off` switch on the table name.<br/><br/> **Note:** It is preferred to use the `/off` switch versus inserted two blank columns to disable a table because it allows for 'work tables' to be placed in the most logical position in CalcEngine tabs instead of being forced to always be at the end right of all tables and additionally, it allows for the KAT Excel Addin to navigate to these tables since the table configuration is detected before encountering two blank columns.
+`/off` | Column Switch | Optional switch used on table columns to indicate that the column should not be processed during calculations
+`/sort-field` | Table Switch | To configure how the table data is sorted, use the `/sort-field:field[,direction,isNumber]` switch on the table name. `direction` and `isNumber` are optional parameters.  `direction` can be `asc` or `desc` (defaulting to `asc`) while `isNumber` can be `true` or `false` (defaulting to `false`).  To specify multiple columns to sort, provide a `|` delimitted list of column configurations.  For example `/sort-field:status|pay,,true|year,desc,true` would sort by `status` *text* ascending, then by `pay` *number* ascending, then by `year` *number* descending.
+`/sort-field` Legacy | Table Switch | To configure how the table data is sorted, use the `/sort-field:field-name` switch on the table name.  To specify multiple columns to use in the sort, provide a comma delimitted list of field names.  When used on an _Input Tab Table_, the data is sorted _before_ it is loaded into the tab.  Conversely, when used on a _Result Tab Table_, the data is sorted _after_ exporting the results from the CalcEngine.
+`/sort-direction` Legacy | Table Switch | Optional sort control (`asc` or `desc`) used in conjunction with `sort-field`.  By default, data will be sorted ascending.  Use the `/sort-direction:direction` to control how field(s) specified in the `/sort-field` switch are sorted.  If `/sort-direction:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
+`/sort-number` Legacy | Table Switch | Optional switch (`true` or `false`) used in conjunction with `sort-field`.  By default, data will be sorted using a `string` comparison.  Use the `/sort-number:true` to indicate that field(s) specified in the `/sort-field` switch should be treated as numeric when sorting.  If `/sort-number:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
 
-    // Loop all inputs that start with iCoverageA- and process them.
-    // data-inputname is in form of iCoverageA-id
-    // For each input, create a row with id/covered properties
-    var inputControlData = application.select("div[data-inputname^=iCoverageA-]");
-    inputControlData.each(function (index, element) {
-        var id = $(element).data("inputname").split("-")[1];
-        var v = $(element).hasClass("active") ? 1 : 0;
-        var row = { "id": id, covered: v };
-        coverageTable.rows.push(row);
-    });
-	submitOptions.inputs.tables.push(coverageTable);
-});
+### RBLe CalcEngine Input Tabs
+
+There are many features available during RBLe Framework processing that are controlled via 'switches', special column and table names, or special values within a table.  Input tabs have the following features.
+
+Name | Location | Description
+---|---|---
+`<data-element>` | `StartData` Element | Surrounding a term with `< >` indicates that data should be pulled from the current xDS data model. The term can be in one of the following three formats:<br/><br/>`profile-field` - Simply a name to a field present in Profile data.<br/>`HistoryTable:index:field` - Selector expression to query a specific row within historical data.  `index` can be a specific index value (must match exactly) or a positional based index; `first`, `last`, `first+N` or `last-N`. When using `first+` or `last-` if the expression results in an 'overflow' position (i.e. `first+10` but only 5 rows exist), then a blank value will be returned.<br/>`HistoryItem{XPath}` where `XPath` creates a valid XPath expression; i.e. `HistoryItem[@hisType='Pay'][position()=last()]/pay would select the most recent `pay` field.
+`/text` | Element switch | Optional switch used on `<data-element>`, inputs, or input table columns to indicate that the provided data should be formatted as 'text'.  If `/text` is not provided and a textual value that can convert to a number is provided, the CalcEngine automatically parses the value as a number.  For example, if 'code' of `01` is provided without the `/text` flag, the CalcEngine would convert `01` to `1`.  With the `/text` flag, the leading `0` would be preserved.
+`<dataTable>` | `StartTables` Element | Surrounding a table name with `< >` indicates that, for each calculation, the rows of the table will be cleared and populated with *data from the xDS history table* with the matching `dataTable` (i.e. `<Pay>`). The columns specified will popualte with the xDS History fields with the exact same name. There are a few exceptions:  a) the column  `id`, `index` and `hisIndex` will all function to populate with the 'index' field of the xDS History row, b) `@hisDateCreated`, `@hisDateUpdated`, `@hisCreatedBy`, and `@hisUpdatedBy` will populate with the associated xDS framework audit data items.
+`<<globalTable>>` | `StartTables` Element | Surrounding a table name with `<< >>` indicates that, for each calculation, the rows of the table will be cleared and populated with *data from KAT CMS 'Global Lookups CalcEngine' table* with the matching `dataTable` (i.e. `<<IrsRates>>`). Only data from the columns specified will be popualted.
+inputTable | `StartTables` Element | Surrounding a table name with `<< >>` indicates that, for each calculation, the rows of the table will be cleared and populated with data from KAT CMS 'Global Lookups CalcEngine' table with the matching `globalTable` (i.e. `<<IrsRates>>`). The columns specified will popualte with the global lookup fields with the exact same name.
+inputTable | `StartTables` Element | A table name with *no wrapping characters* indicates that, for each calculation, the rows of the table will be cleared and populated with *tabular input data* provided from the UI (see [Input Table Management](#input-table-management) for more information) with the matching `inputTable` (i.e. `RetirementDates`). The columns specified will popualte with the input table fields with the exact same name.
+`[configureUiInputData]` | `StartTables` Element | Surrounding a table name with `[ ]` indicates that the table is a hybrid of a `<dataTable>` and an `inputTable`. When a calculation is an [`iConfigureUI` calculation](#framework-inputs), the rows of the table will be cleared and populated as if it were a `<dataTable>`.  For all other calculations, the rows of the table will be cleared and populated as if it were an `inputTable`.  This enabled a 'single input table' to be referenced in the CalcEngine an 'input table' is managed by the UI but initially populated by 'matching' data saved in xDS data store. The most common example of this is an 'UI Input Table' that has the capability of being saved to xDS and reloaded into the UI in a subsequent user session.
+`/unique-summary:sourceTable` | Table Switch | The RBLe Framework supports automatic 'grouping' to produce a unique list of values for input tables (`inputTable`, `<dataTable>`, or `<<globalTable>>`).  The `sourceTable` parameter indicates which table/data aggregate before loading it into the current table. See [Unique Summary Configuration](#Unique-Summary-Configuration) for more information.
+`/id-locked` | Table Switch | The RBLe Framework allows loading only specific xDS History data rows based on indexes that provided the desired row indexes to load in an `id` column of the table, *which must be the first column specified* in the table. The index value provided in the `id` column can be a specific index value (must match exactly) or a positional based index; `first`, `last`, `first+N` or `last-N`. When using `first+` or `last-` if the expression results in an 'overflow' position (i.e. `first+10` but only 5 rows exist), then no row data will be populated. See [id-locked Configuration](#id-locked-configuration) for more information.
+
+### RBLe CalcEngine Result Tabs
+
+There are many features available during RBLe Framework processing that are controlled via 'switches', special column and table names, or special values within a table.  Result tabs have the following features.
+
+Name | Location | Description
+---|---|---
+`id` | Column Name | An arbitrary 'id' value for each row that can be used by Kaml View.
+`on` | Column Name | Whether or not current *row* gets exported. If no `on` column is present or the value is *not* set to `0` the row will be exported.
+`on` | Row ID | Whether or not a *column* gets exported (similar to the `on` Column). Provide a row with `id` set to `on`, then for each column in this row, if the value is set to `0`, then column will be omitted from each row exported.
+On/Off Flags | General | All RBLe Framework/KatApp Framework columns that are 'flag' columns (i.e. `on` columns, [`rbl-input.disabled`](#rbl-input-table), etc.) use `1` to indicate 'true' and `0` to indicate 'false'; 'anything else' (usually `blank`) will indicate to use the default value specified for each flag column.
+`table-output-control` | Table Name | Similar to the `on` Column Name and Row ID, this controls exporting logic, but it puts all the logic in one place (instead of every row's `on` column) to make maintenance easier.  See [table-output-control](#table-output-control) for more information.
+`/export-blanks` | Table Switch | By default, columns with blank values are not returned from RBLe service (except for the first row which always contains all columns to provide a table schema to the caller).  Excluding columns with blank values helps reduce network bandwidth.  , however, if table processing requires all columns to be present even when blank to avoid `null`/`undefined` errors, use the `/export-blanks` switch on the column header. **Note**: This switch is only needed for legacy frameworks because the KatApp framework automatically inspects the RBLe Framework results and ensures that all rows have all columns (injecting a 'blank' value for any missing columns; instead of `undefined`) *except* for tables that expect `undefined` to be present to aid in detection of 'not supplied' versus an 'empty value' supplied (i.e. for the [`rbl-input.value`](#rbl-input-table) result column).
+`'` (text forced) | Column Value | As described in the `/export-blanks` switch, blank columns are not exported. If you want to ensure a column is present inside the result row with a 'blank' value and *not* removed, set the CalcEngine column value to `'` and it will be returned and treated as an 'empty value' versus a 'missing value'.
+`/configure-ui` | Table Switch<br/>Column Switch | To configure a table or column to _only_ export during a [`iConfigureUI`](#framework-inputs) calculation, append the `/configure-ui` switch.  This removes the need of providing `on` column or `table-output-control` logic that checks the `iConfigureUI` input explicitly.
+`/iAnd:` `/iOr:` | Table Switch<br/>Column Switch | To configure a table or column to _only_ export when one or more input values are matched. These switches can be used together *and* appear more than one time in a specified configuration.<br/><br/>The format for these switches are a `|` delimitted list of input match patterns in the format of `/iAnd:iInput1=value1|iInput2=value2|...`.  When using `/iAnd:`, every input match pattern must evaluate to `true` to export the current item.  When using `iOr:`, if any input match pattern evaluates to `true` the current item will be exported.<br/><br/>These switches are the successor to the `/configure-ui` switch, but they can be used together.  The `/configure-ui` switch is simply translated into `/iAnd:iConfigureUI=1` before processing.<br/><br/>When these switches are table switches, they accomplish the same functionality as the `table-output-control` feature described above with the benefit of not requiring every table that needs export control to be added to the `table-output-control` table, especially when the logic is simple (i.e. tied to a single input value) and can be view directly with the table.<br/><br/>When these switches are used as a column switch too, which accomplishes the same functionality as the `on` Row ID feature described above with the benefit of easily seeing the 'on' logic and using familiar syntax when used as table switch.
+`[]` Nesting | Column Switch | Optional syntax to specify that a column contains result nesting information.  Note that if any `/switch` flags are to be used on this column (i.e. `/text`), they should appear _after_ the closing `]`.  See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
+`/child-only` | Table Switch | By default, any tables used as a child table are still exported normally, so the data appears twice in the results; once nested, and once at root level.  If you want to supress the exporting of data at the normal/root level, you can add the `/child-only` flag indicating that it will only appear in the results nested in its parent table.  _If the parent is not exported, child tables remain supressed._ See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
+`/type:dataType` | Column Switch | When calculation results are turned into a JSON object (usually in conjunction with `[]` Nesting), by default, all column values will be treated as a `string`.  If certain columns need to be of a different data type, the following values can be provided: `Date`, `Integer`, `Double`, or `Boolean`. See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
+
+#### table-output-control
+
+Provide a single table with logic that controls whether or not a table is exported without the need placing logic in every row's `on` column of desired table.
+
+Column | Description
+---|---
+id | The name of the table to control.
+export | Whether or not the table is exported.<br/>`1` indicates that the table should be exported. If all rows are turned off via `on` column, then the KatApp state will be assigned an empty result; resulting in reactive processing to occur.<br/>`0` indicates that the table should *not* be exported. KatApp state will remain as is.<br/>`-1` indicates that the table should *not* be exported and the KatApp state will be cleared.
+
+### RBLe CalcEngine Table Samples
+
+Below are some samples of different table configurations leveraging different switches, values, etc. to enable custom RBLe Framework processing.
+
+- [RBLe Input Table Configuration](#rble-input-table-configuration) - General flags available on all input tables.
+- [RBLe Result Table Configuration](#rble-result-table-configuration) - General flags available on all result tables.
+- [Unique Summary Configuration](#unique-summary-configuration) - Discusses how to control data aggregation when using the `/unique-summary` switch.
+- [Table Nesting Configuration](#table-nesting-configuration) - Discusses how to control result table nesting when using the `[]` Nesting, `/child-only`, and `/type` switches.
+- [id-locked Configuration](#id-locked-configuration) - Explains how to load specific data into input tables via the `/id-locked` switch and `index` column configurations.
+
+#### RBLe Input Table Configuration
+
+```xml
+<xDataDef id-auth="111111111">
+    <HistoryData>
+        <HistoryItem hisIndex="2004" hisType="Pay" hisUpdatedBy="kat.admin">
+            <index>2004</index>
+            <pay>56000</pay>
+            <bonus>1000</bonus>
+            <status>01</status>
+            <organization>03</organization>
+        </HistoryItem>
+        <HistoryItem hisIndex="2005" hisType="Pay" hisUpdatedBy="kat.admin">
+            <index>2005</index>
+            <pay>52000</pay>
+            <bonus>1100</bonus>
+            <status>10</status>
+            <organization>02</organization>
+        </HistoryItem>
+        <HistoryItem hisIndex="2006" hisType="Pay" hisUpdatedBy="kat.admin">
+            <index>2006</index>
+            <pay>54000</pay>
+            <bonus>1200</bonus>
+            <status>10</status>
+            <organization>02</organization>
+        </HistoryItem>
+        <HistoryItem hisIndex="2007" hisType="Pay" hisUpdatedBy="kat.admin">
+            <index>2007</index>
+            <pay>56000</pay>
+            <bonus>1300</bonus>
+            <status>01</status>
+            <organization>01</organization>
+        </HistoryItem>
+    </HistoryData>
+</xDataDef>
 ```
 
-## Result Tables
+Given the data above, and the configurations below, the data would be loaded as follows:
 
-All tables processed by RBLe Framework follow the rules described below.
+`<Pay>/sort-field:status|pay,,true|organization,desc,true`
+index | pay | bonus | status | organization/text | @hisUpdatedBy
+---|---|---|---|---|---
+2007 | 56000 | 1300 | 1 | 01 | kat.admin
+2004 | 56000 | 1000 | 1 | 03 | kat.admin
+2005 | 52000 | 1100 | 10 | 02 | kat.admin
+2006 | 54000 | 1200 | 10 | 02 | kat.admin
 
-Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Location&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description
----|---|---
-id | Column Name | An arbitrary 'id' value for each row that can be used by Kaml View.
-on | Column Name | Whether or not this row gets exported. If set to `0`, the row is not returned in results.
-on | Row ID | Similar to the `on` Column, to control whether or not a column gets exported, provide a row with `id` set to `on`, then for each column in this row, if the value is `0`, then _entire_ column will not be exported.
-table-output-control | Table Name | Similar to the `on` Column Name and Row ID, this controls exporting logic, but it puts all the logic in one place (instead of every row's `on` column) to make maintenance easier.  See [table-output-control](#table-output-control) for more information.
-export-blanks | Column Switch | By default, blank values/columns are not returned from RBLe service.  If table processing requires all columns to be present even when blank, use the `/export-blanks` switch on the column header.
-work-table | Table Switch | By default, all tables on a CalcEngine result tab are exported (until two blank columns are encountered).  To flag a table as simply a temp/work table that doesn't need to be processed, use the `/work-table` switch on the table name.
-configure-ui | Table Switch | To configure a table to _only_ export during a Configure UI calculation (`iConfigureUI=1`), use the `/configure-ui` switch on the table name.  This removes the need of putting `on` or `table-output-control` logic that checks the `iConfigureUI` input explicitly.
-unique-summary | Table Switch | RBLe has an automatic 'grouping' aggregator to produce a unique list of values for input tables (UI inputs, Data Tables, or Global Tables).  See [Unique Summary Configuration](#Unique-Summary-Configuration) for more information.
-child-only | Table Switch | By default, any tables used as a child table are still exported normally, so the data appears twice in the results; once nested, and once at root level.  If you want to supress the exporting of data at the normal/root level, you can add the `/child-only` flag indicating that it will only appear in the results nested in its parent table.  _If the parent is not exported, child tables remain supressed._ See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
-sort-field | Table Switch | To configure how the table data is sorted, use the `/sort-field:field-name` switch on the table name.  To specify multiple columns to use in the sort, provide a comma delimitted list of field names.  When used on an _Input Tab Table_, the data is sorted _before_ it is loaded into the tab.  Conversely, when used on a _Result Tab Table_, the data is sorted _after_ exporting the results from the CalcEngine.
-sort-direction | Table Switch | Optional sort control (`asc` or `desc`) used in conjunction with `sort-field`.  By default, data will be sorted ascending.  Use the `/sort-direction:direction` to control how field(s) specified in the `/sort-field` switch are sorted.  If `/sort-direction:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
-sort-number | Table Switch | Optional switch (`true` or `false`) used in conjunction with `sort-field`.  By default, data will be sorted using a `string` comparison.  Use the `/sort-number:true` to indicate that field(s) specified in the `/sort-field` switch should be treated as numeric when sorting.  If `/sort-number:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
-text | Column Switch | Optional switch used on input table columns to indicate whether or not to force the provided data to be formatted as 'text'.  If `/text` is not provided and a textual value that converts to a number is provided, it can change the value.  For example, if `01` is provided to a column without the `\text` flag, the CalcEngine would convert `01` to `1`.  With the `\text` flag, the leading `0` would be preserved.
-off | Column Switch | Optional switch used on result table columns to indicate that the column should not be exported in the results.  This is similar to an `on` row ID where each column is controlled with a `1` or `0` (skipped) value, but is an easier syntax to use if there is no logic behind exporting or not.
-Nesting `[]` | Column Switch | Optional syntax to specify that a column contains nested information.  See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
+States/off
+key | text
+---|---
+MN | Minnesota
+CA | California
+PA | Pennsylvania
 
-### Unique Summary Configuration
+\* Note: The States table *without* the `/off` switch would be treated as an `inputTable` and cleared out on each calculation and attempted to be loaded from an UI input table named `States`.  However, with the `/off` switch, it is treated as a work table and ignored, and therefore 'lookup tables' can be inserted and configured right next to all other 'source' tables for the calculations.
+
+#### RBLe Result Table Configuration
+
+Given the following result table configuration and data present in the CalcEngine:
+
+`rbl-input`
+on | id | label | value | help/iAnd:iConfigureUI=1
+---|---|---|---|---
+1 | iNameFirst | First Name | John
+1 | iNameMiddle | Middle Name
+0 | iNickName | Nick Name
+| iNameLast | Last Name |`'`| Provide your last name, we don't know it.
+
+`errors/iAnd:iValidate=1/export-blanks`
+id | text
+---|---
+iNameFirst | First Name is required.
+iNameMiddle | Last Name is required.
+
+If the calculation has `iConfigureUI=1 and iValidate=0` input, the following data would be returned.
+
+1. `help` column returned.
+1. `errors` table *not* returned.
+1. `iNickName` row *not* returned because `on=0`.
+
+```javascript
+{
+    "rbl-input": [
+        { 
+            "@id": "iNameFirst", 
+            "label": "First Name",
+            "value": "John",
+            "help": ""            
+        },
+        { 
+            "@id": "iNameMiddle", 
+            "label": "Middle Name",
+        },
+        { 
+            "@id": "iNameLast", 
+            "label": "Last Name",
+            "value": "",
+            "@value": { "text-forced": "true" },
+            "help": "Provide your last name, we don't know it."            
+        }
+    ]
+}
+```
+
+If the calculation has `iConfigureUI=0 and iValidate=1` input, the following data would be returned.
+
+1. `help` column *not* returned.
+1. `errors` table returned.
+1. `iNickName` row *not* returned because `on=0`.
+
+```javascript
+{
+    "rbl-input": [
+        { 
+            "@id": "iNameFirst", 
+            "label": "First Name",
+            "value": "John",
+        },
+        { 
+            "@id": "iNameMiddle", 
+            "label": "Middle Name",
+        },
+        { 
+            "@id": "iNameLast", 
+            "label": "Last Name",
+            "value": "",
+            "@value": { "text-forced": "true" }
+        }
+    ],
+    "errors": [
+        { "@id": "iNameFirst", "text": "First Name is required." },
+        { "@id": "iLastFirst", "text": "Last Name is required." }
+    ]
+}
+```
+
+#### Unique Summary Configuration
 
 Producing a unique list of values in CalcEngines can be difficult (especially when the unique _key_ is a combination of multiple columns). To alleviate this problem, RBLe can produce a unique list of values from input tables (UI inputs, `<data-tables>` or `<<global-tables>>`).  The configuration is controlled by the `/unique-summary:detailTable` flag and the columns specified in the summary table.
 
-1. The `/unique-summary:detailTable` flags a table as a _summary_ table and the `detailTable` name indicates the table that should be summarized.
+1. The `/unique-summary:sourceTable` flags a table as a _summary_ table and the `sourceTable` name indicates the table that should be summarized.
 2. When creating a summary table, you indicate what type of table (input, data, or global) the detail table is by using the same naming convention: `<data>`, `<<global>>`, or no `<>` for user input tables.
-3. In the summary table, only columns that generate the _unique_ list of values desired should be specified.  Additional columns (i.e. for additional details) *can not* be used.
+3. In the summary table, only columns that generate the _unique_ list of values desired should be specified.  Additional columns (i.e. for additional details) *can not* be used because the combination of all supplied columns will be the 'aggregator key' used to generate each row.
 
 In the example below, `benefitSummary` will contain values that generate a unique list across the `benefitType` and `optionId` columns from the `benefitDetails` table.
 
 *&lt;benefitDetails&gt; table*
-
 id | benefitType/text | optionId/text | coverageLevel/text
 ---|---|---|---
 1 | 01 | 02 | 05
@@ -5059,7 +5335,6 @@ id | benefitType/text | optionId/text | coverageLevel/text
 5 | 03 | 01 | 01
 
 *&lt;benefitSummary&gt;/unique-summary:benefitDetails table*
-
 benefitType/text | optionId/text
 ---|---
 01 | 02
@@ -5067,7 +5342,8 @@ benefitType/text | optionId/text
 02 | 01
 03 | 01
 
-### Table Nesting Configuration
+
+#### Table Nesting Configuration
 
 Traditionally, RBLe exports all tables specified in the CalcEngine as root level table row arrays with no nesting; each row containing only the properties (columns from CalcEngine) defined on the table.  For better API support from other systems calling into RBLe, result tables can be configured so that nesting occurs and rich object hierarchies can be built.  
 
@@ -5081,16 +5357,16 @@ Configuration | Value | Description
 `[]` | `childTable:childKeyColumn=value` | Each row can specify a filter into the specified `childTable`.  The table and filter are separated by a `:` and a simply expression using `=` is all that is supported.  This would nest all rows from `childTable` where the column `childKeyColumn` has a value of `value`.
 `[childTable:childKeyColumn]` | `value` | When this syntax is used, the `value` provided in each row is used as a filter for the `childKeyColumn` column.
 
-*Example of `[childTable:childKeyColumn]` syntax.*
+*Example of `[childTable:childKeyColumn]` syntax (with `/type` switch).*
 
 *orders table*
-id | date | amount | items\[orderItems:orderId\] 
+id | date | amount/type:Double | items\[orderItems:orderId\] 
 ---|---|---|---
 1 | 2021-07-13 | 45 | 1
 2 | 2021-08-13 | 33 | 2
 
 *orderItems table*
-id | orderId | sku | price | quantity 
+id | orderId/type:Double | sku | price/type:Double | quantity/type:Double
 ---|---|---|---|---
 1 | 1 | PRD4321 | 10 | 3
 2 | 1 | PRD5678 | 5 | 2
@@ -5130,7 +5406,7 @@ This CalcEngine nesting configuration would result in the following JSON
 }
 ```
 
-*Example of `[]` syntax.*
+*Example of `[]` syntax.  (with `/type` switch)*
 
 *plans table*
 id | name | subPlans\[\] 
@@ -5143,7 +5419,7 @@ MISC | Misc Savings | savingsPlans:type=MISC
 SIMPLE | Simple (no subPlans) |
 
 *retirementPlans/child-only table*
-id | name
+id/type:Integer | name
 ---|---
 1 | Plan 1
 2 | Plan 2
@@ -5215,14 +5491,125 @@ Notes about nesting:
 5. When using `[childTable:childKeyColumn]`, no nesting is attempted if no column value is provided or if the `childKeyColumn` has no row matching the column value.
 6. By default, tables that are the 'child' tables of a nest configuration are still exported as root level table rows.  If the data should _only_ appear in the nested relationship, the `child-only` table flag can be used to supress the normal exporting process.
 
-### table-output-control
+#### id-locked Configuration
 
-Provide a single table with logic that controls whether or not a table is exported without the need placing logic in every row's `on` column of desired table.
+`<dataTables>` located on RBLe Input Tabs can be configured to only be populated with specific xDS History rows.  To enable this feature, use the `/id-locked` flag on the input table and provided the desired row indexes in the `id` column.  Below are some examples of how to use the `/id-locked` flag.
 
-Column | Description
+In the samples below, assume the following history data is present in xDS:
+
+```xml
+<xDataDef id-auth="111111111">
+    <HistoryData>
+        <HistoryItem hisIndex="2004" hisType="Pay">
+            <index>2004</index>
+            <pay>50000</pay>
+            <bonus>1000</bonus>
+        </HistoryItem>
+        <HistoryItem hisIndex="2005" hisType="Pay">
+            <index>2005</index>
+            <pay>52000</pay>
+            <bonus>1100</bonus>
+        </HistoryItem>
+        <HistoryItem hisIndex="2006" hisType="Pay">
+            <index>2006</index>
+            <pay>54000</pay>
+            <bonus>1200</bonus>
+        </HistoryItem>
+        <HistoryItem hisIndex="2007" hisType="Pay">
+            <index>2007</index>
+            <pay>56000</pay>
+            <bonus>1300</bonus>
+        </HistoryItem>
+    </HistoryData>
+</xDataDef>
+```
+
+##### id-locked Fixed Index
+
+If the `<Pay>` table is configured as follows in the CalcEngine:
+
+&lt;Pay&gt;/id-locked
+id | pay
 ---|---
-id | The name of the table to control.
-export | Whether or not the table is exported.<br/>`1` indicates that the table should be exported. If all rows are turned off via `on` column, then the KatApp state will be assigned an empty result; resulting in reactive processing to occur.<br/>`0` indicates that the table should *not* be exported. KatApp state will remain as is.<br/>`-1` indicates that the table should *not* be exported and the KatApp state will be cleared.
+2005
+2006
+
+When data is loaded, the resulting table will be:
+
+&lt;Pay&gt;/id-locked
+id | pay
+---|---
+2005 | 52000
+2006 | 54000
+
+##### id-locked Positional Index
+
+`/id-locked` supports positional based indexes as well; `first`, `last`, `first+N` or `last-N`. When using `first+` or `last-` if the expression results in an 'overflow' position (i.e. `first+10` but only 5 rows exist), then no row data will be populated. Additionally, to retrieve the *actual* value of the xDS History row index, you must provide an additional `index` column in your configuration because the `< >` configuration instructions inside the `id` column will *not* be replaced.
+
+If the `<Pay>` table is configured as follows in the CalcEngine:
+
+&lt;Pay&gt;/id-locked  
+id | index | pay
+---|---|---
+`<first>`
+`<first+1>`
+`<first+4>`
+`<last-1>`
+`<last>`
+
+When data is loaded, the resulting table will be:
+
+&lt;Pay&gt;/id-locked  
+id | index | pay
+---|---|---
+`<first>` | 2004 | 50000
+`<first+1>` | 2005 | 52000
+`<first+4>`*
+`<last-1>` | 2006 | 54000
+`<last>` | 2007 | 56000
+
+\* Note how no data is loaded because `first+4` wants to retreive the fifth row, but there are only 4 rows present in data.
+
+## Framework Inputs
+
+Every calculation sends back a set of framework inputs that are set programmatically via the `KatAppOptions`, versus an actual input on the page.
+
+Input | Description
+---|---
+iConfigureUI | A value of `1` indicates that this is the first calculation called after the markup has been rendered.  Can be turned off via `IKatAppOptions.runConfigureUICalculation`
+iDataBind | A value of `1` indicates that all `rbl-listcontrol` and `rbl-defaults` should be processed to set default data bound values (note, this happens on the same calculation that sends `iConfigureUI=1`).
+iInputTrigger | The name of the input that triggered the calculation (if any) will be passed.
+iCurrentPage | Describes which page the calculation is being submitted from.  Passed from `IKatAppOptions.currentPage`
+iCurrentUICulture | Specifies which culture should be when generating results.  Passed from `IKatAppOptions.currentUICulture`
+iEnvironment | Specifies the environment in which the RBLe Service is executing.  Passed from `IKatAppOptions.environment` (`PITT.PROD`, `PITT.UAT`, or `WN.PROD`)
+
+## Input Table Management
+
+RBLe Framework has the concept of input tables that allow for tabular input data to be sent to the CalcEngine.  If input tables are expected from the CalcEngine, they can be supplied via the [`IKatApp.updateApiOptions` event](#IKatApp.updateApiOptions).
+
+```javascript
+// Append custom table to the CalculationInputs object instead of sending an input for each 'table cell' of data
+application.on("updateApiOptions.ka", (event, submitOptions) => {
+    // Create custom coverage table
+    var coverageTable = {
+        name: "coverage",
+        rows: []
+    };
+
+    // Loop all inputs that start with iCoverageA- and process them.
+    // data-inputname is in form of iCoverageA-id
+    // For each input, create a row with id/covered properties
+    var inputControlData = application.select("div[data-inputname^=iCoverageA-]");
+    inputControlData.each(function (index, element) {
+        var id = $(element).data("inputname").split("-")[1];
+        var v = $(element).hasClass("active") ? 1 : 0;
+        var row = { "id": id, covered: v };
+        coverageTable.rows.push(row);
+    });
+	submitOptions.inputs.tables.push(coverageTable);
+});
+```
+
 
 ## Precalc Pipelines
 

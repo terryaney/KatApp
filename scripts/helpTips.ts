@@ -2,6 +2,27 @@
 	private static visiblePopover: HTMLElement | undefined;
 	private static visiblePopoverApp: KatApp | undefined;
 
+	// Code to hide tooltips if you click anywhere outside the tooltip
+	// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
+	// This one looked interesting too: https://stackoverflow.com/a/24289767/166231 but I didn't test this one yet
+	public static hideVisiblePopover(): void {
+		// Going against entire KatApp (all apps) instead of a local variable because I only setup
+		// the HTML click event one time, so the 'that=this' assignment above would be the first application
+		// and might not match up to the 'currently executing' katapp, so had to make this global anyway
+		const visiblePopover = HelpTips.visiblePopover;
+
+		if (visiblePopover != undefined) {
+			// Just in case the tooltip hasn't been configured
+			if ($(visiblePopover).attr("ka-init") != "true") return;
+
+			// Used to use this logic, but it didn't work with bootstrap 5, I've asked a question here:
+			// https://stackoverflow.com/questions/67301932/cannot-access-bootstrap-5-bs-popover-data-with-jquery
+			// if ( $(visiblePopover).data("bs.popover") === undefined ) return;
+
+			bootstrap.Popover.getInstance(visiblePopover).hide();
+		}
+	}
+
 	public static processHelpTips(application: KatApp, container: JQuery, selector?: string): void {
 
 		const isContainerKatApp = container.closest("[ka-id]").length == 1;
@@ -12,41 +33,20 @@
 			? container.find(search)
 			: application.select(search, context);
 
-		// Code to hide tooltips if you click anywhere outside the tooltip
-		// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
-		// This one looked interesting too: https://stackoverflow.com/a/24289767/166231 but I didn't test this one yet
-		const hideVisiblePopover = function (): void {
-			// Going against entire KatApp (all apps) instead of a local variable because I only setup
-			// the HTML click event one time, so the 'that=this' assignment above would be the first application
-			// and might not match up to the 'currently executing' katapp, so had to make this global anyway
-			const visiblePopover = HelpTips.visiblePopover;
-
-			if (visiblePopover != undefined) {
-				// Just in case the tooltip hasn't been configured
-				if ($(visiblePopover).attr("ka-init") != "true") return;
-
-				// Used to use this logic, but it didn't work with bootstrap 5, I've asked a question here:
-				// https://stackoverflow.com/questions/67301932/cannot-access-bootstrap-5-bs-popover-data-with-jquery
-				// if ( $(visiblePopover).data("bs.popover") === undefined ) return;
-
-				bootstrap.Popover.getInstance(visiblePopover).hide();
-			}
-		};
-
 		if ($("html").attr("ka-init-tip") != "true") {
 			$("html")
 				.on("click.ka", e => {
-					if ($(e.target).is(".popover-header, .popover-body")) return;
-					hideVisiblePopover();
+					if ($(e.target).closest(".popover-header, .popover-body").length == 0) {
+						HelpTips.hideVisiblePopover();
+					}
 				})
 				.on("keyup.ka", e => {
-					if (e.keyCode != 27) { // esc
-						return;
+					if (e.keyCode == 27) { // esc
+						e.preventDefault();
+						HelpTips.hideVisiblePopover();
 					}
-					e.preventDefault();
-					hideVisiblePopover();
 				})
-				.on("show.bs.popover.ka", () => hideVisiblePopover())
+				.on("show.bs.popover.ka", () => HelpTips.hideVisiblePopover())
 				.on("inserted.bs.tooltip.ka", e => {
 					const target = $(e.target);
 
