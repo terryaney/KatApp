@@ -2,22 +2,6 @@
 //	1. Demo site
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/profile/address
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/theme
-//	1. KatApp - test input being removed via 'display' in calc or something and see if v-if still works on unmount...stating that it shouldn't
-
-//	1. Athlon
-//		Finish banners
-//		- hamburger not showing in mobile
-//		- mobile - go to profile - beneficiaries - 'edit a benefit' the padding on left slowly indents more and more for elements the further down the page...figure out
-//	1. Profile
-//		1. Add bank from han/db side should use same modal as profile does
-//	1. RBL
-//		1. configure-ui on column
-//		1. Ability to put flag on table for expression, iValidate=1
-//		1. Cache header allowed yet?
-//	1. Tom's Culture script
-//		1. Errors - maybe have a 'watcher' that catches assignments (pushes) and translate - or just helper to 'translate errors'
-//	1. DataSource - needs history navigator
-
 
 //	1. Inspector
 //		- channel.pension doesn't work, throws error when turning switch on and off
@@ -279,6 +263,10 @@ class KatApp implements IKatApp {
 					return isTrue(v);
 				},
 				value() { return getValue(...arguments) },
+				number() {
+					const v = +(getValue(...arguments) ?? 0);
+					return isNaN(v) ? 0 : v;
+				},
 				source(table, calcEngine, tab, predicate) {
 					if (typeof calcEngine == "function") {
 						predicate = calcEngine;
@@ -322,7 +310,7 @@ class KatApp implements IKatApp {
 				}
 			},
 
-			model: undefined,
+			model: {},
 			handlers: {},
 			components: {},
 
@@ -513,8 +501,8 @@ class KatApp implements IKatApp {
 
 			Components.initializeCoreComponents(this, name => this.getTemplateId(name));
 
-			this.state.model = this.updateOptions?.model;
-			this.state.handlers = this.updateOptions?.handlers;
+			this.state.model = this.updateOptions?.model ?? {};
+			this.state.handlers = this.updateOptions?.handlers ?? {};
 
 			if (this.updateOptions?.components != undefined) {
 				for (const propertyName in this.updateOptions.components) {
@@ -550,6 +538,8 @@ class KatApp implements IKatApp {
 				}
 			}
 			await this.triggerEventAsync("initialized");
+
+			const initializedErrors = this.state.errors.length > 0;
 
 			if (this.options.manualResults != undefined) {
 				const hasCalcEngines = this.calcEngines.length > 0;
@@ -587,14 +577,18 @@ class KatApp implements IKatApp {
 			let configureUiException: any = undefined;
 
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
-			if (isConfigureUICalculation) {
-				this.on("calculationErrors", async (_e, key, ex) => {
-					if (key == "SubmitCalculation.ConfigureUI") {
-						configureUiException = ex;
-					}
-				});
-				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
-				await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
+
+			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
+			if (!initializedErrors) {
+				if (isConfigureUICalculation) {
+					this.on("calculationErrors", async (_e, key, ex) => {
+						if (key == "SubmitCalculation.ConfigureUI") {
+							configureUiException = ex;
+						}
+					});
+					// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
+					await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
+				}
 			}
 
 			this.vueApp = PetiteVue.createApp(this.state);
@@ -610,19 +604,21 @@ class KatApp implements IKatApp {
 			this.vueApp.mount(this.selector);
 			this.isMounted = true;
 
-			// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
-			if (isConfigureUICalculation && this.lastCalculation) {
-				await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
-				await this.triggerEventAsync("calculation", this.lastCalculation);
-				await this.triggerEventAsync("calculateEnd");
-			}
-			else if (this.calcEngines.find(c => c.manualResult) != undefined) {
-				await this.triggerEventAsync("calculation", this.lastCalculation);
-			}
+			if (!initializedErrors) {
+				// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
+				if (isConfigureUICalculation && this.lastCalculation) {
+					await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
+					await this.triggerEventAsync("calculation", this.lastCalculation);
+					await this.triggerEventAsync("calculateEnd");
+				}
+				else if (this.calcEngines.find(c => c.manualResult) != undefined) {
+					await this.triggerEventAsync("calculation", this.lastCalculation);
+				}
 
-			if (configureUiException != undefined) {
-				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-				console.log(isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", { configureUiException });
+				if (configureUiException != undefined) {
+					this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+					console.log(isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", { configureUiException });
+				}
 			}
 
 			if (isModalApplication) {
@@ -630,7 +626,7 @@ class KatApp implements IKatApp {
 			}
 			this.el.removeAttr("ka-cloak");
 			await this.processDomElementsAsync(); // process main application
-			await this.triggerEventAsync("rendered");
+			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
 
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == 1) {
 				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this);
@@ -687,8 +683,8 @@ class KatApp implements IKatApp {
                     <div class="modal-body"></div>\
                         <div class="modal-footer">\
 							<div class="modal-footer-buttons d-none">\
-								<button type="button" class="' + cssCancel + ' cancelButton" aria-hidden="true">' + labelCancel + '</button>\
-								<button type="button" class="' + cssContinue + ' continueButton">' + labelContinue + '</button>\
+								<button type="button" :class="[\'' + cssCancel + '\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">' + labelCancel + '</button>\
+								<button type="button" :class="[\'' + cssContinue + '\', \'continueButton\', { disabled: uiBlocked}]">' + labelContinue + '</button>\
 	                        </div>\
                         </div>\
                     </div>\
@@ -727,15 +723,15 @@ class KatApp implements IKatApp {
 
 	private async showModalApplicationAsync(): Promise<boolean> {
 		const d: JQuery.Deferred<boolean> = $.Deferred();
-
+		
 		if (this.el.hasClass("show")) {
+			console.log("When this is hit, document why condition is there");
+			debugger;
 			d.resolve(true);
 			return d;
 		}
 
-		const modalBS5 = new bootstrap.Modal(this.el[0]);
-		this.el.on("shown.bs.modal", () => d.resolve(true));
-
+		const options = this.options.modalAppOptions!;
 		const that = this;
 		let katAppModalClosing = false;
 
@@ -746,8 +742,6 @@ class KatApp implements IKatApp {
 			KatApp.remove(that);
 		}
 
-		const options = this.options.modalAppOptions!;
-
 		// If response if of type Event, 'confirmedAsync/cancelled' was just attached to a button and default processing occurred and the first param was
 		// click event object.  Just pass undefined back as a response in that scenario.		
 		options.confirmedAsync = async response => {
@@ -757,7 +751,7 @@ class KatApp implements IKatApp {
 				const calculateOnConfirm = (typeof options.calculateOnConfirm == 'boolean') ? options.calculateOnConfirm : true;
 				const calculationInputs = (typeof options.calculateOnConfirm == 'object') ? options.calculateOnConfirm : undefined;
 				if (calculateOnConfirm) {
-					await that.calculateAsync(calculationInputs);
+					await that.options.hostApplication!.calculateAsync(calculationInputs);
 				}
 			}
 
@@ -768,82 +762,91 @@ class KatApp implements IKatApp {
 			options.promise.resolve({ confirmed: false, response: response instanceof Event ? undefined : response });
 		};
 
+		// if any errors during initialized event or during iConfigureUI calculation, modal is probably 'dead', show a 'close' button and
+		// just trigger a cancelled
 		const isInvalid = this.state.errors.length > 0;
-		const showCancel = isInvalid || ( options.showCancel ?? true );
+		const hasCustomHeader = options.headerTemplate != undefined;
+		const hasCustomButtons = options.buttonsTemplate != undefined;
+		// If custom buttons, framework should ignore the options (kaml can use them)
+		const showCancel = hasCustomButtons || ( options.showCancel ?? true );
 
-		if (isInvalid) {
-			this.select(".modal-footer-buttons button").remove();
-			this.select(".modal-footer-buttons").append(
-				$(`<button type="button" class="${options.css!.cancel} cancelButton">${options.labels!.cancel}</button>`)
-			);
-		}
+		// Could put an options about whether or not to set this
+		// this.el.attr("data-bs-keyboard", "false");
 
-		if (isInvalid || options.buttonsTemplate == undefined) {
-			this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
+		const closeButtonClickAsync = async (e: JQuery.TriggeredEvent) => {
+			if (!katAppModalClosing) {
 				e.preventDefault();
-				await options.confirmedAsync!();
-			});
-
-			if (!showCancel) {
-				this.select('.modal-footer-buttons .cancelButton').remove();
-				this.el.attr("data-bs-keyboard", "false");
-			}
-			else {
-				this.select('.modal-footer-buttons .cancelButton').on("click.ka", function (e) {
-					e.preventDefault();
+				if (isInvalid) {
 					options.cancelled!();
-				});
-			}
-		}
-
-		if (!showCancel) {
-			if (options.headerTemplate == undefined) {
-				this.select('.modal-header .btn-close').remove();
-			}
-			else if (this.select('.modal-header .btn-close').length == 0) {
-				this.el.attr("data-bs-keyboard", "false");
-			}
-		}
-
-
-		if (showCancel || options.headerTemplate != undefined) {
-
-			if (options.headerTemplate == undefined) {
-				this.select('.modal-header .btn-close').on("click.ka", function (e) {
-					e.preventDefault();
-
-					if (options.closeButtonTrigger != undefined) {
-						that.select(options.closeButtonTrigger).trigger("click");
+				}
+				else if (options.closeButtonTrigger != undefined) {
+					that.select(options.closeButtonTrigger).trigger("click");
+				}
+				else if (showCancel) {
+					if (that.select(".modal-footer-buttons .cancelButton").length == 1) {
+						that.select(".modal-footer-buttons .cancelButton").trigger("click");
 					}
 					else {
 						options.cancelled!();
 					}
-				});
+				}
+				else {
+					if (that.select(".modal-footer-buttons .continueButton").length == 1) {
+						that.select(".modal-footer-buttons .continueButton").trigger("click");
+					}
+					else {
+						await options.confirmedAsync!();
+					}
+				}
+			}
+		};
+
+		if (isInvalid) {
+			this.select(".modal-footer-buttons button").remove();
+			this.select(".modal-footer-buttons").append(
+				$(`<button type="button" class="${options.css!.continue} continueButton">Close</button>`)
+			);
+			this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
+				e.preventDefault();
+				await options.cancelled!();
+			});
+		}
+		else {
+			if (!hasCustomHeader) {
+				this.select(".modal-header .btn-close").on("click.ka", async e => await closeButtonClickAsync(e) );
 			}
 
-			if (this.select('.modal-header .btn-close').length > 0) {
-				// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
-				$(this.el).on("hide.bs.modal", e => {
-					if (!katAppModalClosing) {
-						e.preventDefault();
-						if (options.closeButtonTrigger != undefined) {
-							that.select(options.closeButtonTrigger).trigger("click");
-						}
-						else {
-							options.cancelled!();
-						}
-					}
+			if (!hasCustomButtons) {
+				this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
+					e.preventDefault();
+					await options.confirmedAsync!();
 				});
+				this.select('.modal-footer-buttons .cancelButton').on("click.ka", function (e) {
+					e.preventDefault();
+					options.cancelled!();
+				});
+
+				if (!showCancel) {
+					this.select('.modal-footer-buttons .cancelButton').remove();
+				}
 			}
 		}
 
-		this.select(".modal-footer-buttons").removeClass("d-none");
+		this.el
+			.on("shown.bs.modal", () => {
+				that.select(".modal-footer-buttons").removeClass("d-none");
+				d.resolve(true);
+			})
+			// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
+			// After modal is shown, resolve promise to caller to know modal is fully displayed
+			.on("hide.bs.modal", async e => await closeButtonClickAsync(e) );
 
+		const modalBS5 = new bootstrap.Modal(this.el[0]);
 		modalBS5.show();
 
 		if (options.triggerLink != undefined) {
 			options.triggerLink.prop("disabled", false).removeClass("disabled kaModalInit");
-			$("body").removeClass("kaModalInit kaModalInit");
+			$("body").removeClass("kaModalInit");
 		}
 
 		this.options.hostApplication!.unblockUI();
@@ -1534,6 +1537,10 @@ class KatApp implements IKatApp {
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
 			options.content = this.select(options.contentSelector).html();
+
+			if (!options.content) {
+				throw new Error(`The content selector (${options.contentSelector}) did not return any content.`);
+			}
 		}
 
 		if (options.content == undefined && options.view == undefined) {
@@ -1588,7 +1595,7 @@ class KatApp implements IKatApp {
 
 			if (triggerLink != undefined) {
 				triggerLink.prop("disabled", false).removeClass("disabled kaModalInit");
-				$("body").removeClass("kaModalInit kaModalInit");
+				$("body").removeClass("kaModalInit");
 			}
 
 			throw e;

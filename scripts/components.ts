@@ -48,7 +48,9 @@ class InputComponent {
 		input.setAttribute("name", name);
 		input.classList.add(name);
 
-		// Issue with nested v-if directives and reactivity - see tests/if.nested.reactive.html, https://stackoverflow.com/questions/74497174/petite-vue-mount-and-unmount-events-with-nested-v-if
+		// Issue with nested v-if directives and reactivity - see tests/if.nested.reactive.html
+		// https://stackoverflow.com/questions/74497174/petite-vue-mount-and-unmount-events-with-nested-v-if
+		// https://github.com/vuejs/petite-vue/discussions/188
 
 		if (!input.isConnected) {
 			console.log(`Skipping input mount on ${name} because the input is not connected, consider the order of model properties being set.`);
@@ -84,6 +86,7 @@ class InputComponent {
 
 		const inputEventAsync = async (calculate: boolean) => {
 			removeError();
+			await application.triggerEventAsync("input", name, calculate, input, scope);
 
 			if (!exclude) {
 				application.state.inputs[name] = application.getInputValue(name);
@@ -127,8 +130,10 @@ class InputComponent {
 
 			// Textbox...
 			if (type != "radio" && input.tagName == "INPUT") {
+				input.addEventListener("input", async e => {
+					await inputEventAsync(false);
+				});
 				input.addEventListener("keypress", async e => {
-					removeError();
 					if (e.keyCode == 13) {
 						await inputEventAsync(true);
 					}
@@ -258,9 +263,10 @@ class InputComponent {
 		setRangeValues(false);
 
 		input.addEventListener("input", async () => {
+			await inputEventAsync(false);
 			setRangeValues(true);
 		});
-		input.addEventListener("rangeset.ka", async () => {
+		input.addEventListener("rangeset.ka", () => {
 			setRangeValues(false);
 		});
 		input.addEventListener("change", async () => {
@@ -545,7 +551,7 @@ class InputComponent {
 					container: props?.css?.container
 				};
 			},
-			get error() { return base.error; },
+			get error() { return props.isError?.(base) ?? base.error; },
 			get warning() { return base.warning; },
 			get list() {
 				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
@@ -683,7 +689,7 @@ class TemplateMultipleInputComponent {
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
 			}),
 			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
-			error: (index: number) => base.error(index),
+			error: (index: number) => props.isError?.(index, base) ?? base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
 				const table =

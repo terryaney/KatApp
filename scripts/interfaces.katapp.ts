@@ -128,7 +128,7 @@ interface IApplicationData {
 	uiBlocked: boolean;
 	needsCalculation: boolean; // True when input not 'skipped' has been edited but has not triggered a calculation yet
 
-	model?: any;
+	model: IStringAnyIndexer;
 
 	handlers?: IStringAnyIndexer;
 
@@ -159,6 +159,7 @@ interface IRblApplicationData {
 	source: <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string, predicate?: (row: T) => boolean) => Array<T>;
 	exists: <T extends ITabDefRow>(table: string, calcEngine?: string, tab?: string, predicate?: (row: T) => boolean) => boolean;
 	value: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined;
+	number: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => number;
 	boolean: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string, valueWhenMissing?: boolean) => boolean;
 
 	onAll: (...values: Array<undefined | string | number>) => boolean;
@@ -304,6 +305,7 @@ interface IKaInputModel {
 
 	template?: string;
 
+	isError?: (base: IKaInputScopeBase) => string;
 	isNoCalc?: (base: IKaInputScopeBase) => boolean;
 	isDisabled?: (base: IKaInputScopeBase) => boolean;
 	isDisplay?: (base: IKaInputScopeBase) => boolean;
@@ -396,6 +398,7 @@ interface IKaInputGroupModel {
 	template: string;
 
 	isNoCalc?: (index: number, base: IKaInputGroupModelBase) => boolean;
+	isError?: (index: number, base: IKaInputGroupModelBase) => string;
 	isDisabled?: (index: number, base: IKaInputGroupModelBase) => boolean;
 	isDisplay?: (index: number, base: IKaInputGroupModelBase) => boolean;
 
