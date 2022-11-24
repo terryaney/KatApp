@@ -105,14 +105,14 @@ When multiple CalcEngines or result tabs are used, additional information can be
 
 Entity | Description
 ---|---
-`templates` | Attribute; Comma delimitted list of Kaml Template Files required by this Kaml View.  Each template is specified in Folder:FileName syntax.
-`calc-engine` | Element; If one or more CalcEngines are used in Kaml View, specify each one via a `calc-engine` element.
-`key` | Attribute; When more than one CalcEngine is provided (or if you need to access [Manual Results](#manualResults)), a CalcEngine is referenced by this key; usually via a `ce` property passed into a Vue directive.
-`name` | Attribute; The name of the CalcEngine.
-`input-tab` | Attribute; The name of the tab where KatApp framework should inject inputs. Default is `RBLInput`.
-`result-tabs` | Attribute; Comma delimitted list of result tabs to process during RBLe Calculation. When more than one result tab is provided, the tab is referenced by name; usually via a `tab` property passed into a Vue directive. Default is `RBLResult`.
-`configure-ui` | Attribute; Whether or not this CalcEngine should run during the Kaml View's original [Configure UI Calculation](#IKatApp.configureUICalculation). Default is `true`.
-`precalcs` | Attribute; Comma delimitted list of CalcEngines, i.e. `CalcEngine1,CalcEngineN` to use in a a [Precalc Pipeline](#Precalc Pipelines) for the current CalcEngine. .  By default, if only a CalcEngine name is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.  To use different tabs, each PreCalc CalcEngine 'entity' becomes `CalcEngine|InputTab|ResultTab`.  
+templates | Attribute; Comma delimitted list of Kaml Template Files required by this Kaml View.  Each template is specified in Folder:FileName syntax.
+calc&#x2011;engine | Element; If one or more CalcEngines are used in Kaml View, specify each one via a `calc-engine` element.
+key | Attribute; When more than one CalcEngine is provided (or if you need to access [Manual Results](#manualResults)), a CalcEngine is referenced by this key; usually via a `ce` property passed into a Vue directive.
+name | Attribute; The name of the CalcEngine.
+input&#x2011;tab | Attribute; The name of the tab where KatApp framework should inject inputs. Default is `RBLInput`.
+result&#x2011;tabs | Attribute; Comma delimitted list of result tabs to process during RBLe Calculation. When more than one result tab is provided, the tab is referenced by name; usually via a `tab` property passed into a Vue directive. Default is `RBLResult`.
+configure&#x2011;ui | Attribute; Whether or not this CalcEngine should run during the Kaml View's original [Configure UI Calculation](#IKatApp.configureUICalculation). Default is `true`.
+precalcs | Attribute; Comma delimitted list of CalcEngines, i.e. `CalcEngine1,CalcEngineN` to use in a a [Precalc Pipeline](#Precalc Pipelines) for the current CalcEngine. .  By default, if only a CalcEngine name is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.  To use different tabs, each PreCalc CalcEngine 'entity' becomes `CalcEngine|InputTab|ResultTab`.  
 
 # Kaml View Specifications
 
@@ -284,61 +284,81 @@ application.state object.
 const nameFirst = application.state.rbl.value("name-first");
 ```
 
-### IApplicationData.kaId
+### IApplicationData Properties
 
-Property Type: `string`  
-Current id of the running KatApp.  Typically only used in Template Files when a unique id is required.
+Property | Type | Description
+---|---|---
+`kaId` | `string` | Current id of the running KatApp.  Typically only used in Template Files when a unique id is required.
+`uiBlocked` | `boolean` | Returns `true` when a RBL Calculation or Api Endpoint is being processed.  See [`IKatApp.blockUI`](#IKatApp.blockUI) and [`IKatApp.unblockUI`](#IKatApp.unblockUI) for more information. Typically used to show a 'blocker' on the rendered HTML to prevent the user from clicking anywhere.
+`needsCalculation` | `boolean` | Returns `true` when input that will trigger a calculation has been edited but has not triggered a calculation yet.  Typically used with [`v-ka-needs-calc`](#v-ka-needs-calc) directive which toggles 'submit button' state to indicate to the user that a calculation is needed before they can submit the current form.
+`model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
+`handlers` | `IStringAnyIndexer` | Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
+`components` | `IStringIndexer<IStringAnyIndexer>` | Kaml Views can pass in petite-vue components that can used in v-scope directives (i.e. v-scope="components.inputComponent({})"). See [`IKatApp.update`](#IKatApp.update) for more information.
+`inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp
+`errors` | [`Array<IValidation>`](#ivalidation) | Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
+`warnings` | [`Array<IValidation>`](#ivalidation) | Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
+`rbl` | [`IRbl`](#irbl) | Helper object used to access RBLe Framework Calculation results.
 
-### IApplicationData.uiBlocked
 
-Property Type: `boolean`  
-Returns `true` when a RBL Calculation or Api Endpoint is being processed.  See [`IKatApp.blockUI`](#IKatApp.blockUI) and [`IKatApp.unblockUI`](#IKatApp.unblockUI) for more information. Typically used to show a 'blocker' on the rendered HTML to prevent the user from clicking anywhere.
+### IApplicationData Methods
 
-### IApplicationData.needsCalculation
+Name | Description
+---|---
+[`onAll`](#iapplicationdataonall) | Returns `true` if **all** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
+[`onAny`](#iapplicationdataonany) | Returns `true` if **any** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
+[`pushTo`](#iapplicationdatapushto) | Allows Kaml Views to manually push 'additional result rows' into a calculation result table.
 
-Property Type: `boolean`  
-Returns `true` when input that will trigger a calculation has been edited but has not triggered a calculation yet.  Typically used with [`v-ka-needs-calc`](#v-ka-needs-calc) directive which toggles 'submit button' state to indicate to the user that a calculation is needed before they can submit the current form.
+#### IApplicationData.onAll
 
-### IApplicationData.model
 
-Property Type: `any`  
-Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
+**`onAll(...values: any[]) => boolean`**
 
-### IApplicationData.handlers
+Returns `true` if **all** values passed in evaluate to `true` using same conditions described in `rbl.boolean()`.
 
-Property Type: `IStringAnyIndexer`  
-Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
+#### IApplicationData.onAny
 
-### IApplicationData.components
+**`onAny(...values: any[]) => boolean`**
 
-Property Type: `IStringIndexer<IStringAnyIndexer>`  
-Kaml Views can pass in petite-vue components that can used in v-scope directives (i.e. v-scope="components.inputComponent({})"). See [`IKatApp.update`](#IKatApp.update) for more information.
+Returns `true` if **any** value passed in evaluates to `true` using same conditions described in `rbl.boolean()`.
 
-### IApplicationData.inputs
+#### IApplicationData.pushTo
 
-Property Type: `ICalculationInputs`  
-Inputs to pass along to each calculation during life span of KatApp
+**`pushTo(tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>, calcEngine?: string, tab?: string) => void`**
 
-### IApplicationData.errors
+Allows Kaml Views to manually push 'additional result rows' into a calculation result table.  Typically used in [IKatApp.resultsProcessing](#ikatapponresultsprocessing) event handlers to inject rows before they are [processed into the application state](#rbl-framework-result-processing-in-katapp-state).
 
-Property Type: `Array<IValidation>`  
-Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
+```javascript
+application.on("resultsProcessing.ka", (event, results, inputs) => {
+    // Push 'core' inputs into rbl-value for every CalcEngine if they exist
+    // in this global handler instead of requiring *every* CalcEngine to return these.
+    application.state.rbl.pushTo(results[0], "rbl-value",
+        [
+            { "@id": "currentPage", "value": inputs.iCurrentPage || "" },
+            { "@id": "parentPage", "value": inputs.iParentPage || "" },
+            { "@id": "referrerPage", "value": inputs.iReferrer || "" },
+            { "@id": "isModal", "value": inputs.iModalApplication || "0" },
+            { "@id": "isNested", "value": inputs.iNestedApplication || "0" }
+        ]
+    );
+});
+```
 
-### IApplicationData.warnings
 
-Property Type: `Array<IValidation>`  
-Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
+## IRbl
 
-### IApplicationData.rbl.results
+Helper object used to access RBLe Framework Calculation results.
 
-Property Type: `IStringIndexer<IStringIndexer<Array<ITabDefRow>>>`  
-JSON object containing results of all assocatied CalcEngines.  Typically not used by Kaml developers.  Instead, use other methods of IRblApplicationData to grab results.  The `string` key to results is the concatenation of `CalcEngineKey.TabName`.
+### IRbl Properties
 
-See [RBLe Framework Result Processing in KatApp State](#rbl-framework-result-processing-in-katapp-state) to understand how RBLe Framework result managed in KatApp state to ensure proper `reactivity` after each calculation.
+Property | Type | Description
+`results`<sup>1</sup> | `IStringIndexer<IStringIndexer<Array<ITabDefRow>>>` | JSON object containing results of all assocatied CalcEngines.  Typically not used by Kaml developers.  Instead, use other methods of `IRbl` to grab results.  The `string` key to results is the concatenation of `CalcEngineKey.TabName`.
+`options`<sup>2</sup> | `{ calcEngine?: string, tab?: string }` | Default configuration settings to be applied when working with the `IApplicationData.rbl` object and its methods.  The CalcEngine key and/or the `ITabDef` name to use as the default source when the CalcEngine key is not provided in methods that access RBLe Framework results.  If not provided, the *first* CalcEngine key and its *first* result tab defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
+
+<sup>1</sup> The `results` object can be visualized as below (See [RBLe Framework Result Processing in KatApp State](#rble-framework-result-processing-in-katapp-state) to understand how RBLe Framework result managed in KatApp state to ensure proper `reactivity` after each calculation):
 
 ```javascript
 // The object can be visualized as follows
-state: {
+rbl: {
     results: {
         "Home.RBLResult": {
             "rbl-value": [
@@ -360,7 +380,40 @@ state: {
 }
 ```
 
-### IApplicationData.rbl.source
+<sup>2</sup> Given the following configuration for multiple CalcEngines and tabs, the `rbl.options` object can be used in the following scenarios.  Note, that when `options.calcEngine` or `options.tab` are set, all KatApp directives (`v-ka-value`, `v-ka-template`, `v-ka-table`, `v-ka-highchart`, etc.) that access RBLe Results will also obey the settings.
+
+```html
+<rbl-config templates="Standard_Templates,LAW:Law_Templates">
+    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult"></calc-engine>
+    <calc-engine key="shared" name="LAW_Shared_CE" input-tab="RBLInput" result-tabs="RBLResult,RBLHelpers"></calc-engine>
+</rbl-config>
+```
+
+```javascript
+// Start: application.state.rbl.options.calcEngine is 'undefined'
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "shared";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "default";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
+
+application.state.rbl.options.calcEngine = "shared";
+application.state.rbl.options.tab = "RBLHelpers";
+application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLHelpers tab
+```
+
+### IRbl Methods
+
+Name | Description
+---|---
+[`source`](#irblsource) | Returns table rows from `results`.
+[`exists`](#irblexists) | Check for existence of table row(s).
+[`value`](#irblvalue) | Return a single value (`undefined` if not present) from `results`.
+[`boolean`](#irblboolean) | Return whether or not a single row.column value is truthy.
+
+#### IRbl.source
 
 **`source(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean) => Array<ITabDefRow>`**
 
@@ -391,48 +444,8 @@ application.state.rbl.source("resultTable", , "RBLSecondTab");
 application.state.rbl.source("brdResultTable", "BRD", r => r.topic == 'head');
 ```
 
-### IApplicationData.rbl.options
 
-Default configuration settings to be applied when working with the `IApplicationData.rbl` object and its methods.
-
-#### IApplicationData.rbl.options.calcEngine
-
-Property Type: `string`; Optional  
-The CalcEngine key to use as the default source when the CalcEngine key is not provided in methods that access RBLe Framework results.  If not provided, the *first* CalcEngine key defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
-
-#### IApplicationData.rbl.options.tab
-
-Property Type: `string`; Optional  
-The `ITabDef` name to use as the default source when not the tab name is not provided in methods that access RBLe Framework results.  If not provided, the *first* result tab for the *default* CalcEngine defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
-
-#### IApplicationData.rbl.options Samples
-
-Given the following configuration for multiple CalcEngines and tabs, the `rbl.options` object can be used in the following scenarios.  Note, that when `options.calcEngine` or `options.tab` are set, all KatApp directives (`v-ka-value`, `v-ka-template`, `v-ka-table`, `v-ka-highchart`, etc.) that access RBLe Results will also obey the settings.
-
-```html
-<rbl-config templates="Standard_Templates,LAW:Law_Templates">
-    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult"></calc-engine>
-    <calc-engine key="shared" name="LAW_Shared_CE" input-tab="RBLInput" result-tabs="RBLResult,RBLHelpers"></calc-engine>
-</rbl-config>
-```
-
-```javascript
-// Start: application.state.rbl.options.calcEngine is 'undefined'
-application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
-
-application.state.rbl.options.calcEngine = "shared";
-application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLResult tab
-
-application.state.rbl.options.calcEngine = "default";
-application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Wealth_CE, RBLResult tab
-
-application.state.rbl.options.calcEngine = "shared";
-application.state.rbl.options.tab = "RBLHelpers";
-application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLHelpers tab
-```
-
-
-### IApplicationData.rbl.exists
+#### IRbl.exists
 
 **`exists(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean ) => boolean`**
 
@@ -451,7 +464,7 @@ A `predicate` can be passed to filter rows before checking for existence.
 </div>
 ```
 
-### IApplicationData.rbl.value
+#### IRbl.value
 
 **`value(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined`**
 
@@ -464,28 +477,39 @@ Shorthand syntax of only one parameter is allowed, where the `table` parameter i
 ```javascript
 // Return 'value' column from 'rbl-value' table where '@id' column is "name-first".
 const name = application.state.rbl.value("rbl-value", "name-first");
+
 // Shorthand syntax for example above.
 const name = application.state.rbl.value("name-first");
+
 // Return 'value2' column from 'rbl-value' table where '@id' column is "name-first".
 const name = application.state.rbl.value("custom-table", "name-first", "value2");
+
 // Return 'value2' column from 'rbl-value' table where 'key' column is "name-first".
 const name = application.state.rbl.value("custom-table", "name-first", "value2", "key");
+
 // Return 'value' column from 'rbl-value' table where 'key' column is "name-first".
 const name = application.state.rbl.value("custom-table", "name-first", undefined, "key");
 
+
 // Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the BRD CalcEngine
 const name = application.state.rbl.value("rbl-value", "name-first", undefined, undefined, "BRD");
-// Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the RBLResult2 tab in the default CalcEngine
-const name = application.state.rbl.value("rbl-value", "name-first", undefined, undefined, undefined, "RBLResult2");
-// Return 'value2' column from 'rbl-value' table where 'key' column is "name-first" from the RBLResult2 tab in the BRD CalcEngine
-const name = application.state.rbl.value("custom-table", "name-first", "value2", "key", "BRD", "RBLResult2");
+
+// Return 'value' column from 'rbl-value' table where '@id' column is "name-first" 
+// from the RBLResult2 tab in the default CalcEngine
+const name = application.state.rbl.value("rbl-value", "name-first", 
+                undefined, undefined, undefined, "RBLResult2");
+
+// Return 'value2' column from 'rbl-value' table where 'key' column is "name-first" from the 
+// RBLResult2 tab in the BRD CalcEngine
+const name = application.state.rbl.value("custom-table", "name-first", "value2", "key", 
+                "BRD", "RBLResult2");
 ```
 
-### IApplicationData.rbl.boolean
+#### IRbl.boolean
 
 **`boolean(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string, valueWhenMissing?: boolean) => boolean`**
 
-Returns `true` if the value returned (with same function signature as `rbl.value`) if value is `undefined` (currently not present in results) or value is string and lower case is not in ['false', '0', 'n', 'no'] or value converted to a boolean is `true`.  Typically used in `v-if` and `v-show` directives.
+Returns `true` if the value returned (with same function signature as `rbl.value`) is `undefined` (currently not present in results) or value is string and lower case is not in ['false', '0', 'n', 'no'] or value converted to a boolean is `true`.  Typically used in `v-if` and `v-show` directives.
 
 Shorthand syntax of only one parameter is allowed, where the parameter is assumed to be the `keyValue` parameter, and then **multiple** tables are checked returning first existing match.  The tables checked (based on priority) are: `rbl-value`, `rbl-display`, `rbl-disabled`, and `rbl-skip`.
 
@@ -536,39 +560,6 @@ since 'undefined' will be treated as 'false' in rbl.boolean() because valueWhenM
 <a href="#" :disabled="rbl.value('rbl-disabled', 'allowLink', false)">Click Here</a>
 ```
 
-### IApplicationData.rbl.onAll
-
-**`onAll(...values: any[]) => boolean`**
-
-Returns `true` if **all** values passed in evaluate to `true` using same conditions described in `rbl.boolean()`.
-
-### IApplicationData.rbl.onAny
-
-**`onAny(...values: any[]) => boolean`**
-
-Returns `true` if **any** value passed in evaluates to `true` using same conditions described in `rbl.boolean()`.
-
-### IApplicationData.pushTo
-
-**`pushTo(tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>, calcEngine?: string, tab?: string) => void`**
-
-Allows Kaml Views to manually push 'additional result rows' into a calculation result table.  Typically used in [IKatApp.resultsProcessing](#ikatapponresultsprocessing) event handlers to inject rows before they are [processed into the application state](#rbl-framework-result-processing-in-katapp-state).
-
-```javascript
-application.on("resultsProcessing.ka", (event, results, inputs) => {
-    // Push 'core' inputs into rbl-value for every CalcEngine if they exist
-    // in this global handler instead of requiring *every* CalcEngine to return these.
-    application.state.rbl.pushTo(results[0], "rbl-value",
-        [
-            { "@id": "currentPage", "value": inputs.iCurrentPage || "" },
-            { "@id": "parentPage", "value": inputs.iParentPage || "" },
-            { "@id": "referrerPage", "value": inputs.iReferrer || "" },
-            { "@id": "isModal", "value": inputs.iModalApplication || "0" },
-            { "@id": "isNested", "value": inputs.iNestedApplication || "0" }
-        ]
-    );
-});
-```
 
 ## RBLe Framework Result Processing in KatApp State
 
@@ -792,54 +783,58 @@ Below is an example of how to leverage the `$renderId` to allow for proper scopi
 	<script setup type="text/javascript">
 		function mounted(application) {
 			// Use {{ }} syntax to grab value and store it in string selector
-            const renderId = '.{{$renderId}}';
-			console.log(`setup templateMounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`setup templateMounted:, ${application.select(renderId).length} template-script-input items found`);
+			const renderId = '.{{$renderId}}';
+            const length = application.select(renderId).length;
+			console.log(`setup templateMounted:, ${length} scoped items found`);
 		}
 		function unmounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`setup templateUnmounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`setup templateUnmounted:, ${application.select(renderId).length} template-script-input items found`);
+            const length = application.select(renderId).length;
+			console.log(`setup templateUnmounted:, ${length} scoped items found`);
 		}
 	</script>
 	<script type="text/javascript">
 		function mounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`templateMounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`templateMounted:, ${application.select(".template-script-input").length} template-script-input items found`);
+            const scopeLength = application.select(renderId).length;
+            const templateLength = application.select(renderId).length;
+			console.log(`templateMounted:, ${scopeLength} scoped items found`);
+			console.log(`templateMounted:, ${templateLength} template-script-input items found`);
 		}
 		function unmounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`templateUnmounted:, ${application.select(".template-script-input").length} template-script-input items found`);
+            const templateLength = application.select(renderId).length;
+			console.log(`templateUnmounted:, ${templateLength} template-script-input items found`);
 		}
 	</script>
-	<input v-ka-input="{name: 'iTemplateInput' + name }" type="text" :class="['form-control template-script-input', $renderId]" />
+	<input v-ka-input="{name: 'iTemplateInput' + name }" type="text" 
+        :class="['template-script-input', $renderId]" />
 </template>
 
 <!-- Rendered HTML -->
 <div class="rbl-nocalc">
     <input name="iTemplateInputPension" 
         type="text" 
-        class="form-control template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
+        class="template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
     <input name="iTemplateInputLifeEvents" 
         type="text" 
-        class="form-control template-script-input iTemplateInputLifeEvents templateWithScript_templateWithScript_ka1e46825c_2">
+        class="template-script-input iTemplateInputLifeEvents templateWithScript_templateWithScript_ka1e46825c_2">
     <input name="iTemplateInputPension" 
         type="text" 
-        class="form-control template-script-input iTemplateInputSavings templateWithScript_templateWithScript_ka1e46825c_3">
+        class="template-script-input iTemplateInputSavings templateWithScript_templateWithScript_ka1e46825c_3">
 </div>
 ```
 
 With the above example, you could expect the following in the console ouput (remembering that all rendering completes before `mounted` is called):
 
-> templateWithScript setup templateMounted:, 1 scoped items found
-> templateWithScript setup templateMounted:, 3 template-script-input items found
-> templateWithScript templateMounted:, 1 scoped items found
-> templateWithScript templateMounted:, 3 template-script-input items found
-> templateWithScript templateMounted:, 1 scoped items found
-> templateWithScript templateMounted:, 3 template-script-input items found
-> templateWithScript templateMounted:, 1 scoped items found
-> templateWithScript templateMounted:, 3 template-script-input items found
+> templateWithScript setup templateMounted:, 1 scoped items found  
+> templateWithScript setup templateMounted:, 3 template-script-input items found  
+> templateWithScript templateMounted:, 1 scoped items found  
+> templateWithScript templateMounted:, 3 template-script-input items found  
+> templateWithScript templateMounted:, 1 scoped items found  
+> templateWithScript templateMounted:, 3 template-script-input items found  
+> templateWithScript templateMounted:, 1 scoped items found  
+> templateWithScript templateMounted:, 3 template-script-input items found  
 
 ```html
 <script>
@@ -862,51 +857,55 @@ With the above example, you could expect the following in the console ouput (rem
 		function mounted(application) {
 			// Use {{ }} syntax to grab value and store it in string selector
             const renderId = '.{{$renderId}}';
-			console.log(`setup templateMounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`setup templateMounted:, ${application.select(renderId).length} template-script-input items found`);
+            const length = application.select(renderId).length;
+			console.log(`setup templateMounted:, ${length} scoped items found`);
 		}
 		function unmounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`setup templateUnmounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`setup templateUnmounted:, ${application.select(renderId).length} template-script-input items found`);
+            const length = application.select(renderId).length;
+			console.log(`setup templateUnmounted:, ${length} scoped items found`);
 		}
 	</script>
 	<script type="text/javascript">
 		function mounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`templateMounted:, ${application.select(renderId).length} scoped items found`);
-			console.log(`templateMounted:, ${application.select(".template-script-input").length} template-script-input items found`);
+            const scopeLength = application.select(renderId).length;
+            const templateLength = application.select(renderId).length;
+			console.log(`templateMounted:, ${scopeLength} scoped items found`);
+			console.log(`templateMounted:, ${templateLength} template-script-input items found`);
 		}
 		function unmounted(application) {
 			const renderId = '.{{$renderId}}';
-			console.log(`templateUnmounted:, ${application.select(".template-script-input").length} template-script-input items found`);
+            const templateLength = application.select(renderId).length;
+			console.log(`templateUnmounted:, ${templateLength} template-script-input items found`);
 		}
 	</script>
 
     <!-- Render items with v-for -->
-	<input v-for="(row, index) in rows" v-ka-input="{name: 'iTemplateInput' + row.name }" type="text" :class="['form-control template-script-input', $renderId]" />
+	<input v-for="(row, index) in rows" v-ka-input="{name: 'iTemplateInput' + row.name }" type="text" 
+        :class="['template-script-input', $renderId]" />
 </template>
 
 <!-- Rendered HTML (notice how the last segment of renderId is always 1 in this case) -->
 <div class="rbl-nocalc">
     <input name="iTemplateInputPension" 
         type="text" 
-        class="form-control template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
+        class="template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
     <input name="iTemplateInputLifeEvents" 
         type="text" 
-        class="form-control template-script-input iTemplateInputLifeEvents templateWithScript_templateWithScript_ka1e46825c_1">
+        class="template-script-input iTemplateInputLifeEvents templateWithScript_templateWithScript_ka1e46825c_1">
     <input name="iTemplateInputPension" 
         type="text" 
-        class="form-control template-script-input iTemplateInputSavings templateWithScript_templateWithScript_ka1e46825c_1">
+        class="template-script-input iTemplateInputSavings templateWithScript_templateWithScript_ka1e46825c_1">
 </div>
 ```
 
 With the above example, you could expect the following in the console ouput (remembering that all rendering completes before `mounted` is called):
 
-> templateWithScript setup templateMounted:, 3 scoped items found
-> templateWithScript setup templateMounted:, 3 template-script-input items found
-> templateWithScript templateMounted:, 3 scoped items found
-> templateWithScript templateMounted:, 3 template-script-input items found
+> templateWithScript setup templateMounted:, 3 scoped items found  
+> templateWithScript setup templateMounted:, 3 template-script-input items found  
+> templateWithScript templateMounted:, 3 scoped items found  
+> templateWithScript templateMounted:, 3 template-script-input items found  
 
 **Note**: When a template with `<script>` tags is called and passed an `Array` data source, you can see that both the `setup` and 'normal' scripts excecute only one time, therefore it is recommended to always use the 'normal' script mode.
 
@@ -1146,7 +1145,8 @@ model: {
 <!-- 
 Expression of type IStringIndexer<string> 
 
-When expression is IStringIndexer<string> each style is applied and overrides any existing matching styles with last element in array taking precedence.
+When expression is IStringIndexer<string> each style is applied and overrides any existing matching styles with 
+last element in array taking precedence.
 -->
 <div :style="{ color: model.activeColor, fontSize: model.fontSize + 'px' }"></div>
 <!-- Renders.. -->
@@ -1156,16 +1156,22 @@ When expression is IStringIndexer<string> each style is applied and overrides an
 Expression of type Array<string, IStringIndexer<string>>
 Can mix and match string and IStringIndexer<string> in the array as well.
 -->
-<div style="border: 1px solid blue;" :style="['font-weight: bold', { color: model.activeColor, fontSize: model.fontSize + 'px' }, { font-weight: 'normal' }]"></div>
+<div style="border: 1px solid blue;" 
+    :style="['font-weight: bold', { color: model.activeColor, fontSize: model.fontSize + 'px' }, { font-weight: 'normal' }]">
+</div>
 <!-- Renders... -->
 <div style="border: 1px solid blue; color: red; fontSize: 30px; font-weight: normal;"></div>
 
 <!-- 
 Expression of type IStringIndexer<Array<string>>
-You can provide an array of multiple (prefixed) values to a style property and Vue will only render the last value in the array which the browser supports. 
+You can provide an array of multiple (prefixed) values to a style property and Vue will only render the last 
+value in the array which the browser supports. 
 -->
 <div :style="{ display: ['-webkit-box', '-ms-flexbox', 'flex'] }"></div>
-<!-- Renders `display: flex` for browsers that support the unprefixed version of `flexbox`.  This gets around the limitation of no support for 'auto-prefixing'. -->
+<!-- 
+Renders `display: flex` for browsers that support the unprefixed version of `flexbox`.  
+This gets around the limitation of no support for 'auto-prefixing'. 
+-->
 <div style="display: flex;"></div>
 ```
 
@@ -1390,17 +1396,20 @@ These events can be used in Kaml Views manually if needed. To use the elements y
 <div v-if="rbl.boolean('showElectionForm')" @vue:mounted="handlers.paymentOptionsMounted">
     <ul class="nav nav-tabs" id="eHSAContribution" role="tablist">
         <li v-if="rbl.boolean('enableHsaPPP')" class="nav-item" role="presentation">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#perPayPeriod" type="button" role="tab" aria-controls="perPayPeriod" aria-selected="true" value="perPay">Change per-pay-period contribution</button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#perPayPeriod" 
+                type="button" role="tab" aria-controls="perPayPeriod" aria-selected="true" 
+                value="perPay">Change per-pay-period contribution</button>
         </li>
         <li v-if="rbl.boolean('enableHsaOneTime')" class="nav-item" role="presentation">
-            <button @click="handlers.togglePaymentOption" class="nav-link" data-bs-toggle="tab" data-bs-target="#iOneTime" type="button" role="tab" aria-controls="iOneTime" aria-selected="false" value="oneTime">Make a one-time contribution</button>
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#iOneTime" 
+                type="button" role="tab" aria-controls="iOneTime" aria-selected="false" value="oneTime"
+                @click="handlers.togglePaymentOption">Make a one-time contribution</button>
         </li>
     </ul>
 
     <!-- Omitting markup for the actual tab content -->
 </div>
 ```
-
 
 ## v-if / v-else / v-else-if
 
@@ -1493,14 +1502,26 @@ The `v-ka-value` directive has the same shorthand capabilities as `rbl.value()` 
 <div v-ka-value="custom-table.name-first.value2"></div>
 <!-- Return 'value2' column from 'rbl-value' table where 'key' column is "name-first". -->
 <div v-ka-value="custom-table.name-first.value2.key"></div>
-<!-- Return 'value' column from 'rbl-value' table where 'key' column is "name-first". NOTE: The 'empty' segment where returnValue is omitted -->
+<!-- 
+Return 'value' column from 'rbl-value' table where 'key' column is "name-first". 
+NOTE: The 'empty' segment where returnValue is omitted 
+-->
 <div v-ka-value="custom-table.name-first..key"></div>
 
-<!-- Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the BRD CalcEngine. NOTE: Empty segments. -->
+<!-- 
+Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the BRD CalcEngine. 
+NOTE: Empty segments. 
+-->
 <div v-ka-value="rbl-value.name-first...BRD"></div>
-<!-- Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the RBLResult2 tab in the default CalcEngine -->
+<!-- 
+Return 'value' column from 'rbl-value' table where '@id' column is "name-first" from the 
+RBLResult2 tab in the default CalcEngine
+-->
 <div v-ka-value="rbl-value.name-first....RBLResult2"></div>
-<!-- Return 'value2' column from 'rbl-value' table where 'key' column is "name-first" from the RBLResult2 tab in the BRD CalcEngine -->
+<!-- 
+Return 'value2' column from 'rbl-value' table where 'key' column is "name-first" from the
+RBLResult2 tab in the BRD CalcEngine 
+-->
 <div v-ka-value="custom-table.name-first.value2.key.BRD.RBLResult2"></div>
 ```
 
@@ -1640,24 +1661,23 @@ type | For textual inputs, a [HTML5 input type](#https://developer.mozilla.org/e
 label | Provide the associated label for the current input.
 placeholder | For textual inputs, provided the associated placeholder to display when the input is empty.  
 help | Provide help content (can be HTML). Default is blank.
-help-title | If the help popup should have a 'title', can return it here. Default is blank.
-help-width | By default, when help popup is displayed, the width is 250px, provide a width (without the `px`) if you need it larger.
+help&#x2011;title | If the help popup should have a 'title', can return it here. Default is blank.
+help&#x2011;width | By default, when help popup is displayed, the width is 250px, provide a width (without the `px`) if you need it larger.
 value | A input value can be set from the CalcEngine whenever a calculation occurs.  Normally, this column is only returned during `iConfigureUI` calculations to return the 'default' value, but if it is non-blank, the value will be assigned during any calculation.
 display | Whether or not the input should be displayed.  Returning `0` will hide the input, anything else will display the input.
 disabled | Whether or not the input should be disabled.  Returning `1` will disable the input, anything else will enable the input.
-skip-calc | Whether or not this input should trigger a calculation when it is changed by the user.  Returning `1` will prevent the input from triggering a calculation, anything else will allow a calculation to occur.
+skip&#x2011;calc | Whether or not this input should trigger a calculation when it is changed by the user.  Returning `1` will prevent the input from triggering a calculation, anything else will allow a calculation to occur.
 list | If the input is a 'list' control (dropdown, option list, checkbox list, etc.), return the name of the table that provides the list of items used to populate the control.
 prefix | If the input should have a prefix (usually a [Bootstrap `input-group`](#https://getbootstrap.com/docs/5.0/forms/input-group/)) prepended to the front, provide a value here (i.e. `$`).
 suffix | If the input should have a prefix (usually a Bootstrap `input-group`) appended to the end, provide a value here (i.e. `%`).
-max-length | For textual inputs (i.e. TEXTAREA inputs), a maximum allowed input length can be provided.  Default is `250`.
+max&#x2011;length | For textual inputs (i.e. TEXTAREA inputs), a maximum allowed input length can be provided.  Default is `250`.
 min | For inputs with the concept of minimum values (sliders, dates), a minimum value can be provided.
 max | For inputs with the concept of maximum values (sliders, dates), a minimum value can be provided.
 step | For range/slider inputs, a `step` increment can be provided. Default is `1`.
 mask | For textual inputs, if an input mask should be applied while the user is typing information, a mask pattern can be provided (i.e. `(###) ###-####`).
-display-format | For range/slider inputs, a display format can be provided. See [`model.displayFormat`](#ikainputmodeldisplayformat) for more details.
+display&#x2011;format | For range/slider inputs, a display format can be provided. See [`model.displayFormat`](#ikainputmodeldisplayformat) for more details.
 error | During validation calculations (usually `iValidate=1`), if an input is invalid, an error message can be provided here.  Additionally, the `errors` table can be used as well.
 warning | During validation calculations (usually `iValidate=1`), if an input triggers a warning, an warning message can be provided here.  Additionally, the `warnings` table can be used as well.
-
 
 ### v-ka-input Samples
 
@@ -1684,7 +1704,11 @@ Date input rendered via an `input-textbox-nexgen` template;
     template: 'input-textbox-nexgen', 
     label: 'Date of Birth', 
     type: 'date',
-    help: { content: 'Enter your DOB :), also 1 + 2 = {{1+2}}.<br/><b>I\'m bold</b><br/><a v-ka-navigate=&quot;{ view: \'Channel.Home\', inputs: { iFromTooltip: 1 } }&quot;>Go home</a>' }, 
+    help: { 
+        content: 
+            '1 + 2 = {{1+2}}.<br/><b>I\'m bold</b><br/>' + 
+            '<a v-ka-navigate=&quot;{ view: \'Channel.Home\', inputs: { iFromTooltip: 1 } }&quot;>Go home</a>' 
+    }, 
     isDisplay: base => inputs.iHideDateBirth != '1' && base.display,
     events: { 
         'keypress.enter.once': () => console.log('Hooray, enter pressed!'), 
@@ -1697,7 +1721,8 @@ Render an upload control and corresponding comment control.
 
 1. iComment and iUpload are rendered with templates
 2. iComment has max length of 250 and keyup handler to display remaining characters
-3. iUpload is provided uploadEndpoint and template renders a button called iUploadUpload that leverages IKaInputScope.uploadAsync
+3. iUpload is provided uploadEndpoint and template renders a button called iUploadUpload 
+    that leverages IKaInputScope.uploadAsync
 -->
 <script>
     application.update({
@@ -1722,7 +1747,9 @@ Render an upload control and corresponding comment control.
         uploadEndpoint: 'document-center/upload' 
     }"></div>
     <div class="mt-2">
-        <a href="#" @click.prevent="handlers.processUpload" class='btn btn-primary'><i class="fa-solid fa-upload"></i> Upload</a>
+        <a href="#" @click.prevent="handlers.processUpload" class='btn btn-primary'>
+            <i class="fa-solid fa-upload"></i> Upload
+        </a>
     </div>
 </div>
 ```
@@ -1734,12 +1761,21 @@ Render an upload control and corresponding comment control.
 The following uses all the scope properties except for list, maxLength, min, max, step, iconHtml and uploadAsync
 -->
 <template id="input-textbox-nexgen" input>
-    <div v-if="display && !prefix && !suffix" :class="['tip-icon-wrapper', css.container ?? 'mb-3', { 'form-floating': !hideLabel, 'has-help': help.content }]">
+    <div v-if="display && !prefix && !suffix" 
+        :class="['mb-3', css.container, { 'form-floating': !hideLabel, 'has-help': help.content }]">
 
-        <input :value="value" :name="name" :id="id" :type="type" :class="['form-control', name, css.input, { 'is-invalid': error, 'is-warning': warning }]" :disabled="disabled" :placeholder="hideLabel ? '' : 'Fill'">
+        <input :value="value" :name="name" :id="id" :type="type" 
+            :class="['form-control', name, css.input, { 'is-invalid': error, 'is-warning': warning }]" 
+            :disabled="disabled" :placeholder="hideLabel ? '' : 'Fill'">
 
-        <span :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" :data-bs-content="error || warning || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
-        <span :class="['help-icon-hover-area', { 'd-none': !help.content }]" :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
+        <span 
+            :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" 
+            :data-bs-content="error || warning || 'Error content'" 
+            data-bs-toggle="tooltip" data-bs-placement="top"></span>
+        <span 
+            :class="['help-icon-hover-area', { 'd-none': !help.content }]" 
+            :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" 
+            data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
 
         <label v-if="!hideLabel" :for="id" v-html="label"></label>
 
@@ -1755,9 +1791,16 @@ The following uses all the scope properties except for list, maxLength, min, max
             <span v-if="prefix" class="input-group-text">{{prefix}}</span>
 
             <div :class="hideLabel ? 'no-label' : 'form-floating'">
-                <input :value="value" :name="name" :id="id" :type="type" :class="['form-control', name, css.input, { 'is-invalid': error, 'is-warning': warning }]" :disabled="disabled" :placeholder="!hideLabel ? 'Fill' : ''">
-                <span :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" :data-bs-content="error || warning || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
-                <span :class="['help-icon-hover-area', { 'd-none': !help.content }]" :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
+                <input :value="value" :name="name" :id="id" :type="type" 
+                    :class="['form-control', name, css.input, { 'is-invalid': error, 'is-warning': warning }]" 
+                    :disabled="disabled" :placeholder="!hideLabel ? 'Fill' : ''">
+                <span 
+                    :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" 
+                    :data-bs-content="error || warning || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
+                <span 
+                    :class="['help-icon-hover-area', { 'd-none': !help.content }]" 
+                    :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" 
+                    data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
                 <label v-if="!hideLabel" :for="id" v-html="label"></label>
             </div>
 
@@ -1775,13 +1818,22 @@ The following uses all the scope properties except for list, maxLength, min, max
 The following template uses same properties as above, but additionally uses the list property.
 -->
 <template id="input-dropdown-nexgen" input>
-    <div :class="['tip-icon-wrapper', css.container ?? 'mb-3', { 'form-floating': !hideLabel, 'has-help': help.content }]" v-if="display">
-        <select :name="name" :id="id" :class="['form-select', name, css.input, { 'is-invalid': error, 'is-warning': warning }]" :disabled="disabled" :aria-label="label">
+    <div 
+        :class="['tip-icon-wrapper', css.container ?? 'mb-3', { 'form-floating': !hideLabel, 'has-help': help.content }]" 
+        v-if="display">
+        <select :name="name" :id="id" :disabled="disabled" :aria-label="label"
+            :class="['form-select', name, css.input, { 'is-invalid': error, 'is-warning': warning }]">
             <option v-if="placeHolder != ''" value="">{{placeHolder || 'Select a value'}}</option>
             <option v-for="item in list" :key="item.key" :value="item.key" :selected="value == item.key">{{item.text}}</option>
         </select>
-        <span :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" :data-bs-content="error || warning || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
-        <span :class="['help-icon-hover-area', { 'd-none': !help.content }]" :data-bs-content-selector="'#' + id + 'Help'" data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
+        <span 
+            :class="['error-icon-hover-area', { 'd-none': !error && !warning, 'error': error, 'warning': warning }]" 
+            :data-bs-content="error || warning || 'Error content'" 
+            data-bs-toggle="tooltip" data-bs-placement="top"></span>
+        <span 
+            :class="['help-icon-hover-area', { 'd-none': !help.content }]" 
+            :data-bs-content-selector="'#' + id + 'Help'" 
+            data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
         <label v-if="!hideLabel" :for="id" v-html="label"></label>
         <div class="d-none" v-if="help.content">
             <div :id="id + 'HelpTitle'" v-html="help.title"></div>
@@ -1798,16 +1850,26 @@ The following template uses most of the previous properties and additionally use
         <div class="row">
             <div class="col fs-sm fw-bolder">
                 <span v-html="label"></span>
-                <span style="color: blue;" :class="['fa fa-regular fa-circle-question', { 'd-none': !help.content }]" :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
-                <template v-html="iconHtml" v-ka-inline>
-                </template>
-                <span :class="['fa fa-regular', { 'd-none': !error && !warning, 'error text-danger fa-circle-exclamation': error, 'warning text-warning fa-triangle-exclamation': warning }]" :data-bs-content="error || warning || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
+                <span style="color: blue;" 
+                    :class="['fa fa-regular fa-circle-question', { 'd-none': !help.content }]" 
+                    :data-bs-width="help.width" :data-bs-content-selector="'#' + id + 'Help'" 
+                    data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top"></span>
+                <template v-html="iconHtml" v-ka-inline></template>
+                <span 
+                    :class="['fa fa-regular', { 
+                        'd-none': !error && !warning, 
+                        'error text-danger fa-circle-exclamation': error, 
+                        'warning text-warning fa-triangle-exclamation': warning 
+                    }]" 
+                    :data-bs-content="error || warning || 'Error content'" 
+                    data-bs-toggle="tooltip" data-bs-placement="top"></span>
             </div>
             <div ref="display" class="col-auto fs-sm fw-bolder text-end"></div>
         </div>
         <div class="pt-7 range-slider-wrap">
             <div ref="bubble" class="range-slider-bubble"><span ref="bubbleValue"></span></div>
-            <input type="range" :class="['col range-slider', name, { 'is-invalid': error, 'is-warning': warning }]" :name="name" :id="id" :min="min" :max="max" :step="step" :value="value">
+            <input type="range" :class="['col range-slider', name, { 'is-invalid': error, 'is-warning': warning }]" 
+                :name="name" :id="id" :min="min" :max="max" :step="step" :value="value">
         </div>
         <div class="d-none" v-if="help.content">
             <div :id="id + 'HelpTitle'" v-html="help.title"></div>
@@ -2019,7 +2081,12 @@ Sample two column 'textbox' input.  Illustrates how to access scope properties v
 <template id="input-textbox-2col" input>
     <div v-if="display(0)">
         <label :for="id(0)" class="form-label">
-            <span v-html="label(0)"></span> <a v-show="help(0).content" :data-bs-content-selector="'#' + id(0) + 'Help'" data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top" role="button" tabindex="-1"><i class="fa-solid fa-circle-question text-blue"></i></a>
+            <span v-html="label(0)"></span> 
+            <a v-show="help(0).content" 
+                :data-bs-content-selector="'#' + id(0) + 'Help'" 
+                data-bs-toggle="popover" data-bs-trigger="click" data-bs-placement="top" role="button" tabindex="-1">
+                <i class="fa-solid fa-circle-question text-blue"></i>
+            </a>
         </label>
         <div class="d-none" v-if="help(0).content">
             <div :id="id(0) + 'HelpTitle'" v-html="help(0).title"></div>
@@ -2029,15 +2096,44 @@ Sample two column 'textbox' input.  Illustrates how to access scope properties v
             <div class="col-md-6">
                 <div v-if="inputs.iScenarios > 1" class="d-block d-sm-none scenario-header-mobile m-1">Scenario 1</div>
                 <div class="mb-3 tip-icon-wrapper">
-                    <input :value="value(0)" :name="name(0)" :id="id(0)" :type="type" :class="['form-control', name(0), css(0).input, { 'is-invalid': error(0), 'is-warning': warning(0) }]" :disabled="disabled(0)" />
-                    <span :class="['error-icon-hover-area', { 'd-none': !error(0) && !warning(0), 'error': error(0), 'warning': warning(0) }]" :data-bs-content="error(0) || warning(0) || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
+                    <input :value="value(0)" :name="name(0)" :id="id(0)" :type="type" 
+                        :class="['form-control', name(0), css(0).input, { 
+                            'is-invalid': error(0), 
+                            'is-warning': warning(0) 
+                        }]" 
+                        :disabled="disabled(0)" />
+                    <span 
+                        :class="['error-icon-hover-area', { 
+                            'd-none': !error(0) && !warning(0), 
+                            'error': error(0), 
+                            'warning': warning(0) 
+                        }]" 
+                        :data-bs-content="error(0) || warning(0) || 'Error content'" 
+                        data-bs-toggle="tooltip" data-bs-placement="top"></span>
                 </div>
             </div>
             <div class="col-md-6" v-if="inputs.iScenarios > 1">
-                <div class="d-block d-sm-none m-1 scenario-header-mobile">Scenario 2 <a href="#" @click.prevent="inputs.iScenarios = 1;  needsCalculation = true;" class="text-danger"><i class="fa-light fa-square-xmark"></i></a></div>
+                <div class="d-block d-sm-none m-1 scenario-header-mobile">
+                    <span>Scenario 2 </span>
+                    <a href="#" @click.prevent="inputs.iScenarios = 1;  needsCalculation = true;" class="text-danger">
+                        <i class="fa-light fa-square-xmark"></i>
+                    </a>
+                </div>
                 <div class="mb-3 tip-icon-wrapper">
-                    <input :value="value(1)" :name="name(1)" :id="id(1)" :type="type" :class="['form-control', name(1), css(1).input, { 'is-invalid': error(1), 'is-warning': warning(1) }]" :disabled="disabled(1)" />
-                    <span :class="['error-icon-hover-area', { 'd-none': !error(1) && !warning(1), 'error': error(1), 'warning': warning(1) }]" :data-bs-content="error(1) || warning(1) || 'Error content'" data-bs-toggle="tooltip" data-bs-placement="top"></span>
+                    <input :value="value(1)" :name="name(1)" :id="id(1)" :type="type" 
+                        :class="['form-control', name(1), css(1).input, { 
+                            'is-invalid': error(1), 
+                            'is-warning': warning(1) 
+                        }]" 
+                        :disabled="disabled(1)" />
+                    <span 
+                        :class="['error-icon-hover-area', { 
+                            'd-none': !error(1) && !warning(1), 
+                            'error': error(1), 
+                            'warning': warning(1) 
+                        }]" 
+                        :data-bs-content="error(1) || warning(1) || 'Error content'" 
+                        data-bs-toggle="tooltip" data-bs-placement="top"></span>
                 </div>
             </div>
         </div>
@@ -2139,14 +2235,19 @@ Additionally, it is advised to use the [`:key`](#https://vuejs.org/api/built-in-
 
 ```html
 <!-- Template where the model.source is an array, so the template iterated through the 'rows' property -->
-<ul class="dropdown-menu dropdown-menu-lg-end" v-ka-template="{ name: 'more-menu-links', source: rbl.source('contentContextLinks') }"></ul>
+<ul class="dropdown-menu dropdown-menu-lg-end" 
+    v-ka-template="{ name: 'more-menu-links', source: rbl.source('contentContextLinks') }"></ul>
 
 <template id="more-menu-links">
     <li v-for="link in rows">
-        <a v-if="( link.modalModel || '' ) == ''" class="dropdown-item d-flex justify-content-between align-items-start me-3" v-ka-navigate="{ view: link.viewID }">
+        <a v-if="( link.modalModel || '' ) == ''" 
+            class="dropdown-item d-flex justify-content-between align-items-start me-3" 
+            v-ka-navigate="{ view: link.viewID }">
             {{link.text}} <i :class="['fa-light fs-6 link-primary align-self-center', link.linkIcon]"></i>
         </a>
-        <a v-if="( link.modalModel || '' ) != ''" class="dropdown-item d-flex justify-content-between align-items-start me-3" v-ka-modal="{ model: link.modalModel }">
+        <a v-if="( link.modalModel || '' ) != ''" 
+            class="dropdown-item d-flex justify-content-between align-items-start me-3" 
+            v-ka-modal="{ model: link.modalModel }">
             {{link.text}} <i :class="['fa-light fs-6 link-primary align-self-center', link.linkIcon]"></i>
         </a>
     </li>
@@ -2156,22 +2257,30 @@ Additionally, it is advised to use the [`:key`](#https://vuejs.org/api/built-in-
 ```html
 <!-- 
 1. Same as above where the model.source is an array
-2. Demonstrates how the 'scope' to the template takes into account parent scope.  The 'type' iteration item from 'typeMessage' table
-    is expected in the template.  The template uses both the 'type' iteration item and its own 'message' iteration item.
+2. Demonstrates how the 'scope' to the template takes into account parent scope.  The 'type' iteration item 
+    from 'typeMessage' table is expected in the template.  The template uses both the 'type' iteration item 
+    and its own 'message' iteration item.
 -->
 <div v-for="type in rbl.source('typeMessage')">
-    <div v-ka-template="{ name: 'notice-type1', source: rbl.source('messages', 'Messages').filter( r => r.type == type.type ) }"></div>
+    <div v-ka-template="{ 
+        name: 'notice-type1', 
+        source: rbl.source('messages', 'Messages').filter( r => r.type == type.type ) 
+    }"></div>
 </div>
 
 <template id="notice-type1">
     <div v-for="message in rows" :class="'alert alert-' + type.alertType">
         <div class="d-flex w-100 justify-content-between d-none">
-            <h4 class="alert-heading mb-1 d-flex align-content-center text-dark"><i :class="'fa-light me-2 ' + type.icon"></i> {{type.text}}</h4>
+            <h4 class="alert-heading mb-1 d-flex align-content-center text-dark">
+                <i :class="'fa-light me-2 ' + type.icon"></i> {{type.text}}
+            </h4>
         </div>
         <p class="mb-1 fw-bold text-dark"><i :class="'fa-light me-1 ' + type.icon"></i>{{message.title}}</p>
         <small v-html="message.message"></small>
         <div class="text-center border-top border-secondary mt-2 pt-2" v-if="message.linkText!=''">
-            <a class="link-dark" v-ka-navigate="{ view: message.linkDest }"><i class="fa-light fa-circle-chevron-right me-1"></i><span v-html="message.linkText"></span></a>
+            <a class="link-dark" v-ka-navigate="{ view: message.linkDest }">
+                <i class="fa-light fa-circle-chevron-right me-1"></i><span v-html="message.linkText"></span>
+            </a>
         </div>
     </div>
 </template>
@@ -2197,14 +2306,18 @@ Additionally, it is advised to use the [`:key`](#https://vuejs.org/api/built-in-
 <div v-ka-template="validation-summary"></div>
 
 <template id="validation-summary">
-    <div v-if="errors.length > 0" :id="kaId + '_ModelerValidationTable'" class="validation-summary alert alert-danger" role="alert" title="Please review the following issues:">
-        <p><strong><i class="fa-duotone fa-circle-exclamation"></i> Please review the following issues:</strong></p>
+    <div v-if="errors.length > 0" :id="kaId + '_ModelerValidationTable'" 
+        class="validation-summary alert alert-danger" 
+        role="alert" title="Please review the following issues:">
+        <p><b><i class="fa-duotone fa-circle-exclamation"></i> Please review the following issues:</b></p>
         <ul>
             <li v-for="error in errors" v-html="error.text"></li>
         </ul>
     </div>
-    <div v-if="warnings.length > 0" :id="kaId + '_ModelerWarnings'" class="validation-warning-summary alert alert-warning" role="alert" title="Please review the following warnings:">
-        <p><strong><i class="fa-duotone fa-triangle-exclamation"></i> Please review the following warnings:</strong></p>
+    <div v-if="warnings.length > 0" :id="kaId + '_ModelerWarnings'" 
+        class="validation-warning-summary alert alert-warning" 
+        role="alert" title="Please review the following warnings:">
+        <p><b><i class="fa-duotone fa-triangle-exclamation"></i> Please review the following warnings:</b></p>
         <ul>
             <li v-for="warning in warnings" v-html="warning.text"></li>
         </ul>
@@ -2218,7 +2331,10 @@ Additionally, it is advised to use the [`:key`](#https://vuejs.org/api/built-in-
     name: 'confirm-danger', 
     source: { 
         selector: 'delete-confirm', 
-        message: '<p>Do you want to delete this HSA transaction?</p><p>If you delete this transaction, you will not be making a one-time contribution to your HSA.</p><p>Are you sure you want to delete this transaction?</p>' 
+        message: 
+            '<p>Do you want to delete this HSA transaction?</p>' + 
+            '<p>If you delete this transaction, you will not be making a one-time contribution to your HSA.</p>' + 
+            '<p>Are you sure you want to delete this transaction?</p>' 
     } 
 }"></div>
 
@@ -2255,12 +2371,18 @@ Property | Type | Description
 ### v-ka-api Model Samples
 
 ```html
-<!-- Submit to a estimate generation endpoint, and on success, run a calculation on the client side passing in iRefreshAfterEstimate = 1 -->
+<!-- 
+Submit to a estimate generation endpoint, and on success, run a calculation on 
+the client side passing in iRefreshAfterEstimate = 1 
+-->
 <a v-ka-api="{ endpoint: 'generate/estimate', calculateOnSuccess: { iRefreshAfterEstimate: '1' } }">Submit
 ```
 
 ```html
-<!-- Submit to a estimate generation endpoint, and on success, run a calculation on the client side passing in iRefreshAfterEstimate = 1 -->
+<!-- 
+Submit to a estimate generation endpoint, and on success, run a calculation on 
+the client side passing in iRefreshAfterEstimate = 1 
+-->
 <a v-ka-api="{ 
     endpoint: 'generate/estimate', 
     then: ( response, application ) => console.log(`Estimate was successful and responded with ${response}`) 
@@ -2546,8 +2668,8 @@ There are some configuration options that are explicitly handled by the ResultBu
 
 Configuration&nbsp;Setting | Description
 ---|---
-config-style | By default, the Highcharts template has no style applied to the `<div class="chart chart-responsive"></div>` element.  If, the CalcEngine wants to apply any CSS styles (i.e. height and width), the config-style value
-config-tooltipFormat | When tooltips are enabled, there is a default `tooltip.formatter` function provided by KatApps where this value provides the template to apply a `string.format` to.  For example `<b>{x}</b>{seriesDetail}<br/>`<br/><br/>The available substitution tokens are `x` (current X-Axis value), `stackTotal` (sum of all Y-Axis values at this current `x` value), and `seriesDetail` (list of all Y-Axis points in format of `name: value`).  For more information see [tooltip.formatter API](https://api.highcharts.com/highcharts/tooltip.formatter) and [Property Value Parsing](#v-ka-highchart-Prpoerty-Value-Parsing).
+config&#x2011;style | By default, the Highcharts template has no style applied to the `<div class="chart chart-responsive"></div>` element.  If, the CalcEngine wants to apply any CSS styles (i.e. height and width), the config-style value
+config&#x2011;tooltipFormat | When tooltips are enabled, there is a default `tooltip.formatter` function provided by KatApps where this value provides the template to apply a `string.format` to.  For example `<b>{x}</b>{seriesDetail}<br/>`<br/><br/>The available substitution tokens are `x` (current X-Axis value), `stackTotal` (sum of all Y-Axis values at this current `x` value), and `seriesDetail` (list of all Y-Axis points in format of `name: value`).  For more information see [tooltip.formatter API](https://api.highcharts.com/highcharts/tooltip.formatter) and [Property Value Parsing](#v-ka-highchart-Prpoerty-Value-Parsing).
 
 ### v-ka-highchart Standard Options
 
@@ -2629,9 +2751,9 @@ Series options are created by having a row in the `Highcharts-{rbl-chartdata}-Da
 
 Configuration&nbsp;Setting | Description
 ---|---
-config-visible | You can disable a series from being processed by setting its `config-visible` value to `0`.
-config-hidden | Similar to `config-visible` except, if hidden, the series is _processed_ in the chart rendering, but it is not displayed in the chart or the legend.  Hidden series are essentially only available for tooltip processing.
-config-format | Specify a format to use when display date or number values for this series in the tooltip.  See Microsoft documentation for available [date](https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings) and [number](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings) format strings.
+config&#x2011;visible | You can disable a series from being processed by setting its `config-visible` value to `0`.
+config&#x2011;hidden | Similar to `config-visible` except, if hidden, the series is _processed_ in the chart rendering, but it is not displayed in the chart or the legend.  Hidden series are essentially only available for tooltip processing.
+config&#x2011;format | Specify a format to use when display date or number values for this series in the tooltip.  See Microsoft documentation for available [date](https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings) and [number](https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings) format strings.
 
 <br/>
 
@@ -2640,8 +2762,8 @@ An example of how these might look in a CalcEngine result table.
 category | series1 | series2 | series3 | series4
 ---|---|---|---|---
 config&#x2011;visible | 1 | 1 | 1 | 0
-config-hidden | 0 | 0 | 1 | 1
-config-format | c2 | c2 | c2 | c2
+config&#x2011;hidden | 0 | 0 | 1 | 1
+config&#x2011;format | c2 | c2 | c2 | c2
 
 <br/> 
 
@@ -2659,10 +2781,10 @@ Example of settings used for KatApp Sharkfin Income chart.
 
 category | series1 | series2 | series3 | series4 | series5 | series6
 ---|---|---|---|---|---|--
-config-name | Shortfall | 401(k) Plan | Non Qualified Savings Plan | HSA | Personal Savings | Retirement Income  Needed
-config-color | #FFFFFF | #006BD6 | #DDDDDD | #6F743A | #FD9F13 | #D92231
-config-type | areaspline | column | column | column | column | spline
-config-fillOpacity | 0 |||||			
+config&#x2011;name | Shortfall | 401(k) Plan | Non Qualified Savings Plan | HSA | Personal Savings | Retirement Income  Needed
+config&#x2011;color | #FFFFFF | #006BD6 | #DDDDDD | #6F743A | #FD9F13 | #D92231
+config&#x2011;type | areaspline | column | column | column | column | spline
+config&#x2011;fillOpacity | 0 |||||			
 config&#x2011;showInLegend | 0 | 1 | 1 | 1 | 1 | 1
 
 <br/>
@@ -2783,7 +2905,8 @@ To aleviate this issue, the Kaml Views can decorate 'submit buttons' with a `v-k
 After KatApp Framework has created the required directives and elements, when a user is on a form and 'edits' an input, but has not triggered a `change` event yet, the `needsCalculation` property will be true, so the original 'submit button' will be removed, while the cloned element (that is just a place holder to hint to the user to click so that a calculation is run) is displayed.  Given the label says `Refresh` it is more apparent to the user that they will trigger a calculation and review the results before clicking submit.
 
 ```html
-<a v-ka-needs-calc="Click to Refresh" href="#" class="btn btn-primary btn-sm" @click.prevent="console.log('save inputs')">Save Inputs</a>
+<a v-ka-needs-calc="Click to Refresh" href="#" class="btn btn-primary btn-sm" 
+    @click.prevent="console.log('save inputs')">Save Inputs</a>
 
 <!-- When a value is provided in the directive, that text is used as the label of the button -->
 <a v-if="!needsCalculation" href="#" class="btn btn-primary btn-sm" @click.prevent="console.log('save inputs')">Save Inputs</a>
@@ -3248,7 +3371,8 @@ application.on("modalAppInitialized.ka", (e, modalApplication) => {
     irpApplication = modalApplication;
 });
 
-const response = await application.showModalAsync({ view: 'DST.IRP' }); // This will trigger modalAppInitialized before showing the modal
+// This will trigger modalAppInitialized before showing the modal
+const response = await application.showModalAsync({ view: 'DST.IRP' }); 
 
 if (response.confirmed) {
     // If we made it this far, irpApplication will have been successfully assigned, grab a reference to its inputs
@@ -3571,7 +3695,7 @@ Property | Type | Description
 `model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results.
 `options` | [`IKatAppOptions`](#ikatappoptions) | Kaml Views can provide partial updates to the [`IKatApp.options`](#ikatappoptions) object.  Typically, only inputs or modal templates are updated.
 `handlers` | `IStringAnyIndexer` | Provide an object where each property is a function delegate that can be used with [`v-on`](#v-on) directives.
-`components` | `IStringAnyIndexer` Provide an object where each property is a Vue component that can be used with [`v-scope`](#v-scope) directives.
+`components` | `IStringAnyIndexer` | Provide an object where each property is a Vue component that can be used with [`v-scope`](#v-scope) directives.
 `directives` | `IStringIndexer<(ctx: DirectiveContext<Element>) => (() => void) \| void>` | Provide an object where each property name is the directive tag name (i.e. `v-*`) and the value is a function delegate that returns a [custom directive](#custom-katapp-directives) that can be used in the Kaml View markup.
 
 
@@ -3818,12 +3942,12 @@ There are many features available during RBLe Framework processing that are cont
 Name | Location | Description
 ---|---|---
 Case Specific | General | All configuration information (input name, table names, column names, switches) are case specific.
-`/work-table`<br/>`/off` | Table Switch | By default, all tables on a CalcEngine tab are processed (until two blank columns are encountered).  To flag a table as simply a temp/work table that doesn't need to be processed, use the `/work-table` or `/off` switch on the table name.<br/><br/> **Note:** It is preferred to use the `/off` switch versus inserted two blank columns to disable a table because it allows for 'work tables' to be placed in the most logical position in CalcEngine tabs instead of being forced to always be at the end right of all tables and additionally, it allows for the KAT Excel Addin to navigate to these tables since the table configuration is detected before encountering two blank columns.
-`/off` | Column Switch | Optional switch used on table columns to indicate that the column should not be processed during calculations
-`/sort-field` | Table Switch | To configure how the table data is sorted, use the `/sort-field:field[,direction,isNumber]` switch on the table name. `direction` and `isNumber` are optional parameters.  `direction` can be `asc` or `desc` (defaulting to `asc`) while `isNumber` can be `true` or `false` (defaulting to `false`).  To specify multiple columns to sort, provide a `|` delimitted list of column configurations.  For example `/sort-field:status|pay,,true|year,desc,true` would sort by `status` *text* ascending, then by `pay` *number* ascending, then by `year` *number* descending.
-`/sort-field` Legacy | Table Switch | To configure how the table data is sorted, use the `/sort-field:field-name` switch on the table name.  To specify multiple columns to use in the sort, provide a comma delimitted list of field names.  When used on an _Input Tab Table_, the data is sorted _before_ it is loaded into the tab.  Conversely, when used on a _Result Tab Table_, the data is sorted _after_ exporting the results from the CalcEngine.
-`/sort-direction` Legacy | Table Switch | Optional sort control (`asc` or `desc`) used in conjunction with `sort-field`.  By default, data will be sorted ascending.  Use the `/sort-direction:direction` to control how field(s) specified in the `/sort-field` switch are sorted.  If `/sort-direction:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
-`/sort-number` Legacy | Table Switch | Optional switch (`true` or `false`) used in conjunction with `sort-field`.  By default, data will be sorted using a `string` comparison.  Use the `/sort-number:true` to indicate that field(s) specified in the `/sort-field` switch should be treated as numeric when sorting.  If `/sort-number:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
+/work&#x2011;table<br/>/off` | Table Switch | By default, all tables on a CalcEngine tab are processed (until two blank columns are encountered).  To flag a table as simply a temp/work table that doesn't need to be processed, use the `/work-table` or `/off` switch on the table name.<br/><br/> **Note:** It is preferred to use the `/off` switch versus inserted two blank columns to disable a table because it allows for 'work tables' to be placed in the most logical position in CalcEngine tabs instead of being forced to always be at the end right of all tables and additionally, it allows for the KAT Excel Addin to navigate to these tables since the table configuration is detected before encountering two blank columns.
+/off | Column Switch | Optional switch used on table columns to indicate that the column should not be processed during calculations
+/sort&#x2011;field | Table Switch | To configure how the table data is sorted, use the `/sort-field:field[,direction,isNumber]` switch on the table name. `direction` and `isNumber` are optional parameters.  `direction` can be `asc` or `desc` (defaulting to `asc`) while `isNumber` can be `true` or `false` (defaulting to `false`).  To specify multiple columns to sort, provide a `|` delimitted list of column configurations.  For example `/sort-field:status|pay,,true|year,desc,true` would sort by `status` *text* ascending, then by `pay` *number* ascending, then by `year` *number* descending.
+/sort&#x2011;field Legacy | Table Switch | To configure how the table data is sorted, use the `/sort-field:field-name` switch on the table name.  To specify multiple columns to use in the sort, provide a comma delimitted list of field names.  When used on an _Input Tab Table_, the data is sorted _before_ it is loaded into the tab.  Conversely, when used on a _Result Tab Table_, the data is sorted _after_ exporting the results from the CalcEngine.
+/sort&#x2011;direction Legacy | Table Switch | Optional sort control (`asc` or `desc`) used in conjunction with `sort-field`.  By default, data will be sorted ascending.  Use the `/sort-direction:direction` to control how field(s) specified in the `/sort-field` switch are sorted.  If `/sort-direction:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
+/sort&#x2011;number Legacy | Table Switch | Optional switch (`true` or `false`) used in conjunction with `sort-field`.  By default, data will be sorted using a `string` comparison.  Use the `/sort-number:true` to indicate that field(s) specified in the `/sort-field` switch should be treated as numeric when sorting.  If `/sort-number:` is provided, there must be the same number of comma delimitted values as the number of comma delimitted fields found in `/sort-field`.
 
 ### RBLe CalcEngine Input Tabs
 
@@ -3838,8 +3962,8 @@ Name | Location | Description
 inputTable | `StartTables` Element | Surrounding a table name with `<< >>` indicates that, for each calculation, the rows of the table will be cleared and populated with data from KAT CMS 'Global Lookups CalcEngine' table with the matching `globalTable` (i.e. `<<IrsRates>>`). The columns specified will popualte with the global lookup fields with the exact same name.
 inputTable | `StartTables` Element | A table name with *no wrapping characters* indicates that, for each calculation, the rows of the table will be cleared and populated with *tabular input data* provided from the UI (see [Input Table Management](#input-table-management) for more information) with the matching `inputTable` (i.e. `RetirementDates`). The columns specified will popualte with the input table fields with the exact same name.
 `[configureUiInputData]` | `StartTables` Element | Surrounding a table name with `[ ]` indicates that the table is a hybrid of a `<dataTable>` and an `inputTable`. When a calculation is an [`iConfigureUI` calculation](#framework-inputs), the rows of the table will be cleared and populated as if it were a `<dataTable>`.  For all other calculations, the rows of the table will be cleared and populated as if it were an `inputTable`.  This enabled a 'single input table' to be referenced in the CalcEngine an 'input table' is managed by the UI but initially populated by 'matching' data saved in xDS data store. The most common example of this is an 'UI Input Table' that has the capability of being saved to xDS and reloaded into the UI in a subsequent user session.
-`/unique-summary:sourceTable` | Table Switch | The RBLe Framework supports automatic 'grouping' to produce a unique list of values for input tables (`inputTable`, `<dataTable>`, or `<<globalTable>>`).  The `sourceTable` parameter indicates which table/data aggregate before loading it into the current table. See [Unique Summary Configuration](#Unique-Summary-Configuration) for more information.
-`/id-locked` | Table Switch | The RBLe Framework allows loading only specific xDS History data rows based on indexes that provided the desired row indexes to load in an `id` column of the table, *which must be the first column specified* in the table. The index value provided in the `id` column can be a specific index value (must match exactly) or a positional based index; `first`, `last`, `first+N` or `last-N`. When using `first+` or `last-` if the expression results in an 'overflow' position (i.e. `first+10` but only 5 rows exist), then no row data will be populated. See [id-locked Configuration](#id-locked-configuration) for more information.
+/unique&#x2011;summary:sourceTable | Table Switch | The RBLe Framework supports automatic 'grouping' to produce a unique list of values for input tables (`inputTable`, `<dataTable>`, or `<<globalTable>>`).  The `sourceTable` parameter indicates which table/data aggregate before loading it into the current table. See [Unique Summary Configuration](#Unique-Summary-Configuration) for more information.
+/id&#x2011;locked | Table Switch | The RBLe Framework allows loading only specific xDS History data rows based on indexes that provided the desired row indexes to load in an `id` column of the table, *which must be the first column specified* in the table. The index value provided in the `id` column can be a specific index value (must match exactly) or a positional based index; `first`, `last`, `first+N` or `last-N`. When using `first+` or `last-` if the expression results in an 'overflow' position (i.e. `first+10` but only 5 rows exist), then no row data will be populated. See [id-locked Configuration](#id-locked-configuration) for more information.
 
 ### RBLe CalcEngine Result Tabs
 
@@ -4338,7 +4462,9 @@ Configure two CalcEngines with different tabs to run in the pipeline before the 
 
 ```html
 <rbl-config templates="Standard_Templates,LAW:Law_Templates">
-    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" precalcs="LAW_Wealth_Helper1_CE|RBLInput|RBLHelperResults,LAW_Wealth_Helper2_CE"></calc-engine>
+    <calc-engine 
+        key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" 
+        precalcs="LAW_Wealth_Helper1_CE|RBLInput|RBLHelperResults,LAW_Wealth_Helper2_CE"></calc-engine>
 </rbl-config>
 ```
 
