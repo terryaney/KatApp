@@ -55,6 +55,7 @@ See [Common Vue Directives](#Common-Vue-Directives) and [Custom KatApp Directive
 
 Below are the libraries required or used by KatApp framework.
 
+- petite-vue.js - Required [library](https://unpkg.com/petite-vue) to enable Vue processing and other functionality internal to KatApp framework.
 - jquery.js - Required [library](https://api.jquery.com/) to enable KatApp event processing and other functionality internal to KatApp framework.
 - bootstrap.js - Required to support [Modals](https://getbootstrap.com/docs/5.0/components/modal/), [Popovers](https://getbootstrap.com/docs/5.0/components/popovers/) and [Tooltips](https://getbootstrap.com/docs/5.0/components/tooltips/).
 - highcharts.js - Optional, if `v-ka-highchart` directive is leveraged, to support build [Highcharts](https://api.highcharts.com/highcharts/) from CalcEngine results.
