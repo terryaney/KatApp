@@ -4453,7 +4453,9 @@ Configure two CalcEngines to run in the pipeline before the primary CalcEngine. 
 
 ```html
 <rbl-config templates="Standard_Templates,LAW:Law_Templates">
-    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" precalcs="LAW_Wealth_Helper1_CE,LAW_Wealth_Helper2_CE"></calc-engine>
+    <calc-engine 
+        key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" 
+        precalcs="LAW_Wealth_Helper1_CE,LAW_Wealth_Helper2_CE"></calc-engine>
 </rbl-config>
 ```
 
