@@ -3467,7 +3467,7 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
         refreshKeys.push("hwEventHistory");
     }
 
-    submitOptions.configuration.CacheRefreshKeys = refreshKeys;
+    submitOptions.configuration.cacheRefreshKeys = refreshKeys;
 });
 ```
 
@@ -3879,7 +3879,7 @@ The `IGetSubmitApiOptions` interface represents the information that creates an 
 Property | Type | Description
 ---|---|---
 `inputs` | [`ICalculationInputs`](#icalculationinputs) | The list of inputs to submit to the api endpoint (usually used in a `iValidate="1"` calculation in the Host Environment).
-`configuration` | `IStringIndexer<string>` | Any custom configuration settings to pass to the Host Environment. The most common property set is the `configuration.CacheRefreshKeys: Array<string>` property.
+`configuration` | `IStringIndexer<string>` | Any custom configuration settings to pass to the Host Environment. The most common property set is the `configuration.cacheRefreshKeys: Array<string>` property.
 
 ### IApiOptions
 

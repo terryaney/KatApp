@@ -67,31 +67,28 @@
 
 	public static pageParameters = this.readPageParameters();
 
-	public static trace(application: KatApp | undefined, message: string, verbosity: TraceVerbosity = TraceVerbosity.Normal): void {
-		const verbosityOption = application?.options.debug.traceVerbosity ?? TraceVerbosity.None;
+	public static trace(application: KatApp, callerType: string, methodName: string, message: string, verbosity: TraceVerbosity, ...groupItems: Array<any>): void {
+		const verbosityOption = application.options.debug.traceVerbosity ?? TraceVerbosity.None;
 
 		if (verbosityOption >= verbosity) {
+			const currentTrace = new Date();
+			const origin = `${callerType}\tKatApp Framework`;
+			const katApp = application.selector ?? application.id;
+			const startTrace = application.traceStart
+			const lastTrace = application.traceLast;
+			const startDelta = Math.abs(currentTrace.getTime() - startTrace.getTime());
+			const lastDelta = Math.abs(currentTrace.getTime() - lastTrace.getTime());
+			application.traceLast = currentTrace;
+			const log = `${String.localeFormat("{0:yyyy-MM-dd hh:mm:ss:ff}", currentTrace)}\t${String(startDelta).padStart(5, "0")}\t${String(lastDelta).padStart(5, "0")}\t${application.options.dataGroup}\t${katApp ?? "Unavailable"}\t${origin}\t${methodName}: ${message}`;
 
-			let item: JQuery | undefined = undefined;
-
-			const d = new Date(),
-				year = d.getFullYear();
-			let
-				month = '' + (d.getMonth() + 1),
-				day = '' + d.getDate(),
-				hours = '' + d.getHours(),
-				minutes = '' + d.getMinutes(),
-				seconds = '' + d.getSeconds();
-
-			if (month.length < 2) month = '0' + month;
-			if (day.length < 2) day = '0' + day;
-			if (hours.length < 2) hours = '0' + hours;
-			if (minutes.length < 2) minutes = '0' + minutes;
-			if (seconds.length < 2) seconds = '0' + seconds;
-
-			const displayDate = [year, month, day].join('-') + " " + [hours, minutes, seconds].join(':');
-
-			console.log(String.formatTokens("{displayDate} Application {id}: {message}", { displayDate, id: application?.options.currentPage ?? application?.id, message }));
+			if (groupItems.length > 0) {
+				console.group(log);
+				groupItems.forEach(i => i instanceof Error ? console.log({ i }) : console.log(i));
+				console.groupEnd();
+			}
+			else {
+				console.log(log);
+			}
 		}
 	}
 }

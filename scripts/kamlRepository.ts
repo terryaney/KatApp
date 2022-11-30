@@ -15,7 +15,7 @@
 			(currentOptions.useLocalRepository ?? (currentOptions.useLocalRepository = await this.checkLocalServerAsync(currentOptions)));
 
 		var resourceResults = await Promise.allSettled(
-			resourceArray.map(async resourceKey => {
+			resourceArray.map(resourceKey => {
 				if (!isView) {
 					var currentRequest = KamlRepository.resourceRequests[resourceKey];
 

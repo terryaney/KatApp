@@ -1,157 +1,194 @@
 ﻿class Calculation {
 	public static async calculateAsync(
+		application: KatApp,
 		serviceUrl: string,
 		calcEngines: ICalcEngine[],
 		inputs: ICalculationInputs,
 		configuration: ISubmitApiConfiguration | undefined
 	): Promise<IRbleTabDef[]> {
+		Utils.trace(application, "Calculation", "calculateAsync", "Start", TraceVerbosity.Detailed);
 
-		const calculationResults = await Promise.allSettled(
+		const submitCalculationConfiguration =
 			calcEngines.filter(c => !c.manualResult && c.enabled)
-				.map(c => {
-					const d: JQuery.Deferred<ICalculationSuccessResponse | ICalculationFailedResponse> = $.Deferred();
+				.map(c => ({
+					CalcEngine: c.name,
+					InputTab: c.inputTab,
+					ResultTabs: c.resultTabs,
+					PreCalcs: c.preCalcs
+				}));
 
-					const submitCalculationConfiguration: ISubmitCalculationConfiguration = {
-						CalcEngine: c.name,
-						InputTab: c.inputTab,
-						ResultTabs: c.resultTabs,
-						PreCalcs: c.preCalcs,
-					};
+		const submitConfiguration =
+			Utils.extend<ISubmitApiConfiguration>(
+				{},
+				configuration,
+				{ CalcEngines: submitCalculationConfiguration }
+			);
 
-					const submitConfiguration =
-						Utils.extend<ISubmitApiConfiguration>(
-							{},
-							configuration,
-							submitCalculationConfiguration
-						);
+		const submitData: ISubmitApiData = {
+			Inputs: Utils.clone(inputs, (k, v) => k == "tables" ? undefined : v),
+			InputTables: inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
+			Configuration: submitConfiguration
+		};
 
-					const submitData: ISubmitApiData = {
-						Inputs: Utils.clone( inputs, ( k, v ) => k == "tables" ? undefined : v ),
-						InputTables: inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
-						Configuration: submitConfiguration
-					};
+		const failedResponses: Array<ICalculationFailedResponse> = [];
+		const successResponses: Array<Array<IRbleTabDef>> = [];
 
-					try {
-						$.ajax({
-							url: serviceUrl,
-							data: JSON.stringify(submitData),
-							method: "POST",
-							// dataType: "json",
-							/*
-							// My attempt to get browser caching
-							headers: submitConfiguration.Token != undefined
-								? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined, 'Cache-Control': 'max-age=0' }
-								: { 'Cache-Control': 'max-age=0' }
-							*/
-							headers: submitConfiguration.Token != undefined
-								? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined }
-								: undefined
-						}).then(
-							function (response, status, jqXHR) {
-								var rbleCacheKey = jqXHR.getResponseHeader("rble-cache-key");
+		const d: JQuery.Deferred<boolean> = $.Deferred();
 
-								let result: IRblCalculationSuccessResponse = status == "notmodified"
-									? sessionStorage.getItem(`RBLCache:${rbleCacheKey}`)
-									: jqXHR.responseJSON ?? response;
+		try {
+			Utils.trace(application, "Calculation", "calculateAsync", "Posting Data", TraceVerbosity.Detailed);
 
-								if (typeof result == "string") {
-									result = JSON.parse(result);
-								}
+			$.ajax({
+				url: serviceUrl,
+				data: JSON.stringify(submitData),
+				method: "POST",
+				// dataType: "json",
+				/*
+				// My attempt to get browser caching
+				headers: submitConfiguration.Token != undefined
+					? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined, 'Cache-Control': 'max-age=0' }
+					: { 'Cache-Control': 'max-age=0' }
+				*/
+				headers: submitConfiguration.Token != undefined
+					? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined }
+					: undefined
+			}).then(
+				function (response, status, jqXHR) {
+					Utils.trace(application, "Calculation", "calculateAsync", "Received Success Response", TraceVerbosity.Detailed);
 
-								if (rbleCacheKey != undefined) {
-									sessionStorage.setItem(`RBLCache:${rbleCacheKey}`, JSON.stringify(result));
-								}
+					let result: IRblCalculationSuccessResponses = jqXHR.responseJSON ?? response;
 
-								if (result.Diagnostics != null) {
-									console.group(c.name + " " + result.Diagnostics.CalcEngineVersion + " Diagnostics");
+					if (typeof result == "string") {
+						result = JSON.parse(result);
+					}
 
-									const utcDateLength = 28;
-									const timings: string[] = result.Diagnostics.Timings.Status.map(t => {
-										const start = (t["@Start"] + "       ").substring(0, utcDateLength);
-										return start + ": " + t["#text"];
-									}) ?? [];
+					result.Results.forEach(r => {
+						const cacheKey = r.CacheKey;
 
-									const diag = {
-										Server: result.Diagnostics.RBLeServer,
-										Session: result.Diagnostics.SessionID,
-										Url: result.Diagnostics.ServiceUrl,
-										Timings: timings,
-										Trace: result.Diagnostics.Trace?.Item.map(i => i.substring(2))
-									};
-									console.log(diag);
-
-									console.groupEnd();
-								}
-
-								if (result.Exception != undefined) {
-									const response: ICalculationFailedResponse = {
-										calcEngine: c.name,
-										exception: {
-											message: result.Exception.Message,
-											detail: result.Exception.Message,
-											stackTrace: result.Exception.StackTrace.split("\n"),
-											configuration: submitConfiguration,
-											inputs: inputs
-										}
-									};
-
-									d.reject(response);
+						if (cacheKey != undefined) {
+							if (r.Result == undefined) {
+								const cacheResult = sessionStorage.getItem(`RBLCache:${cacheKey}`);
+								if (cacheResult == undefined) {
+									Utils.trace(application, "Calculation", "calculateAsync", `Cache miss for ${r.CalcEngine} with key ${cacheKey}`, TraceVerbosity.Detailed);
 								}
 								else {
-									const tabDefs = result.RBL.Profile.Data.TabDef;
-									const resopnse: ICalculationSuccessResponse = { calcEngine: c.name, results: tabDefs instanceof Array ? tabDefs : [tabDefs] };
-									d.resolve(resopnse);
+									Utils.trace(application, "Calculation", "calculateAsync", `Use cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
 								}
-							},
-							function (jqXHR, status) {
-								const apiResponse: IRblCalculationFailedResponse = jqXHR.responseJSON ?? (jqXHR.responseText.startsWith("{") ? JSON.parse(jqXHR.responseText) : {});
+								r.Result = JSON.parse(cacheResult!);
+							}
+							else if (r.Result.Exception != undefined) {
+								Utils.trace(application, "Calculation", "calculateAsync", `(RBL exception) Remove cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
+								sessionStorage.removeItem(`RBLCache:${cacheKey}`);
+							}
+							else {
+								Utils.trace(application, "Calculation", "calculateAsync", `Set cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
+								sessionStorage.setItem(`RBLCache:${cacheKey}`, JSON.stringify(r.Result));
+							}
+						}
+					});
 
-								const response: ICalculationFailedResponse = {
-									calcEngine: c.name,
-									exception: {
-										message: apiResponse.Validations?.[0]?.Message ?? status,
-										detail: apiResponse.ExceptionDetails?.Message ?? jqXHR.responseText,
-										stackTrace: apiResponse.ExceptionDetails?.StackTrace,
-										configuration: submitConfiguration,
-										inputs: inputs
-									}
+					const mergedResults = result as IMergedRblCalculationSuccessResponses;
+
+					if (submitConfiguration.TraceEnabled) {
+						mergedResults.Results
+							.filter(r => r.Result.Diagnostics != undefined)
+							.forEach(r => {
+								const utcDateLength = 28;
+								const timings: string[] = r.Result.Diagnostics.Timings.Status.map(t => {
+									const start = (t["@Start"] + "       ").substring(0, utcDateLength);
+									return start + ": " + t["#text"];
+								}) ?? [];
+
+								const diag = {
+									Server: r.Result.Diagnostics.RBLeServer,
+									Session: r.Result.Diagnostics.SessionID,
+									Url: r.Result.Diagnostics.ServiceUrl,
+									Timings: timings,
+									Trace: r.Result.Diagnostics.Trace?.Item.map(i => i.substring(2))
+								};
+								Utils.trace(application, "Calculation", "calculateAsync", `${r.CalcEngine} ${r.Result.Diagnostics.CalcEngineVersion} Diagnostics`, TraceVerbosity.Detailed, diag);
+							});
+					}
+
+					mergedResults.Results.filter(r => r.Result.Exception != undefined).forEach(r => {
+						const response: ICalculationFailedResponse = {
+							calcEngine: r.CalcEngine,
+							exception: {
+								message: r.Result.Exception.Message,
+								detail: [{
+									message: r.Result.Exception.Message,
+									stackTrace: r.Result.Exception.StackTrace.split("\n")
+								}] as Array<ICalculationResponseExceptionDetail>,
+								configuration: submitConfiguration,
+								inputs: inputs
+							}
+						};
+
+						failedResponses.push(response);
+					});
+
+					mergedResults.Results.filter(r => r.Result.Exception == undefined).forEach(r => {
+						const tabDefs = r.Result.RBL.Profile.Data.TabDef;
+						successResponses.push(tabDefs instanceof Array ? tabDefs : [tabDefs]);
+					});
+
+					d.resolve();
+				},
+				function (jqXHR, status) {
+					Utils.trace(application, "Calculation", "calculateAsync", "Received Error Response", TraceVerbosity.Detailed);
+					const apiResponse: IRblCalculationFailedResponse = jqXHR.responseJSON?.Message && jqXHR.responseJSON?.MessageDetail
+						? { Exceptions: [{ Message: jqXHR.responseJSON.Message }] }
+						: jqXHR.responseJSON ?? (jqXHR.responseText.startsWith("{") ? JSON.parse(jqXHR.responseText) : { Exceptions: [{ Message: "No additional details available." }] });
+
+					const response: ICalculationFailedResponse = {
+						calcEngine: submitCalculationConfiguration.map(c => c.CalcEngine).join(", "),
+						exception: {
+							message: apiResponse.Validations?.[0]?.Message ?? status,
+							detail: apiResponse.Exceptions.map(e => {
+								const detail: ICalculationResponseExceptionDetail = {
+									message: e.Message,
+									type: e.Type,
+									stackTrace: e.StackTrace
 								};
 
-								d.reject(response);
-							}
-						);
-					} catch (e) {
-						const exception = e instanceof Error
-							? { message: e.message, stackTrace: e.stack?.split("\n") }
-							: { message: e + "", stackTrace: "Calculation.calculateAsync (rest is missing)" };
+								return detail;
+							}),
+							configuration: submitConfiguration,
+							inputs: inputs
+						}
+					};
 
-						d.reject({
-							calcEngine: c.name,
-							errorMessage: "Unable to submit Calculation to " + serviceUrl,
-							exception: exception
-						});
-					}
-					finally {
-						return d;
-					}
-				})
-		);
+					failedResponses.push(response);
+					d.resolve(true);
+				}
+			);
+		} catch (e) {
+			const exception: ICalculationResponseException = {
+				message: e instanceof Error ? e.message : e + "Unable to process RBL calculation.",
+				inputs: inputs,
+				configuration: submitConfiguration,
+				detail: [{
+					message: "Unable to submit Calculation to " + serviceUrl,
+					stackTrace: e instanceof Error
+						? e.stack?.split("\n") ?? ["No stack available"]
+						: ["Calculation.calculateAsync (rest is missing)"]
+				}] as Array<ICalculationResponseExceptionDetail>
+			};
 
-		const rejected =
-			calculationResults
-				.filter(r => r.status == "rejected")
-				.map(r => (r as PromiseRejectedResult).reason as ICalculationFailedResponse);
+			failedResponses.push({
+				calcEngine: submitCalculationConfiguration.map( c => c.CalcEngine ).join( ", "),
+				exception: exception
+			});
 
-		if (rejected.length > 0) {
-			throw new CalculationError("Unable to complete calculation(s) submitted to " + serviceUrl, rejected);
+			d.resolve(true);
 		}
 
-		const tabDefs =
-			calculationResults
-				.filter(r => r.status == "fulfilled")
-				.flatMap(r => (r as PromiseFulfilledResult<ICalculationSuccessResponse>).value.results);
+		await d;
 
-		return tabDefs;
+		if (failedResponses.length > 0) {
+			throw new CalculationError("Unable to complete calculation(s)", failedResponses);
+		}
+		return successResponses.flatMap( r => r );
 	}
 }
 

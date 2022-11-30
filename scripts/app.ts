@@ -92,6 +92,8 @@ class KatApp implements IKatApp {
 	public options: IKatAppOptions;
 	public state: IApplicationData;
 	public el: JQuery;
+	public traceStart: Date;
+	public traceLast: Date;
 
 	private applicationCss: string;
 	private vueApp?: PetiteVueApp;
@@ -108,6 +110,7 @@ class KatApp implements IKatApp {
 	private updateDomPromise = Promise.resolve();
 
 	private constructor(public selector: string, options: IKatAppOptions) {
+		this.traceStart = this.traceLast = new Date();		
 		const id = this.id = "ka" + Utils.generateId();
 		this.applicationCss = ".katapp-" + this.id.substring(2);
 		this.isCalculating = false;
@@ -115,7 +118,7 @@ class KatApp implements IKatApp {
 		const defaultOptions: IKatAppDefaultOptions = {
 			inputCaching: false,
 			debug: {
-				traceVerbosity: TraceVerbosity.None,
+				traceVerbosity: Utils.pageParameters["tracekatapp"] === "1" ? TraceVerbosity.Diagnostic : TraceVerbosity.None,
 				showInspector: Utils.pageParameters["showinspector"] === "1" || Utils.pageParameters["localserver"] != undefined,
 				refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
 				useTestCalcEngine: Utils.pageParameters["test"] === "1",
@@ -133,6 +136,14 @@ class KatApp implements IKatApp {
 			// for now, I want inspector disabled
 			{ debug: { showInspector: false } }
 		);
+
+		const nc = this.nextCalculation;
+		if (nc.trace) {
+			// Reassign this if they navigated in case the level changed
+			nc.originalVerbosity = this.options.debug.traceVerbosity;
+			this.nextCalculation = nc;
+			this.options.debug.traceVerbosity = TraceVerbosity.Detailed;
+		}
 
 		const selectorResults = options.modalAppOptions == undefined ? $(selector) : undefined;
 		if (selectorResults != undefined && selectorResults.length != 1) {
@@ -228,6 +239,12 @@ class KatApp implements IKatApp {
 			inputs: Utils.extend({}, this.options.inputs, this.getLocalStorageInputs()),
 			errors: [],
 			warnings: [],
+			onAll(...values: any[]) {
+				return values.find(v => (v ?? "") == "" || !isTrue(v)) == undefined;
+			},
+			onAny(...values: any[]) {
+				return values.find(v => (v ?? "") != "" && isTrue(v)) != undefined;
+			},
 			rbl: {
 				results: {},
 				options: {},
@@ -238,12 +255,6 @@ class KatApp implements IKatApp {
 					toPush.forEach((r, i) => r["@id"] = r["@id"] ?? "_pushId_" + (t.length + i));
 
 					t.push(...toPush);
-				},
-				onAll(...values: any[]) {
-					return values.find(v => (v ?? "") == "" || !isTrue(v) ) == undefined;
-				},
-				onAny(...values: any[]) {
-					return values.find(v => (v ?? "") != "" && isTrue(v)) != undefined;
 				},
 				boolean() {
 					const argList = Array.from(arguments);
@@ -455,6 +466,8 @@ class KatApp implements IKatApp {
 
 	private async mountAsync(): Promise<void> {
 		try {
+			Utils.trace(this, "KatApp", "mountAsync", `Start`, TraceVerbosity.Detailed);
+
 			const viewElement = await this.getViewElementAsync();
 
 			// TODO: Should this just be 'view.kaml' instead of the 'guid' id?
@@ -484,8 +497,7 @@ class KatApp implements IKatApp {
 				try {
 					this.options.manualResults = await $.ajax({ method: "GET", url: url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
 				} catch (e) {
-					Utils.trace(this, "Error downloading manualResults " + this.options.manualResultsEndpoint, TraceVerbosity.None);
-					console.log(e);
+					Utils.trace(this, "KatApp", "mountAsync", `Error downloading manualResults ${this.options.manualResultsEndpoint}`, TraceVerbosity.None, e);
 				}
 			}
 
@@ -553,7 +565,7 @@ class KatApp implements IKatApp {
 				if (!hasCalcEngines) {
 					const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 						async submitApiOptions => {
-							await this.triggerEventAsync("updateApiOptions", submitApiOptions, this.options.calculationUrl);
+							await this.triggerEventAsync("updateApiOptions", submitApiOptions, this.options.calculationUrl.split("-")[0]);
 						},
 						{}
 					);
@@ -574,21 +586,18 @@ class KatApp implements IKatApp {
 			}
 
 			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1;
-			let configureUiException: any = undefined;
-
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
-			if (!initializedErrors) {
-				if (isConfigureUICalculation) {
-					this.on("calculationErrors", async (_e, key, ex) => {
-						if (key == "SubmitCalculation.ConfigureUI") {
-							configureUiException = ex;
-						}
-					});
-					// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
-					await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
-				}
+			if (!initializedErrors && isConfigureUICalculation) {
+				this.on("calculationErrors", async (_e, key, ex) => {
+					if (key == "SubmitCalculation.ConfigureUI") {
+						this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+						Utils.trace(this, "KatApp", "mountAsync", isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", TraceVerbosity.None, ex);
+					}
+				});
+				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
+				await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
 			}
 
 			this.vueApp = PetiteVue.createApp(this.state);
@@ -614,11 +623,6 @@ class KatApp implements IKatApp {
 				else if (this.calcEngines.find(c => c.manualResult) != undefined) {
 					await this.triggerEventAsync("calculation", this.lastCalculation);
 				}
-
-				if (configureUiException != undefined) {
-					this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-					console.log(isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", { configureUiException });
-				}
 			}
 
 			if (isModalApplication) {
@@ -633,17 +637,17 @@ class KatApp implements IKatApp {
 			}
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
-				Utils.trace(
-					this,
-					"Error during resource download...\n" +
-					ex.results.map(r =>
-						String.formatTokens("  {resource}: {errorMessage}", { resource: r.resource, errorMessage: r.errorMessage })
-					).join("\n"),
-					TraceVerbosity.None
+				Utils.trace(this, "KatApp", "mountAsync", "Error during resource download", TraceVerbosity.None,
+					...ex.results.map(r =>
+						String.formatTokens("{resource}: {errorMessage}", { resource: r.resource, errorMessage: r.errorMessage })
+					)
 				);
 			}
 
 			throw ex;
+		}
+		finally {
+			Utils.trace(this, "KatApp", "mountAsync", `Complete`, TraceVerbosity.Detailed);
 		}
 	}
 
@@ -873,113 +877,110 @@ class KatApp implements IKatApp {
 	}
 
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
-		const serviceUrl = /* this.options.registerDataWithService ? this.options.{what url should this be} : */ this.options.calculationUrl
-		const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
-			async submitApiOptions => {
-				await this.triggerEventAsync("updateApiOptions", submitApiOptions, serviceUrl);
-			},
-			customInputs
-		);
-
-		if (!processResults) {
-			return this.toTabDefs(
-				await Calculation.calculateAsync(
-					serviceUrl,
-					calcEngines ?? this.calcEngines,
-					getSubmitApiConfigurationResults.inputs,
-					getSubmitApiConfigurationResults.configuration
-				)
-			) as Array<ITabDef>;
+		// First calculation done before application is even mounted, just get the results setup
+		const isConfigureUICalculation = customInputs?._iConfigureUI === 1;
+		if (!isConfigureUICalculation) {
+			this.traceStart = this.traceLast = new Date();
 		}
-		else {
-			this.isCalculating = true;
-			this.blockUI();
-			this.state.errors = [];
-			this.state.warnings = [];
-			this.lastCalculation = undefined;
-			// First calculation done before application is even mounted, just get the results setup
-			let isConfigureUICalculation = false;
+		Utils.trace(this, "KatApp", "calculateAsync", `Start: ${(calcEngines ?? this.calcEngines).map( c => c.name ).join(", ")}`, TraceVerbosity.Detailed);
 
-			try {
-				const inputs = getSubmitApiConfigurationResults.inputs;
-				const submitApiConfiguration = getSubmitApiConfigurationResults.configuration;
-				isConfigureUICalculation = inputs._iConfigureUI === 1;
-				delete inputs._iConfigureUI;
+		try {
+			const serviceUrl = this.getUrlWithId( /* this.options.registerDataWithService ? this.options.{what url should this be} : */ this.options.calculationUrl);
+			const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
+				async submitApiOptions => {
+					await this.triggerEventAsync("updateApiOptions", submitApiOptions, serviceUrl.split("?")[0]);
+				},
+				customInputs
+			);
 
-				const calcStartResult = await this.triggerEventAsync("calculateStart", submitApiConfiguration) ?? true;
-				if (!calcStartResult) {
-					return;
-				}
-
-				const results = this.toTabDefs(
+			if (!processResults) {
+				return this.toTabDefs(
 					await Calculation.calculateAsync(
-						serviceUrl,
-						isConfigureUICalculation
-							? this.calcEngines.filter(c => c.allowConfigureUi)
-							: this.calcEngines,
-						inputs,
-						submitApiConfiguration
-					)
-				);
-
-				await this.cacheInputsAsync(inputs);
-
-				await this.triggerEventAsync("resultsProcessing", results, inputs, submitApiConfiguration);
-
-				await this.processResultsAsync(results);
-
-				this.lastCalculation = {
-					inputs: inputs,
-					results: results as Array<ITabDef>,
-					configuration: submitApiConfiguration
-				};
-
-				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
-				if (!isConfigureUICalculation) {
-					// Sometimes KAMLs call a iConfigureUI calc at different intervals (outside of the normal 'mount' flow) and if iConfigureUI=1, 
-					// but I'm not in the 'mountAsync configureUI calc', then I want to trigger the event
-					if (inputs.iConfigureUI == 1) {
-						await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
-					}
-					await this.triggerEventAsync("calculation", this.lastCalculation);
-				}
-
-				this.state.needsCalculation = false;
-				this.nextCalculation = undefined;
-			}
-			catch (error) {
-				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-
-				if (error instanceof CalculationError) {
-					// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
-					Utils.trace(
 						this,
-						"calculateAsync Exception: " + error.message + "\n" +
-						error.failures.map(f =>
-							String.formatTokens("  {ce}: {errorMessage}\n  Details: {details}\n  Stack:\n{stack}", { ce: f.calcEngine, errorMessage: f.exception.message, details: f.exception.detail, stack: f.exception.stackTrace.map(t => "    " + t).join("\n") })
-						).join("\n"),
-						TraceVerbosity.None
-					);
-				}
-				else if (error instanceof Error) {
-					Utils.trace(this, "calculateAsync Exception: " + error.message, TraceVerbosity.None);
-				}
-				else {
-					Utils.trace(this, "calculateAsync Exception", TraceVerbosity.None);
-					console.log({ error });
-				}
+						serviceUrl,
+						calcEngines ?? this.calcEngines,
+						getSubmitApiConfigurationResults.inputs,
+						getSubmitApiConfigurationResults.configuration
+					)
+				) as Array<ITabDef>;
+			}
+			else {
+				this.isCalculating = true;
+				this.blockUI();
+				this.state.errors = [];
+				this.state.warnings = [];
+				this.lastCalculation = undefined;
 
-				await this.triggerEventAsync("calculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error instanceof Error ? error : undefined);
-			}
-			finally {
-				// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
-				if (!isConfigureUICalculation) {
-					await this.triggerEventAsync("calculateEnd");
+				try {
+					const inputs = getSubmitApiConfigurationResults.inputs;
+					const submitApiConfiguration = getSubmitApiConfigurationResults.configuration;
+					delete inputs._iConfigureUI;
+
+					const calcStartResult = await this.triggerEventAsync("calculateStart", submitApiConfiguration) ?? true;
+					if (!calcStartResult) {
+						return;
+					}
+
+					const results = this.toTabDefs(
+						await Calculation.calculateAsync(
+							this,
+							serviceUrl,
+							isConfigureUICalculation
+								? this.calcEngines.filter(c => c.allowConfigureUi)
+								: this.calcEngines,
+							inputs,
+							submitApiConfiguration
+						)
+					);
+
+					await this.cacheInputsAsync(inputs);
+
+					await this.triggerEventAsync("resultsProcessing", results, inputs, submitApiConfiguration);
+
+					await this.processResultsAsync(results);
+
+					this.lastCalculation = {
+						inputs: inputs,
+						results: results as Array<ITabDef>,
+						configuration: submitApiConfiguration
+					};
+
+					// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
+					if (!isConfigureUICalculation) {
+						// Sometimes KAMLs call a iConfigureUI calc at different intervals (outside of the normal 'mount' flow) and if iConfigureUI=1, 
+						// but I'm not in the 'mountAsync configureUI calc', then I want to trigger the event
+						if (inputs.iConfigureUI == 1) {
+							await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
+						}
+						await this.triggerEventAsync("calculation", this.lastCalculation);
+					}
+
+					this.state.needsCalculation = false;
+					this.options.debug.traceVerbosity = this.nextCalculation.originalVerbosity;
+					this.nextCalculation = undefined;
 				}
-				delete this.state.inputs.iInputTrigger;
-				this.isCalculating = false;
-				this.unblockUI();
+				catch (error) {
+					this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+
+					if (!isConfigureUICalculation) {
+						// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
+						Utils.trace(this, "KatApp", "calculateAsync", `Exception: ${(error instanceof Error ? error.message : error + "")}`, TraceVerbosity.None, error);
+					}
+
+					await this.triggerEventAsync("calculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error instanceof Error ? error : undefined);
+				}
+				finally {
+					// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
+					if (!isConfigureUICalculation) {
+						await this.triggerEventAsync("calculateEnd");
+					}
+					delete this.state.inputs.iInputTrigger;
+					this.isCalculating = false;
+					this.unblockUI();
+				}
 			}
+		} finally {
+			Utils.trace(this, "KatApp", "calculateAsync", `Complete: ${(calcEngines ?? this.calcEngines).map(c => c.name).join(", ")}`, TraceVerbosity.Detailed);
 		}
 	}
 
@@ -1114,10 +1115,7 @@ class KatApp implements IKatApp {
 
 			this.state.warnings = (errorResponse.ValidationWarnings ?? []).map(v => ({ "@id": v.ID, text: v.Message }));
 
-			console.group("Unable to process " + endpoint);
-			console.log(errorResponse);
-			console.log(this.state.errors);
-			console.groupEnd();
+			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, [errorResponse, this.state.errors]);
 
 			await this.triggerEventAsync("apiFailed", endpoint, errorResponse, trigger, apiOptions);
 
@@ -1149,7 +1147,10 @@ class KatApp implements IKatApp {
 		if (urlParts.length === 2) {
 			url += (url.indexOf("?") > -1 ? "&" : "?") + urlParts[1];
 		}
-		return url;
+		return this.getUrlWithId( url );
+	}
+	private getUrlWithId(url: string): string {
+		return url + (url.indexOf("?") > -1 ? "&" : "?") + `katapp=${this.selector ?? this.id}`;
 	}
 
 	private buildFormData(submitData: ISubmitApiData): FormData {
@@ -1385,72 +1386,75 @@ class KatApp implements IKatApp {
 		}
 
 		if (templateId == undefined) {
-			Utils.trace(this, "Invalid template id: " + name, TraceVerbosity.None);
+			Utils.trace(this, "KatApp", "getTemplateId", `Unable to find template: ${name}.`, TraceVerbosity.Normal);
 		}
 
 		return templateId;
 	}
 
 	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
-		if (eventName == "calculation" || eventName == "configureUICalculation") {
-			await PetiteVue.nextTick();
-		}
-
-		// If event is cancelled, return false;
-		const eventArgs = [...args, this];
+		Utils.trace(this, "KatApp", "triggerEventAsync", `Start: ${eventName}.`, TraceVerbosity.Detailed);
 
 		try {
-			// Make application.element[0] be 'this' in the event handler
-			const delegateResult = (this.options as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
-
-			if (delegateResult != undefined) {
-				return delegateResult;
+			if (eventName == "calculation" || eventName == "configureUICalculation") {
+				await PetiteVue.nextTick();
 			}
 
-		} catch (error) {
-			Utils.trace(this, "Error calling " + eventName + ": " + error, TraceVerbosity.None);
-			console.log({ error });
+			// If event is cancelled, return false;
+			const eventArgs = [...args, this];
+
+			try {
+				// Make application.element[0] be 'this' in the event handler
+				const delegateResult = (this.options as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
+
+				if (delegateResult != undefined) {
+					return delegateResult;
+				}
+
+			} catch (error) {
+				Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
+			}
+
+			try {
+				const event = jQuery.Event(eventName + ".ka");
+
+				const currentEvents = $._data(this.el[0], "events")?.[eventName];
+
+				// Always prevent bubbling, KatApp events should never bubble up, had a problem where
+				// events were triggered on a nested rbl-app view element, but every event was then
+				// bubbled up to the containing application handlers as well
+				if (currentEvents != undefined) {
+					currentEvents.filter(e => e.namespace == "ka" && (e.kaProxy ?? false) == false).forEach(e => {
+						e.kaProxy = true;
+						const origHandler = e.handler;
+						e.handler = function () {
+							arguments[0].stopPropagation();
+							return origHandler.apply(this, arguments);
+						}
+					});
+
+					$(this.el).trigger(event, eventArgs);
+				}
+
+				let eventResult = (event as JQuery.TriggeredEvent).result;
+
+				if (eventResult instanceof Promise) {
+					eventResult = await eventResult;
+				}
+
+				if (event.isDefaultPrevented()) {
+					return false;
+				}
+
+				return eventResult;
+
+			} catch (error) {
+				Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, error);
+			}
+			return true;
+		} finally {
+			Utils.trace(this, "KatApp", "triggerEventAsync", `Complete: ${eventName}.`, TraceVerbosity.Detailed);
 		}
-
-		try {
-			const event = jQuery.Event(eventName + ".ka");
-
-			const currentEvents = $._data(this.el[0], "events")?.[eventName];
-
-			// Always prevent bubbling, KatApp events should never bubble up, had a problem where
-			// events were triggered on a nested rbl-app view element, but every event was then
-			// bubbled up to the containing application handlers as well
-			if (currentEvents != undefined) {
-				currentEvents.filter(e => e.namespace == "ka" && (e.kaProxy ?? false) == false).forEach(e => {
-					e.kaProxy = true;
-					const origHandler = e.handler;
-					e.handler = function () {
-						arguments[0].stopPropagation();
-						return origHandler.apply(this, arguments);
-					}
-				});
-
-				$(this.el).trigger(event, eventArgs);
-			}
-
-			let eventResult = (event as JQuery.TriggeredEvent).result;
-
-			if (eventResult instanceof Promise) {
-				eventResult = await eventResult;
-			}
-
-			if (event.isDefaultPrevented()) {
-				return false;
-			}
-
-			return eventResult;
-
-		} catch (error) {
-			Utils.trace(this, "Error triggering " + eventName + ": " + error, TraceVerbosity.None);
-			console.log({ error });
-		}
-
-		return true;
 	}
 
 	private get nextCalculation(): INextCalculation {
@@ -1463,6 +1467,9 @@ class KatApp implements IKatApp {
 		}
 		
 		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
+		if (cacheValue == undefined) {
+			debugNext.originalVerbosity = this.options.debug.traceVerbosity;
+		}
 		debugNext.from = from;
 
 		return debugNext;
@@ -1499,11 +1506,13 @@ class KatApp implements IKatApp {
 				...debugNext.saveLocations.filter(l => locations.indexOf(l.location) == -1),
 				...locations.map(l => ({ location: l, serverSideOnly: serverSideOnly ?? false }))
 			];
-
-			debugNext.trace = trace ?? false;
-			debugNext.expireCache = expireCache ?? false;
 		}
 
+		debugNext.trace = trace ?? false;
+		if (debugNext.trace) {
+			this.options.debug.traceVerbosity = TraceVerbosity.Detailed;
+		}
+		debugNext.expireCache = expireCache ?? false;
 		this.nextCalculation = debugNext;
 	}
 
@@ -1726,7 +1735,7 @@ class KatApp implements IKatApp {
                     submitOptions.Configuration.CalcEngine = "Conduent_Nexgen_Profile_SE";
                 })
 				*/
-				console.log("Unable to find calcEngine: " + ceName + ".  Determine if this should be supported.")
+				Utils.trace(this, "KatApp", "toTabDefs", `Unable to find calcEngine: ${ceName}.  Determine if this should be supported.`, TraceVerbosity.None);
 			}
 
 			const ceKey = configCe?.key ?? defaultCEKey;
@@ -1799,6 +1808,7 @@ class KatApp implements IKatApp {
 	}
 
 	private async processResultsAsync(results: IKaTabDef[]): Promise<void> {
+		Utils.trace(this, "KatApp", "processResultsAsync", `Start: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
 		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
 
 		const processResultColumn = (row: ITabDefRow, colName: string, isRblInputTable: boolean) => {
@@ -1899,33 +1909,39 @@ class KatApp implements IKatApp {
 		try {
 			await this.processDataUpdateResultsAsync(results);
 		} catch (error) {
-			console.log({ error });
 			await this.triggerEventAsync("calculationErrors", "ProcessDataUpdateResults", error instanceof Error ? error : undefined);
 		}
 		try {
 			this.processDocGenResults(results);
 		} catch (error) {
-			console.log({ error });
 			await this.triggerEventAsync("calculationErrors", "ProcessDocGenResults", error instanceof Error ? error : undefined);
 		}
+		Utils.trace(this, "KatApp", "processResultsAsync", `Complete: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
 	}
 
 	private async processDataUpdateResultsAsync(results: IKaTabDef[]): Promise<void> {
-		const jwtPayload = {
-			DataTokens: [] as Array<{ Name: string; Token: string; }>
-		};
+		try {
+			const jwtPayload = {
+				DataTokens: [] as Array<{ Name: string; Token: string; }>
+			};
 
-		results
-			.forEach(t => {
-				(t["jwt-data"] as ITabDefTable ?? [])
-					.filter(r => r["@id"] == "data-updates")
-					.forEach(r => {
-						jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
-					});
-			});
+			results
+				.forEach(t => {
+					(t["jwt-data"] as ITabDefTable ?? [])
+						.filter(r => r["@id"] == "data-updates")
+						.forEach(r => {
+							jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
+						});
+				});
 
-		if (jwtPayload.DataTokens.length > 0) {
-			await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload });
+			if (jwtPayload.DataTokens.length > 0) {
+				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Start (${jwtPayload.DataTokens.length} jwt-data items)`, TraceVerbosity.Detailed);
+				await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload });
+				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Complete`, TraceVerbosity.Detailed);
+			}
+		} catch (e) {
+			Utils.trace(this, "KatApp", "processResultsAsync", `Unhandled exception.`, TraceVerbosity.None, e);
+			throw e;
 		}
     }
 
@@ -1955,23 +1971,30 @@ class KatApp implements IKatApp {
 			fetch(`data:${type};base64,${base64}`).then(res => res.blob())
 		*/
 
-		results
-			.forEach(t => {
-				(t["api-actions"] as ITabDefTable ?? [])
-					.filter(r => r["action"] == "DocGen")
-					.forEach(r => {
-						if (r.exception != undefined) {
-							console.log(r);
-						}
-						else {
-							const base64 = r["content"];
-							const contentType = r["content-type"];
-							const fileName = r["file-name"];
-							const blob = base64toBlob(base64, contentType);
-							this.downloadBlob(blob, fileName);
-						}
-					});
-			});
+		try {
+			const docGenInstructions = results.flatMap(t => (t["api-actions"] as ITabDefTable ?? []).filter(r => r["action"] == "DocGen"));
+
+			if (docGenInstructions.length > 0) {
+				Utils.trace(this, "KatApp", "processDocGenResults", `Start (${docGenInstructions.length} DocGen items)`, TraceVerbosity.Detailed);
+
+				docGenInstructions.forEach(r => {
+					const fileName = r["file-name"];
+					if (r.exception != undefined) {
+						Utils.trace(this, "KatApp", "processDocGenResults", `DocGen Instruction Exception: ${fileName ?? 'File Not Availble'}, ${r.exception})`, TraceVerbosity.None);
+					}
+					else {
+						const base64 = r["content"];
+						const contentType = r["content-type"];
+						const blob = base64toBlob(base64, contentType);
+						this.downloadBlob(blob, fileName);
+					}
+				});
+				Utils.trace(this, "KatApp", "processDocGenResults", `Complete`, TraceVerbosity.Detailed);
+			}
+		} catch (e) {
+			Utils.trace(this, "KatApp", "processDocGenResults", `Unhandled exception.`, TraceVerbosity.None, e);
+			throw e;
+		}
 	}
 
 	private async getViewElementAsync(): Promise<HTMLElement | undefined> {
@@ -1991,7 +2014,7 @@ class KatApp implements IKatApp {
 					Utils.extend(this.state.inputs, response.manualInputs);
 				}
 			} catch (e) {
-				Utils.trace(this, "Error verifying KatApp " + view, TraceVerbosity.None);
+				Utils.trace(this, "KatApp", "getViewElementAsync", `Error verifying KatApp ${view}`, TraceVerbosity.None, e);
 			}
 		}
 

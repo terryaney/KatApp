@@ -31,6 +31,7 @@ interface INextCalculation {
 	expireCache: boolean;
 	trace: boolean;
 	from?: string;
+	originalVerbosity: TraceVerbosity;
 }
 interface IStringIndexer<T> extends Record<string, T> { }
 interface IStringAnyIndexer extends IStringIndexer<any> { } // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -126,6 +127,20 @@ interface ISubmitCalculationConfiguration {
 }
 
 // Interfaces for responses from RBL Framework
+interface IRblCalculationSuccessResponses {
+	Results: Array<{
+		CalcEngine: string;
+		CacheKey?: string;
+		Result?: IRblCalculationSuccessResponse;
+	}>;
+}
+// Didn't want !. checks on result every time after getting results successfully set up
+interface IMergedRblCalculationSuccessResponses {
+	Results: Array<{
+		CalcEngine: string;
+		Result: IRblCalculationSuccessResponse;
+	}>;
+}
 interface IRblCalculationSuccessResponse {
 	Diagnostics: {
 		CalcEngineVersion: string;
@@ -155,10 +170,11 @@ interface IRblCalculationSuccessResponse {
 }
 interface IRblCalculationFailedResponse {
 	Validations?: Array<{ Message: string }>;
-	ExceptionDetails: {
+	Exceptions: Array<{
+		Type: string;
 		Message: string;
 		StackTrace: Array<string>;
-	}
+	}>;
 }
 
 // Interfaces used by KatApp framework
@@ -172,9 +188,13 @@ interface ICalculationSuccessResponse {
 }
 interface ICalculationResponseException {
 	message: string;
-	detail: string;
-	stackTrace: string[];
+	detail: Array<ICalculationResponseExceptionDetail>;
 	configuration: ISubmitApiConfiguration;
 	inputs: ICalculationInputs;
+}
+interface ICalculationResponseExceptionDetail {
+	type: string;
+	message: string;
+	stackTrace: string[];
 }
 // interface ICalculationResponseExceptionConfiguration extends ISubmitApiConfiguration, ISubmitCalculationConfiguration { }

@@ -53,7 +53,7 @@ class InputComponent {
 		// https://github.com/vuejs/petite-vue/discussions/188
 
 		if (!input.isConnected) {
-			console.log(`Skipping input mount on ${name} because the input is not connected, consider the order of model properties being set.`);
+			Utils.trace(application, "InputComponent", "mounted", `Skipping input mount on ${name} because the input is not connected, consider the order of model properties being set.`, TraceVerbosity.Diagnostic);
 			return;
 		}
 
@@ -238,13 +238,13 @@ class InputComponent {
 						const cs = getComputedStyle(element);
 
 						const paddingX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-						const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+						// const paddingY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
 
 						const borderX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-						const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+						// const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
 
 						// Element width and height minus padding and border
-						displayWidth = element.offsetWidth - paddingX - borderX;
+						displayWidth = 15 + element.offsetWidth - paddingX - borderX;
 						// elementHeight = element.offsetHeight - paddingY - borderY;
 					}
 
@@ -581,8 +581,7 @@ class InputComponent {
 				try {
 					await application.apiAsync(props.uploadEndpoint, { files: files });
 				} catch (e) {
-					console.log("API Upload to " + props.uploadEndpoint + " failed.");
-					console.log({ e });
+					Utils.trace(application, "InputComponent", "uploadAsync", `API Upload to ${props.uploadEndpoint} failed.`, TraceVerbosity.None, e);
 				}
 				finally {
 					application.setInputValue(name, undefined);

@@ -1,4 +1,6 @@
-﻿enum TraceVerbosity {
+﻿// High to low... whatever level is set for options, when katapp logs, if the level specified in the log method is 
+// lower, it will not be logged, so any 'errors' that should always be logged should use None as a level to guarantee it is displayed.
+enum TraceVerbosity {
 	None,
 	Quiet,
 	Minimal,
@@ -30,6 +32,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	content?: string;
 
+	dataGroup: string;
 	currentPage: string;
 	userIdHash?: string; // User ID hashed to be used in different caching scenarios
 	environment?: string;
@@ -146,6 +149,8 @@ interface IApplicationData {
 	warnings: IValidation[];
 
 	rbl: IRblApplicationData;
+	onAll: (...values: Array<undefined | string | number>) => boolean;
+	onAny: (...values: Array<undefined | string | number>) => boolean;
 }
 interface IValidation {
 	"@id": string;
@@ -161,9 +166,6 @@ interface IRblApplicationData {
 	value: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined;
 	number: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => number;
 	boolean: (table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string, valueWhenMissing?: boolean) => boolean;
-
-	onAll: (...values: Array<undefined | string | number>) => boolean;
-	onAny: (...values: Array<undefined | string | number>) => boolean;
 
 	pushTo: (tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>) => void;
 }

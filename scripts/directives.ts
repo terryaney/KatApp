@@ -116,8 +116,7 @@ class DirectiveKaApi implements IKaDirective {
 						scope.catch(e, application);
 					}
 					else {
-						console.log("API Submit to " + endpoint + " failed.");
-						console.log({ e });
+						Utils.trace(application, "DirectiveKaApi", "submitApi", `API Submit to ${endpoint} failed.`, TraceVerbosity.None, e);
 					}
 				}
 			};
@@ -160,7 +159,7 @@ class DirectiveKaNavigate implements IKaDirective {
 					scope = ctx.get(scope.model);
 				}
 			} catch (e) {
-				console.log({ e });
+				Utils.trace(application, "DirectiveKaNavigate", "getDefinition", `Unable to compile 'model' property: ${scope.model}`, TraceVerbosity.None, e);
 			}
 
 			const navigationId = scope.view;
@@ -240,7 +239,7 @@ class DirectiveKaModal implements IKaDirective {
 						scope = ctx.get(scope.model);
 					}
 				} catch (e) {
-					console.log({ e });
+					Utils.trace(application, "DirectiveKaModal", "getDefinition", `Unable to compile 'model' property: ${scope.model}`, TraceVerbosity.None, e);
 				}
 
 				const showModal = async function (e: Event) {
@@ -258,7 +257,7 @@ class DirectiveKaModal implements IKaDirective {
 								scope.confirmed(response.response, application);
 							}
 							else {
-								console.log({ message: "Modal App " + scope.view + " confirmed.", response: response.response });
+								Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} confirmed.`, TraceVerbosity.Normal, response.response);
 							}
 						}
 						else {
@@ -266,7 +265,7 @@ class DirectiveKaModal implements IKaDirective {
 								scope.cancelled(response.response, application);
 							}
 							else {
-								console.log({ message: "Modal App " + scope.view + " cancelled.", response: response.response });
+								Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} cancelled.`, TraceVerbosity.Normal, response.response);
 							}
 						}
 					} catch (e) {
@@ -274,8 +273,7 @@ class DirectiveKaModal implements IKaDirective {
 							scope.catch(e, application);
 						}
 						else {
-							console.log("Modal App " + scope.view + " failed.");
-							console.log({ e });
+							Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} failed.`, TraceVerbosity.None, e);
 						}
 					}
 				};
@@ -320,8 +318,7 @@ class DirectiveKaApp implements IKaDirective {
 					nestedApp = await KatApp.createAppAsync(selector, nestedAppOptions);
 				}
 				catch (e) {
-					console.log("Nested App " + scope.view + " failed.");
-					console.log({ e });
+					Utils.trace(application, "DirectiveKaApp", "getDefinition", `Nested App ${scope.view} failed.`, TraceVerbosity.None, e);
 				}
 			})();
 
@@ -438,8 +435,7 @@ ${JSON.stringify(scope, null, 2)}
 					commentContent += `Rendered Element(s) ↓↓↓↓`
 
 					if (inspectTarget == undefined) {
-						console.log("Unable to find inspector target:")
-						console.log(commentContent);
+						Utils.trace(application, "DirectiveKaInspector", "getDefinition", `Unable to find inspector target.`, TraceVerbosity.Detailed, commentContent);
 					}
 					else {
 						if (inspectTarget.previousSibling?.nodeType == 8 && (inspectTarget.previousSibling?.textContent?.indexOf(`KatApp Inspect ${kaTargetId}`) ?? -1) > -1) {
@@ -503,7 +499,7 @@ class DirectiveKaHighchart implements IKaDirective {
 
 			ctx.effect(() => {
 				if (typeof Highcharts !== "object") {
-					Utils.trace(application, `Highcharts javascript is not present for: ${ctx.exp}`, TraceVerbosity.None);
+					Utils.trace(application, "DirectiveKaHighchart", "getDefinition", `Highcharts javascript is not present.`, TraceVerbosity.None, ctx.exp);
 					return;
 				}
 
@@ -551,8 +547,7 @@ class DirectiveKaHighchart implements IKaDirective {
 					try {
 						$(ctx.el).highcharts(chartOptions);
 					} catch (error) {
-						Utils.trace(application, `Error during highchart creation for ${ctx.exp}`, TraceVerbosity.None);
-						console.log({ error });
+						Utils.trace(application, "DirectiveKaHighchart", "getDefinition", `Error during highchart creation.`, TraceVerbosity.None, ctx.exp, error);
 					}
 				}
 			});
