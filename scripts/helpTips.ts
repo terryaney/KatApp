@@ -5,22 +5,19 @@
 	// Code to hide tooltips if you click anywhere outside the tooltip
 	// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
 	// This one looked interesting too: https://stackoverflow.com/a/24289767/166231 but I didn't test this one yet
-	public static hideVisiblePopover(): void {
+	public static hideVisiblePopover(): boolean {
 		// Going against entire KatApp (all apps) instead of a local variable because I only setup
 		// the HTML click event one time, so the 'that=this' assignment above would be the first application
 		// and might not match up to the 'currently executing' katapp, so had to make this global anyway
 		const visiblePopover = HelpTips.visiblePopover;
 
-		if (visiblePopover != undefined) {
-			// Just in case the tooltip hasn't been configured
-			if ($(visiblePopover).attr("ka-init") != "true") return;
-
-			// Used to use this logic, but it didn't work with bootstrap 5, I've asked a question here:
-			// https://stackoverflow.com/questions/67301932/cannot-access-bootstrap-5-bs-popover-data-with-jquery
-			// if ( $(visiblePopover).data("bs.popover") === undefined ) return;
-
+		// Just in case the tooltip hasn't been configured
+		if (visiblePopover != undefined && $(visiblePopover).attr("ka-init") == "true") {
 			bootstrap.Popover.getInstance(visiblePopover).hide();
+			return true;
 		}
+
+		return false;
 	}
 
 	public static processHelpTips(application: KatApp, container: JQuery, selector?: string): void {
@@ -46,7 +43,9 @@
 						HelpTips.hideVisiblePopover();
 					}
 				})
-				.on("show.bs.popover.ka", () => HelpTips.hideVisiblePopover())
+				.on("show.bs.popover.ka", () => {
+					HelpTips.hideVisiblePopover();
+				})
 				.on("inserted.bs.tooltip.ka", e => {
 					const target = $(e.target);
 

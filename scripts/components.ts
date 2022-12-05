@@ -86,7 +86,6 @@ class InputComponent {
 
 		const inputEventAsync = async (calculate: boolean) => {
 			removeError();
-			await application.triggerEventAsync("input", name, calculate, input, scope);
 
 			if (!exclude) {
 				application.state.inputs[name] = application.getInputValue(name);
@@ -102,6 +101,14 @@ class InputComponent {
 					}
 				}
 			}
+
+			// Trigger after setting input state b/c triggering this allows other 'change' events to
+			// execute and input state hasn't been set yet.
+			//
+			// i.e.simply changing a drop down that has a @change event, this inputEventAsync was registered first so it runs
+			// but when it called this 'await triggerEventAsync("input"...)' the @change event of the event was triggered before
+			// input state was set so it didn't have the right state.
+			await application.triggerEventAsync("input", name, calculate, input, scope);
 		}
 
 		if (type == "date") {

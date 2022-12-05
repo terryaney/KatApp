@@ -6,10 +6,6 @@
 	modalAppOptions: IModalAppOptions;
 	inputs: ICalculationInputs;
 }
-interface ISubmitApiOptions {
-	inputs: ICalculationInputs,
-	configuration: ISubmitApiConfiguration;
-}
 interface ISubmitApiConfiguration {	
 	Token?: string; // Used only in submit for session based calcs
 	Comment?: string; // currently never passed

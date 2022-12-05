@@ -105,7 +105,8 @@ class DirectiveKaApi implements IKaDirective {
 				try {
 					const response = await application.apiAsync(
 						endpoint,
-						Utils.clone(scope, (k, v) => ["confirm", "endpoint", "then", "catch"].indexOf(k) > -1 ? undefined : v), undefined, $(ctx.el as HTMLElement)
+						Utils.clone(scope, (k, v) => ["confirm", "endpoint", "then", "catch"].indexOf(k) > -1 ? undefined : v),
+						$(ctx.el as HTMLElement)
 					);
 
 					if (scope.then != undefined) {

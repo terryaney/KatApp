@@ -81,7 +81,7 @@ interface IKatApp {
 	off<TType extends string>(events: TType): KatApp;
 
 	calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;
-	apiAsync(endpoint: string, apiOptions: IApiOptions, calculationSubmitApiConfiguration?: IGetSubmitApiOptions, trigger?: JQuery): Promise<IStringAnyIndexer | undefined>;
+	apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;
 	showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse>;
 
 	blockUI(): void;
@@ -172,9 +172,9 @@ interface IRblApplicationData {
 
 
 // Event parameter interfaces
-interface IGetSubmitApiOptions {
+interface ISubmitApiOptions {
 	inputs: ICalculationInputs,
-	configuration: IStringIndexer<string>;
+	configuration: ISubmitApiConfiguration | IStringIndexer<string>;
 }
 
 interface ILastCalculation {

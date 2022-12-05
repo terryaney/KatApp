@@ -3115,7 +3115,7 @@ Name | Description
 [`on`](#ikatappon) | Allows for the Kaml View to listen to KatApp events.
 [`off`](#ikatappoff) | Allows for the Kaml View to stop listening to KatApp events.
 [`calculateAsync`](#ikatappcalculateasync) | Manually call a RBLe Framework calculation.
-[`apiAsync`](#ikatappapiasync) | Use an [`IApiOptions`](#iapioptions) and [`IGetSubmitApiOptions`](#igetsubmitapioptions) object to submit a payload to an api endpoint.
+[`apiAsync`](#ikatappapiasync) | Use an [`IApiOptions`](#iapioptions) and [`ISubmitApiOptions`](#ISubmitApiOptions) object to submit a payload to an api endpoint.
 [`showModalAsync`](#ikatappshowmodalasync) | Manually show a modal dialog configured by the [`IModalOptions`](#imodaloptions) parameter.
 [`blockUI`](#ikatappblockui) | Indicate that the Kaml View UI should be blocked while performing a long running action.
 [`unblockUI`](#ikatappunblockui) | Indicate that the Kaml View UI should no longer be blocked after performing a long running action.
@@ -3158,9 +3158,9 @@ Manually call a RBLe Framework calculation.  The parameters allow for a list of 
 
 #### IKatApp.apiAsync
 
-**`apiAsync(endpoint: string, apiOptions: IApiOptions, calculationSubmitApiConfiguration?: IGetSubmitApiOptions, trigger?: JQuery): Promise<IStringAnyIndexer | undefined>;`**
+**`apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;`**
 
-Use an [`IApiOptions`](#iapioptions) and [`IGetSubmitApiOptions`](#igetsubmitapioptions) object to submit a payload to an api endpoint and return the results on success. KatApps have the ability to call web api endpoints to perform actions that need server side processing (saving data, generating document packages, saving calculations, etc.).  All api endpoints should return an object indicating success or failure.
+Use an [`IApiOptions`](#iapioptions) and [`ISubmitApiOptions`](#ISubmitApiOptions) object to submit a payload to an api endpoint and return the results on success. KatApps have the ability to call web api endpoints to perform actions that need server side processing (saving data, generating document packages, saving calculations, etc.).  All api endpoints should return an object indicating success or failure.
 
 Api endpoints can return an `IApiErrorResponse` response either due to validation issues or unhandled exceptions on the server. When an api endpoint fails, the response object implements the following interface:
 
@@ -3431,9 +3431,9 @@ application.on("nestedAppRendered.ka", () => {
 
 #### IKatApp.updateApiOptions
 
-**`updateApiOptions( event: Event, submitApiOptions: IGetSubmitApiOptions, endpoint: string, application: IKatApp )`**
+**`updateApiOptions( event: Event, submitApiOptions: ISubmitApiOptions, endpoint: string, application: IKatApp )`**
 
-This event is triggered during RBLe Framework calculations immediately before submission to RBLe Framework and/or during api endpoint submission immediately before submitting to the Host Environment.  It allows Kaml Views to massage the [`IGetSubmitApiOptions.configuration`](#igetsubmitapioptionsconfiguration) or the [`IGetSubmitApiOptions.inputs`](#icalculationinputs) before being submitted.  Use this method to add custom inputs/tables to the submission that wouldn't normally be processed by the KatApp Framework.
+This event is triggered during RBLe Framework calculations immediately before submission to RBLe Framework and/or during api endpoint submission immediately before submitting to the Host Environment.  It allows Kaml Views to massage the [`ISubmitApiOptions.configuration`](#ISubmitApiOptionsconfiguration) or the [`ISubmitApiOptions.inputs`](#icalculationinputs) before being submitted.  Use this method to add custom inputs/tables to the submission that wouldn't normally be processed by the KatApp Framework.
 
 The `endpoint` parameter will contain the endpoint the KatApp Framework is going to submit to.  When processing a RBLe Framework calculation, the url will be the same as [`options.calculationUrl`](#ikatappoptions.calculationurl).
 
@@ -3473,7 +3473,7 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
 
 #### IKatApp.calculateStart
 
-**`calculateStart( event: Event, submitApiOptions: IGetSubmitApiOptions, application: IKatApp ) => boolean`**
+**`calculateStart( event: Event, submitApiOptions: ISubmitApiOptions, application: IKatApp ) => boolean`**
 
 This event is triggered at the start of a RBLe Framework calculation after the `updateApiOptions` has been triggered.  Use this event to perform any actions that need to occur before the calculation is submitted (i.e. custom processing of UI blockers or enabled state of inputs).  If the handler returns `false` or calls `e.preventDefault()`, then the calculation is immediately cancelled and only the `calculateEnd` event will be triggered.
 
@@ -3485,7 +3485,7 @@ This event is triggered immediately before inputs are cached to `sessionStorage`
 
 #### IKatApp.resultsProcessing
 
-**`resultsProcessing( event: Event, results: Array<ITabDef>, inputs: ICalculationInputs, submitApiOptions: IGetSubmitApiOptions, application: IKatApp )`**
+**`resultsProcessing( event: Event, results: Array<ITabDef>, inputs: ICalculationInputs, submitApiOptions: ISubmitApiOptions, application: IKatApp )`**
 
 This event is triggered during a RBLe Framework calculation _after a successful calculation_ from the RBLe Framework and _before [KatApp Framework result processing](#rbl-framework-result-processing-in-katapp-state)_.  This handler allows Kaml Views to manually push 'additional result rows' into a calculation result table.
 
@@ -3872,9 +3872,9 @@ Property | Type | Description
 `Environment` | `string` | The name of the current environment as it is known in the Host Environment. This value is determined from the [`options.environment'](#ikatappoptionsenvironment) property.
 `Framework` | `string` | The name of the current 'framework' submitting to the RBLe Framework. This value is set to `"KatApp"`.
 
-### IGetSubmitApiOptions
+### ISubmitApiOptions
 
-The `IGetSubmitApiOptions` interface represents the information that creates an api submission payload.
+The `ISubmitApiOptions` interface represents the information that creates an api submission payload.
 
 Property | Type | Description
 ---|---|---

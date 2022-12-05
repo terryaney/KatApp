@@ -572,7 +572,7 @@ class KatApp implements IKatApp {
 
 					await this.triggerEventAsync("resultsProcessing", manualResultTabDefs, getSubmitApiConfigurationResults.inputs, getSubmitApiConfigurationResults.configuration);
 				}
-				await this.processResultsAsync(manualResultTabDefs);
+				await this.processResultsAsync(manualResultTabDefs, undefined);
 			}
 
 			if (this.options.debug.showInspector) {
@@ -843,7 +843,13 @@ class KatApp implements IKatApp {
 			})
 			// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
 			// After modal is shown, resolve promise to caller to know modal is fully displayed
-			.on("hide.bs.modal", async e => await closeButtonClickAsync(e) );
+			.on("hide.bs.modal", async e => {
+				if (HelpTips.hideVisiblePopover()) {
+					e.preventDefault();
+					return;
+				}
+				await closeButtonClickAsync(e);
+			});
 
 		const modalBS5 = new bootstrap.Modal(this.el[0]);
 		modalBS5.show();
@@ -900,7 +906,7 @@ class KatApp implements IKatApp {
 						serviceUrl,
 						calcEngines ?? this.calcEngines,
 						getSubmitApiConfigurationResults.inputs,
-						getSubmitApiConfigurationResults.configuration
+						getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration
 					)
 				) as Array<ITabDef>;
 			}
@@ -929,7 +935,7 @@ class KatApp implements IKatApp {
 								? this.calcEngines.filter(c => c.allowConfigureUi)
 								: this.calcEngines,
 							inputs,
-							submitApiConfiguration
+							submitApiConfiguration as ISubmitApiConfiguration
 						)
 					);
 
@@ -937,12 +943,12 @@ class KatApp implements IKatApp {
 
 					await this.triggerEventAsync("resultsProcessing", results, inputs, submitApiConfiguration);
 
-					await this.processResultsAsync(results);
+					await this.processResultsAsync(results, getSubmitApiConfigurationResults);
 
 					this.lastCalculation = {
 						inputs: inputs,
 						results: results as Array<ITabDef>,
-						configuration: submitApiConfiguration
+						configuration: submitApiConfiguration as ISubmitApiConfiguration
 					};
 
 					// If configure UI, Vue not mounted yet, so don't trigger this until after mounting
@@ -988,7 +994,9 @@ class KatApp implements IKatApp {
 		await this.triggerEventAsync("hostNotification", name, information, from);
 	}
 
-	public async apiAsync(endpoint: string, apiOptions: IApiOptions, calculationSubmitApiConfiguration?: IGetSubmitApiOptions, trigger?: JQuery): Promise<IStringAnyIndexer | undefined> {
+	public async apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
+		// calculationSubmitApiConfiguration is only passed internally, when apiAsync is called within the calculation pipeline and there is already a configuration determined
+
 		const isDownload = apiOptions.isDownload ?? false;
 
 		const xhr = new XMLHttpRequest();
@@ -1620,14 +1628,14 @@ class KatApp implements IKatApp {
 		}
     }
 
-	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: IGetSubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<ISubmitApiOptions> {
+	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: ISubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<ISubmitApiOptions> {
 		const currentInputs = this.getInputs(customInputs);
 
 		if (currentInputs.tables == undefined) {
 			currentInputs.tables = [];
 		}
 
-		const submitApiOptions: IGetSubmitApiOptions = {
+		const submitApiOptions: ISubmitApiOptions = {
 			inputs: currentInputs,
 			configuration: {}
 		}
@@ -1807,7 +1815,7 @@ class KatApp implements IKatApp {
 		});
 	}
 
-	private async processResultsAsync(results: IKaTabDef[]): Promise<void> {
+	private async processResultsAsync(results: IKaTabDef[], calculationSubmitApiConfiguration: ISubmitApiOptions | undefined): Promise<void> {
 		Utils.trace(this, "KatApp", "processResultsAsync", `Start: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
 		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
 
@@ -1907,7 +1915,7 @@ class KatApp implements IKatApp {
 		});
 
 		try {
-			await this.processDataUpdateResultsAsync(results);
+			await this.processDataUpdateResultsAsync(results, calculationSubmitApiConfiguration);
 		} catch (error) {
 			await this.triggerEventAsync("calculationErrors", "ProcessDataUpdateResults", error instanceof Error ? error : undefined);
 		}
@@ -1919,7 +1927,7 @@ class KatApp implements IKatApp {
 		Utils.trace(this, "KatApp", "processResultsAsync", `Complete: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
 	}
 
-	private async processDataUpdateResultsAsync(results: IKaTabDef[]): Promise<void> {
+	private async processDataUpdateResultsAsync(results: IKaTabDef[], calculationSubmitApiConfiguration: ISubmitApiOptions | undefined): Promise<void> {
 		try {
 			const jwtPayload = {
 				DataTokens: [] as Array<{ Name: string; Token: string; }>
@@ -1936,7 +1944,7 @@ class KatApp implements IKatApp {
 
 			if (jwtPayload.DataTokens.length > 0) {
 				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Start (${jwtPayload.DataTokens.length} jwt-data items)`, TraceVerbosity.Detailed);
-				await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload });
+				await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload }, undefined, calculationSubmitApiConfiguration);
 				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Complete`, TraceVerbosity.Detailed);
 			}
 		} catch (e) {
