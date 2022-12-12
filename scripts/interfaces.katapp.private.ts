@@ -1,6 +1,6 @@
 ﻿interface IKatAppPartialModalOptions {
 	view?: string;
-	content?: string;
+	content?: string | JQuery;
 	currentPage: string;
 	hostApplication: KatApp;
 	modalAppOptions: IModalAppOptions;

@@ -13,9 +13,11 @@
 
     const app = createApp({
         Template,
-		data: {
-			list: ["A", "B", "C"]
-		}
+        data: {
+            list: ["A", "B", "C"],
+            template: '#t1',
+            suffix: ''
+        }
     });
 
     app.mount();
@@ -23,23 +25,12 @@
 
 <div v-scope>
     <button type="button" @click="data.list = ['X','Y']">Change Data</button>
-    <ul>
-        <li v-for="k in data.list">
-            {{k}}
-        </li>
-    </ul>
-    <template id="myTemplate">
-        <div>Template Val: {{name}}</div>
-        <input type="text" :name="name" value="" />
-    </template>
-    <p><b>Normal Template Call</b></p>
-    <div v-scope="Template('#myTemplate',{name: 'Normal'})"></div>
-
-    <br />
+    <button type="button" @click="data.suffix = '1'">Change Suffix</button>
     <p><b>v-for Template Call (get)</b></p>
     <div v-for="k in data.list" :key="k">
-        <div v-scope="Template('#myTemplate' + k, {get name() {return 'For-' + k; }})"></div>
+        <div v-scope="Template('#myTemplate' + k + data.suffix, {get name() {return 'For-' + k; }})"></div>
     </div>
+
     <template id="myTemplateA">
         <div>Template A Val: {{name}}</div>
     </template>
@@ -49,24 +40,39 @@
     <template id="myTemplateC">
         <div>Template C Val: {{name}}</div>
     </template>
+    <template id="myTemplateA1">
+        <div>Template A1 Val: {{name}}</div>
+    </template>
+    <template id="myTemplateB1">
+        <div>Template B1 Val: {{name}}</div>
+    </template>
+    <template id="myTemplateC1">
+        <div>Template C1 Val: {{name}}</div>
+    </template>
     <template id="myTemplateX">
         <div>Template X Val: {{name}}</div>
     </template>
     <template id="myTemplateY">
         <div>Template Y Val: {{name}}</div>
     </template>
+    <template id="myTemplateX1">
+        <div>Template X1 Val: {{name}}</div>
+    </template>
+    <template id="myTemplateY1">
+        <div>Template Y1 Val: {{name}}</div>
+    </template>
 
-    <br />
-    <p><b>v-for Template Call (prop)</b></p>
-    <div v-for="k in data.list" :key="k">
-        <div v-scope="Template('#myTemplate',{ name: 'For-' + k })"></div>
-    </div>
+    <button @click="data.template = '#t2'">Change Template</button>
+    <p>p: {{data.template}}</p>
 
-    <br />
-    <p><b>v-for Nested Scope</b></p>
-    <div v-scope="{ data: { list: ['L', 'M', 'N'] } }">
-        <div v-for="k in data.list" :key="k">
-            <div v-scope="Template('#myTemplate',{ name: 'For-' + k })"></div>
-        </div>
-    </div>
+    <template v-for="template in [data.template]" :key="template">
+        <div v-scope="{ $template: template, get name() { return 'terry' + template; } }"></div>
+    </template>
+
+    <template id="t1">
+        <p>Template t1: {{name}}</p>
+    </template>
+    <template id="t2">
+        <p>Template t2: {{name}}</p>
+    </template>
 </div>

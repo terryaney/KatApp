@@ -502,11 +502,30 @@ class KatApp implements IKatApp {
 			}
 
 			if (viewElement != undefined) {
-				// Need to append() so script runs to call update() inside Kaml
 				if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1) {
-					this.select(".modal-body").append(viewElement);
+					if (this.options.content != undefined) {
+						if (typeof this.options.content == "string") {
+							this.select(".modal-body").html(this.options.content);
+						}
+						else {
+							// Need to append() so jquery DOM events remain in place
+							this.select(".modal-body").append(this.options.content);
+						}
+						// Even with appending the 'content' object (if selector was provided) the help tips don't function, so
+						// need to remove init flag and let them reprocess
+						this.select("[data-bs-toggle='tooltip'], [data-bs-toggle='popover']").removeAttr("ka-init-tip");
+
+						// There is still an issue with things that used {id} notation (i.e. bootstrap accordians) because now
+						// the original ID is baked into the markup, so in the modal when they are expanding an accordian
+						// it expands the original hidden markup as well.  So there are still issues to consider before using 
+						// contentSelector with showModalAsync.
+					}
+					else {
+						this.select(".modal-body").append(viewElement);
+					}
 				}
 				else {
+					// Need to append() so script runs to call update() inside Kaml
 					$(this.el).append(viewElement);
 				}
 			}
@@ -806,7 +825,7 @@ class KatApp implements IKatApp {
 		};
 
 		if (isInvalid) {
-			this.select(".modal-footer-buttons button").remove();
+			this.select(".modal-footer-buttons button, .modal-footer-buttons a.btn").remove();
 			this.select(".modal-footer-buttons").append(
 				$(`<button type="button" class="${options.css!.continue} continueButton">Close</button>`)
 			);
@@ -1033,6 +1052,8 @@ class KatApp implements IKatApp {
 
 			const calcEngine = this.calcEngines.find(c => !c.manualResult);
 
+			const rbleApiConfiguration = ["Token", "TraceEnabled", "SaveCE", "RefreshCalcEngine", "AuthID", "AdminAuthID", "Client", "TestCE", "CurrentPage", "RequestIP", "CurrentUICulture", "Environment", "Framework"];
+
 			const submitData: ISubmitApiData = {
 				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v),
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
@@ -1054,7 +1075,8 @@ class KatApp implements IKatApp {
 							]
 						}
 						: undefined,
-					{ nextCalculation: this.nextCalculation }
+					{ nextCalculation: this.nextCalculation },
+					Utils.clone(getSubmitApiConfigurationResults.configuration, (k, v) => rbleApiConfiguration.indexOf(k) > -1 ? undefined : v)
 				)
 			};
 
@@ -1550,14 +1572,22 @@ class KatApp implements IKatApp {
 	}
 		
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
+		HelpTips.hideVisiblePopover(); // in case launching a modal from within a help tip
 
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
-			options.content = this.select(options.contentSelector).html();
 
-			if (!options.content) {
+			const selectContent = this.select(options.contentSelector);
+
+			if (selectContent.length == 0) {
 				throw new Error(`The content selector (${options.contentSelector}) did not return any content.`);
 			}
+
+			const selectorContent = $("<div/>");
+			// Use this instead of .html() so I keep my bootstrap events
+			selectorContent.append(selectContent.contents().clone(true));
+
+			options.content = selectorContent;
 		}
 
 		if (options.content == undefined && options.view == undefined) {
@@ -2042,10 +2072,7 @@ class KatApp implements IKatApp {
 
 			this.processKamlMarkup(viewElement, this.id);
 		}
-		else if (this.options.content != undefined) {
-			viewElement.innerHTML = this.options.content;
-		}
-		else {
+		else if (this.options.content == undefined) {
 			// just mounting existing html (usually just a help tip is what this was made for)
 			return undefined;
 		}

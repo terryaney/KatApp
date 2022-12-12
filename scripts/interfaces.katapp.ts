@@ -186,7 +186,7 @@ interface ILastCalculation {
 
 interface IModalOptions {
 	view?: string;
-	content?: string;
+	content?: string | JQuery;
 	contentSelector?: string;
 	calculateOnConfirm?: boolean | ICalculationInputs;
 

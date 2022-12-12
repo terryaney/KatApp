@@ -87,11 +87,11 @@ Count: {{model.count}}
 	<li>City: Custom isDisabled method for an input and uses base.disabled feature of InputComponent (disabled if First Name=Terry)</li>
 	<li>All inputs use @change="handlers.change" demonstration to hook custom events</li>
 </ul>
-<div class="rbl-nocalc" v-scope="templateInput('ka-textbox', { name: 'iFirstName' })"></div>
-<div v-scope="templateInput('ka-textbox', { name: 'iAddress1', label: 'Float Address 1'})"></div>
-<div v-scope="templateInput('ka-textbox', { name: 'iAddress2' })"></div>
+<div class="rbl-nocalc" v-scope="components.templateInput('ka-textbox', { name: 'iFirstName' })"></div>
+<div v-scope="components.templateInput('ka-textbox', { name: 'iAddress1', label: 'Float Address 1'})"></div>
+<div v-scope="components.templateInput('ka-textbox', { name: 'iAddress2' })"></div>
 <div class="rbl-nocalc">
-	<div v-scope="templateInput('ka-textbox', {name: 'iCity', label: 'City', isDisabled: base => inputs.iFirstName =='Terry' || base.disabled })"></div>
+	<div v-scope="components.templateInput('ka-textbox', {name: 'iCity', label: 'City', isDisabled: base => inputs.iFirstName =='Terry' || base.disabled })"></div>
 </div>
 <p>POC: Using input() component directly instead of templateInput()</p>
 <input v-scope="input({ name: 'iInputComponent', value: 'Default IC Value' })" :value="value" :name="name" :id="id" :type="type" :class="'form-control ' + name + ' ' + ( error != undefined ? 'is-invalid' : '' )" :disabled="disabled"
@@ -118,7 +118,7 @@ Count: {{model.count}}
 <p>POC: Using an inputTemplate to create dynamic inputs while inside a v-for</p>
 <h3>Dynamic Inputs</h3>
 <div v-for="n in model.list" :key="n">
-	<div v-scope="templateInput('ka-textbox', { name: 'iDynamicGet' + n, label: 'Dynamic Input for ' + n })"></div>
+	<div v-scope="components.templateInput('ka-textbox', { name: 'iDynamicGet' + n, label: 'Dynamic Input for ' + n })"></div>
 </div>
 
 <p>POC: Using v-for to display calcuation results (using rbl.source('coveredDependents') method) and also using in-built 'index' property</p>
@@ -144,11 +144,11 @@ Count: {{model.count}}
 
 <p>POC: v-for *inside* template markup instead of parent where v-scope is defined, couldn't figure out a better way'</p>
 <h3>Template in v-for</h3>
-<div v-scope="template('myTemplate', rbl.source('keyValue', 'BRD'))"></div>
+<div v-scope="components.template('myTemplate', rbl.source('keyValue', 'BRD'))"></div>
 
 <p>POC: Using v-for to display calcuation results and filter them before processing</p>
 <h3>Template in v-for (filter @id.startsWith('site'))</h3>
-<div v-scope="template('myTemplate', rbl.source('keyValue', 'BRD').filter( row => row[ '@id' ].startsWith( 'site' ) ))"></div>
+<div v-scope="components.template('myTemplate', rbl.source('keyValue', 'BRD').filter( row => row[ '@id' ].startsWith( 'site' ) ))"></div>
 
 <template id="myTemplate">
 	<template v-for="r in rows">
@@ -164,7 +164,7 @@ Count: {{model.count}}
 <p>POC: Calling custom templates during v-for loop, change list with KatApp.get(0).state.model.list = ["terry", ...]</p>
 <h3>Dynamic Template Names</h3>
 <div v-for="k in model.list" :key="k">
-	<div v-scope="template('myTemplate' + k, { name: 'For-' + k })"></div>
+	<div v-scope="components.template('myTemplate' + k, { name: 'For-' + k })"></div>
 </div>
 
 <template id="myTemplateterry">

@@ -12,7 +12,7 @@
 		const visiblePopover = HelpTips.visiblePopover;
 
 		// Just in case the tooltip hasn't been configured
-		if (visiblePopover != undefined && $(visiblePopover).attr("ka-init") == "true") {
+		if (visiblePopover != undefined && $(visiblePopover).attr("ka-init-tip") == "true") {
 			bootstrap.Popover.getInstance(visiblePopover).hide();
 			return true;
 		}
@@ -115,7 +115,7 @@
 		};
 
 		select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container)
-			.not('[ka-init="true"]')
+			.not('[ka-init-tip="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);
 				const isTooltip = tipElement.attr("data-bs-toggle") == "tooltip";
@@ -175,6 +175,6 @@
 					new bootstrap.Popover(tip, options);
 				}
 			})
-			.attr("ka-init", "true");
+			.attr("ka-init-tip", "true");
 	}
 }
