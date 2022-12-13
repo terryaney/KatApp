@@ -558,7 +558,7 @@ class InputComponent {
 					container: props?.css?.container
 				};
 			},
-			get error() { return props.isError?.(base) ?? base.error; },
+			get error() { return /* props.isError?.(base) ?? */ base.error; },
 			get warning() { return base.warning; },
 			get list() {
 				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
@@ -695,7 +695,7 @@ class TemplateMultipleInputComponent {
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
 			}),
 			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
-			error: (index: number) => props.isError?.(index, base) ?? base.error(index),
+			error: (index: number) => /* props.isError?.(index, base) ?? */ base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
 				const table =

@@ -652,7 +652,7 @@ class KatApp implements IKatApp {
 			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
 
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == 1) {
-				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this);
+				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
 			}
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
@@ -1572,8 +1572,6 @@ class KatApp implements IKatApp {
 	}
 		
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
-		HelpTips.hideVisiblePopover(); // in case launching a modal from within a help tip
-
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
 
@@ -2384,17 +2382,49 @@ class KatApp implements IKatApp {
 			});
 
 			// Turn v-ka-template="templateId, scope" into v-scope="components.template(templateId, scope)"
+			const needsReactiveForRE = /.*?name'?\s*:\s*(?<value>'?[\w\s\.]+'?)/;
 			container.querySelectorAll("[v-ka-template]").forEach(directive => {
 				const exp = directive.getAttribute("v-ka-template")!;
-				let scope = exp;
-				if (!scope.startsWith("{")) {
-					scope = `{ name: '${scope}' }`;
-				}
+				const scope = exp.startsWith("{")
+					? exp
+					: `{ name: '${exp}' }`;
 
 				inspectElement(directive, scope);
-
 				directive.removeAttribute("v-ka-template");
-				directive.setAttribute("v-scope", `components.template(${scope})`);
+
+				const nameValue = needsReactiveForRE.exec(scope)?.groups!.value ?? ""
+				const needsReactiveFor = !directive.hasAttribute("v-for") && ["inputs.", "model.", "rbl."].find( n => nameValue.startsWith(n)) != undefined;
+
+				if (needsReactiveFor) {
+					/*
+						Need to change following:
+						<div v-ka-template="{ name: inputs.iNavigationCurrent }" class="mt-5 row"></div>
+
+						To:	
+						<template v-for="template in [inputs.iNavigationCurrent]" :key="template">
+							<div v-ka-template="{ name: template }" class="mt-5 row"></div>
+						</template>
+
+						Needed loop on single item so that reactivity would kick in when it changed and render a new item
+						-->
+					*/
+
+					directive.setAttribute("v-scope", `components.template({ name: _reactive_template.name, source: _reactive_template.source})`);
+
+					// Try to create via dom manipulation wasn't working.  I think the 'template' element screwed it up with the 'document fragment' created
+					// before dom markup was 'really' loaded by browser and then resulted in double document fragment?  No idea, but outerHTML assignment worked.
+					/*
+					const reactiveFor: Element = document.createElement("template");
+					reactiveFor.setAttribute("v-for", `_reactive_template in [${scope}]`);
+					reactiveFor.setAttribute(":key", "_reactive_template.name");
+					directive.before(reactiveFor);
+					reactiveFor.appendChild(directive);
+					*/
+					directive.outerHTML = `<template v-for="_reactive_template in [${scope}]" :key="_reactive_template.name">${directive.outerHTML}<template>`;
+				}
+				else {
+					directive.setAttribute("v-scope", `components.template(${scope})`);
+				}
 			});
 
 			if (that.options.debug.showInspector) {

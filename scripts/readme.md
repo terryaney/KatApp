@@ -99,7 +99,7 @@ Inside each Kaml View file is a required `<rbl-config>` element; This should be 
 </rbl-config>
 ```
 
-When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See the [`rbl.source()`](#iapplicationdatarblsource) method for more information on how the appropriate CalcEngine/Tab name combination is determined specifying non-default CalcEngine results and how they are used in the [`rbl.exists()`](#iapplicationdatarblexists), [`rbl.boolean()`](#iapplicationdatarblboolean) and [`rbl.value()`](#iapplicationdatarblvalue) methods and the [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), and [v-ka-highchart](#v-ka-highchart) directives.
+When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See the [`rbl.source()`](#irblsource) method for more information on how the appropriate CalcEngine/Tab name combination is determined specifying non-default CalcEngine results and how they are used in the [`rbl.exists()`](#irblexists), [`rbl.boolean()`](#irblboolean), [`rbl.value()`](#irblvalue) and [`rbl.number()`](#irblnumber) methods and the [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), and [v-ka-highchart](#v-ka-highchart) directives.
 
 **Important** - Whenever multiple CalcEngines are used, you must provide a `key` attribute; minimally on CalcEngines 2...N, but ideally on all of them.  Note that the first CalcEngine will be assigned a key value of `default` if no `key` is provided.
 
@@ -411,6 +411,7 @@ Name | Description
 [`source`](#irblsource) | Returns table rows from `results`.
 [`exists`](#irblexists) | Check for existence of table row(s).
 [`value`](#irblvalue) | Return a single value (`undefined` if not present) from `results`.
+[`number`](#irblnumber) | Return a single *number* value (`0` if not present or not a number) from `results`.
 [`boolean`](#irblboolean) | Return whether or not a single row.column value is truthy.
 
 #### IRbl.source
@@ -504,6 +505,18 @@ const name = application.state.rbl.value("rbl-value", "name-first",
 const name = application.state.rbl.value("custom-table", "name-first", "value2", "key", 
                 "BRD", "RBLResult2");
 ```
+
+#### IRbl.number
+
+**`number(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => number`**
+
+Return a single *number* value (`undefined` if not present) from `results` given parameters passed in.  .  The CalcEngine key and `ITabDef` name can be passed in if not using the default CalcEngine and result tab.
+
+After `keyValue`, all parameters are optional. If `returnField` is not passed in, the `value` column is used.  If `keyField` is not passed in, the `@id` column is used.
+
+Internally, `number()` first retrieves a value using the [`value()`](#irblvalue) method, then converts it to a number.  If the value is `undefined` or unable to be converted to a number, `0` is returned.
+
+See `rbl.value()` for examples on syntax available.
 
 #### IRbl.boolean
 
@@ -1900,6 +1913,7 @@ During the mounting of a KatApp input the following occurs:
         1. On 'update', syncronize `state.inputs` if `rbl-exclude` class is not used.
         1. On 'update', trigger RBLe Calculation if `rbl-skip` class is not used and [`scope.noCalc`](#ikainputscopenocalc) is `false`.
         1. On `update`, set `state.needsCalculation` to `false`.
+        1. On `update`, trigger [`scope.noCalc`](#ikainputscopenocalc) event.
         1. Attach any events provided in the [`model.events`](#ikainputmodelevents) property.
     1. Specific Input Processing
         1. Date Inputs ([`scope.type`](#ikainputscopetype) is `date`)
@@ -2599,6 +2613,7 @@ The `v-ka-highchart` directive is responsible for creating HTML/javascript based
 - [v-ka-highchart Standard Options](#v-ka-highchart-standard-options) - Discusses the standard options processed by RBLe Framework that *map directly* to Highcharts options.
 - [v-ka-highchart Custom Series Options](#v-ka-highchart-custom-series-options) - Discusses custom series options processed by RBLe Framework that do *not* map directly to Highcharts series options.
 - [v-ka-highchart Standard Series Options](#v-ka-highchart-standard-series-options) - Discusses the standard options processed by RBLe Framework that *map directly* to Highcharts series options.
+- [v-ka-highchart Series Data Options](#v-ka-highchart-series-data-options) - Explains how to set properties on individual data points for each series.
 - [v-ka-highchart Property Value Parsing](#v-ka-highchart-property-value-parsing) - Explains how the RBLe Framework parses values from the CalcEngine to convert them into Highcharts property values.
 - [v-ka-highchart Language Support](#v-ka-highchart-language-support) - Explains how to control the UI culture/localization of the chart.
 
@@ -2842,6 +2857,20 @@ The following Hicharts configuraiton would be created:
 ```
 
 See [series](https://api.highcharts.com/highcharts/series) documentation to learn more about available series properties for each chart type.
+
+### v-ka-highchart Series Data Options
+
+In addition to options set directly on a series itself, there are times when options need to be set individiually on each data value in the series (i.e. color, radius, etc.).  See [`series.line.data`](#https://api.highcharts.com/highcharts/series.line.data) for an example, but each chart/series type may have its own specific set of properties that can be assigned on data values.  To assign those properties, columns are added to the 'data' table in the format of `point.seriesX.property` where `seriesX` matches the series column header and `property` is the name of the configuration property.  `point` is a hard coded string indicating that this is a 'data' configuration value.
+
+Example of settings colors for a pie chart.
+
+category | series1 | point.series1.color
+---|---|---
+config&#x2011;name | score
+config&#x2011;type | type
+config&#x2011;innerSize | 50%
+score | 43 | green
+nonScore | 57 | #eeeeee
 
 ### v-ka-highchart Property Value Parsing
 
@@ -3135,9 +3164,6 @@ Name | Description
 
 The `update` method can only be called one time and must be called before the Kaml View is 'mounted' by Vue. Allows for the Kaml View to update options provided in the [`IUpdateApplicationOptions`](#iupdateapplicationoptions).
 
-
-
-
 #### IKatApp.on
 
 **`on<TType extends string>(events: TType, handler: JQuery.TypeEventHandler<HTMLElement, undefined, HTMLElement, HTMLElement, TType> | false): KatApp;`**
@@ -3161,6 +3187,8 @@ Manually call a RBLe Framework calculation.  The parameters allow for a list of 
 **`apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;`**
 
 Use an [`IApiOptions`](#iapioptions) and [`ISubmitApiOptions`](#ISubmitApiOptions) object to submit a payload to an api endpoint and return the results on success. KatApps have the ability to call web api endpoints to perform actions that need server side processing (saving data, generating document packages, saving calculations, etc.).  All api endpoints should return an object indicating success or failure.
+
+See [`v-ka-api`](#v-ka-api) and [`IApiOptions` interface](#iapioptions) for more information.
 
 Api endpoints can return an `IApiErrorResponse` response either due to validation issues or unhandled exceptions on the server. When an api endpoint fails, the response object implements the following interface:
 
@@ -3205,6 +3233,8 @@ Manually show a modal dialog configured by the [`IModalOptions`](#imodaloptions)
 If a `triggerLink` is provided, the link will be disabled while the modal dialog is shown and re-enabled when hidden.
 
 `showModalAsync` can throw exceptions.
+
+See [`v-ka-modal`](#v-ka-modal) and [`IModalOptions` interface](#imodaloptions) for more information.
 
 #### IKatApp.blockUI
 
@@ -3348,13 +3378,32 @@ When a submission to an api endpiont is initiated via [`v-ka-api`](#v-ka-api) or
 
 The KatApp framework raises events throughout the stages of different [lifecycles](#ikatapp-lifecycles) allowing Kaml View developers to catch and respond to these events as needed. All event handlers are registered on the application itself via the [`on` method](#ikatappon). When using events, it is best practice to use the `.ka` namespace.  It is not required when using the `on` because the method automatically ensures each event type processed has the `.ka` namespace, but explicitly using the namespace makes auditing Kaml View code bases much easier.
 
-Details for each event type can be found below.
+Name | Description
+---|---
+[`initialized`](#ikatappinitialized) | Triggered after KatApp Framework has finished initialization.
+[`modalAppInitialized`](#ikatappmodalappinitialized) | Triggered on host application after a modal application has been initialized.
+[`nestedAppInitialized`](#ikatappnestedappinitialized) | Triggered on host application after a nested application has been initialized.
+[`rendered`](#ikatapprendered) | Triggered after Kaml View has been made visible to the user.
+[`nestedAppRendered`](#ikatappnestedapprendered) | Triggered on host application after a nested application has been rendered.
+[`updateApiOptions`](#ikatappupdateapioptions) | Triggered immediately before submission to server side API calls to allow for Kaml Views to modify inputs or configuration settings before submission.
+[`calculateStart`](#ikatappcalculatestart) | Triggered at the start of a RBLe Framework calculation submission.
+[`inputsCache`](#ikatappinputscache) | Triggered during a RBLe Framework calculation before inputs are cached to `sessionStorage` allowing for modification if needed.
+[`resultsProcessing`](#ikatappresultsprocessing) | Triggered during a RBLe Framework calculation before framework processing of RBLe results allowing for modification of raw results if needed.
+[`configureUICalculation`](#ikatappconfigureuicalculation) | Triggered after successful RBLe Framework calculation processing if `iConfigureUI = 1`.
+[`calculation`](#ikatappcalculation) | Triggered after successful RBLe Framework calculation processing.
+[`calculationErrors`](#ikatappcalculationerrors) | Triggered when an exception is thrown during RBLe Framework calculation processing.
+[`calculateEnd`](#ikatappcalculateend) | Triggered at the completion of a RBLe Framework calculation submission, regardless of success or not.
+[`domUpdated`](#ikatappdomupdated) | Triggered to signal the 'end' of a DOM manipulation due to reactivity.
+[`apiStart`](#ikatappapistart) | Triggered at the start of an API submission (via [`apiAsync`](#ikatappapiasync)).
+[`apiComplete`](#ikatappapicomplete) | Triggered at the *successful* completion of an API submission that is *not* an file download endpoint.
+[`apiFailed`](#ikatappapifailed) | Triggered when an exception is thrown during an API submission.
+[`input`](#ikatappinput) | Triggered whenever a KatApp input has been updated.
 
 #### IKatApp.initialized
 
 **`initialized(event: Event, application: IKatApp )`**
 
-Triggered after KatApp Framework has finished injecting the  Kaml View and any designated template files.  `initialized` can be used to call api endpoints to retreive/initialize data that has not been obtained by default in the Host Environment.
+Triggered after KatApp Framework has finished injecting the Kaml View and any designated template files.  `initialized` can be used to call api endpoints to retrieve/initialize data that has not been obtained by default in the Host Environment.
 
 #### IKatApp.modalAppInitialized
 
@@ -3411,15 +3460,15 @@ application.on("nestedAppInitialized.ka", (e, nestedApplication) => {
 
 #### IKatApp.rendered
 
-**`rendered(event: Event, application: IKatApp )`**
+**`rendered(event: Event, errors: IValidation[] | undefined, application: IKatApp )`**
 
-Triggered after Kaml View has been made visible to the user (will wait for CSS transitions to complete).
+Triggered after Kaml View has been made visible to the user (will wait for CSS transitions to complete).  If any errors occurred during the `initialized` event, they will be passed through via the `errors` parameter.
 
 #### IKatApp.nestedAppRendered
 
-**`nestedAppRendered(event: Event, nestedApplication: IKatApp, hostApplication: IKatApp )`**
+**`nestedAppRendered(event: Event, nestedApplication: IKatApp, errors: IValidation[] | undefined, hostApplication: IKatApp )`**
 
-This event is triggered after a nested application has been rendered. It for host application to remove any UI blockers that might have been in place during initialization.
+This event is triggered after a nested application has been rendered. It for host application to remove any UI blockers that might have been in place during initialization.  If any errors occurred during the nested application's `initialized` event, they will be passed through via the `errors` parameter.
 
 ```html
 <script>
@@ -3589,6 +3638,13 @@ application.on("apiFailed.ka", (event, endpoint) => {
 });
 ```
 
+#### IKatApp.input
+
+**`input( event: Event, name: string, calculate: boolean, input: HTMLElement, scope: IKaInputScope | IKaInputGroupScope )`**
+
+This event is triggered whenever a KatApp input has been updated.  It is a 'catch all' event that allows an application to bind a single event handler on the KatApp when all (or almost all inputs) on the page will use the same event handler.  The same goal could be accomplished via a [`IKaInputModel.events.input` delgate](#v-ka-input-model).
+
+
 ## Supporting Interfaces
 
 In addition to the primary `IKatApp` and `IKatAppOptions` interfaces, there are supporting interfaces that Kaml View developers will not necessarily declare, but rather are interfaces for properties or parameters on the main interface methods that are used.
@@ -3728,8 +3784,10 @@ Property | Type | Description
 `scrollable` | `boolean` | By default, modal content will not be scrollable; only the *entire* modal dialogis scrollable.  If a modal dialog should have its own vertical scrollbar for its body/content, pass `true`.
 `showCancel` | `boolean` | By default, a modal shows both a 'continue' *and* a 'cancel' button.  If the displayed dialog only needs a 'continue' (i.e. confirming a transactional result message), set this value to `true` to hide the 'cancel' button.
 `inputs` | [`ICalculationInputs`](#icalculationinputs) | If inputs should be passed to the modal's rendered Kaml View, provide a `ICalculationInputs` object.
-`buttonsTemplate` | `string` | By default, KatApp modals will generate a 'continue' and 'cancel' button that are always visible and simply return a `boolean` value indicating whether or not a modal was confirmed.<br/><br/>If a modal is more complex with various stages that influence the behavior (visibility or functionality) of the modal buttons, a template ID can be provided.<br/><br/>See [IModalOptions Template Samples](#imodaloptions-template-samples) for more information.
+`buttonsTemplate`<sup>1</sup> | `string` | By default, KatApp modals will generate a 'continue' and 'cancel' button that are always visible and simply return a `boolean` value indicating whether or not a modal was confirmed.<br/><br/>If a modal is more complex with various stages that influence the behavior (visibility or functionality) of the modal buttons, a template ID can be provided.<br/><br/>See [IModalOptions Template Samples](#imodaloptions-template-samples) for more information.
 `headerTemplate` | `string` | By default, KatApp modals simply use the `labels.title` string property to display a 'modal header'.<br/><br/>If a modal is more complex and the header is more than just a text label (i.e. links or inputs), a template ID can be provided as the content to be rendered inside the header.<br/><br/>See [IModalOptions Template Samples](#imodaloptions-template-samples) for more information.
+
+<sup>1</sup> When creating your own buttons for a modal application, it is best practice to always apply a `cancelButton` and `continueButton` class to the appropriate buttons as the KatApp framework first tries to trigger a `click` event on those buttons when the `X` in the header is clicked or `ESC` is pressed.  `cancelButton` is clicked if `showCancel` was set to true otherwise `continueButton` is clicked. If additional processing other than simply calling the [`IModalAppOptions.cancelled` or `IModalAppOptions.confirmedAsync` delegates](#imodalappoptions), make sure to apply those buttons.  If the custom toolbar *only* provides a single 'close' button, both classes can be assigned to the button to ensure that it is triggered, this eliminates the need for the caller of the modal to know the internal logic of the buttons and does not need to 'correctly' pass the `showCancel` property.
 
 #### IModalOptions Template Samples
 

@@ -307,7 +307,7 @@ interface IKaInputModel {
 
 	template?: string;
 
-	isError?: (base: IKaInputScopeBase) => string;
+	// isError?: (base: IKaInputScopeBase) => string;
 	isNoCalc?: (base: IKaInputScopeBase) => boolean;
 	isDisabled?: (base: IKaInputScopeBase) => boolean;
 	isDisplay?: (base: IKaInputScopeBase) => boolean;
@@ -400,7 +400,7 @@ interface IKaInputGroupModel {
 	template: string;
 
 	isNoCalc?: (index: number, base: IKaInputGroupModelBase) => boolean;
-	isError?: (index: number, base: IKaInputGroupModelBase) => string;
+	// isError?: (index: number, base: IKaInputGroupModelBase) => string;
 	isDisabled?: (index: number, base: IKaInputGroupModelBase) => boolean;
 	isDisplay?: (index: number, base: IKaInputGroupModelBase) => boolean;
 
