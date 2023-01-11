@@ -111,6 +111,7 @@ interface ISubmitApiData {
 	// Data?: RBLeRESTServiceResult; // Passed in if non-session calcs being used
 	Inputs: ICalculationInputs;
 	InputTables?: Array<ISubmitCalculationInputTable>;
+	ApiParameters?: IStringAnyIndexer | undefined;
 	Configuration: ISubmitApiConfiguration;
 }
 interface ISubmitCalculationInputTable { Name: string, Rows: Array<ICalculationInputTableRow>; }

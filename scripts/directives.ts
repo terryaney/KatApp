@@ -303,7 +303,7 @@ class DirectiveKaApp implements IKaDirective {
 					view: view,
 					currentPage: view,
 					hostApplication: application,
-					inputs: Utils.extend( { iNestedApplication: 1 }, scope.inputs )
+					inputs: Utils.extend<ICalculationInputs>({ iNestedApplication: "1" } as ICalculationInputs, scope.inputs )
 				}
 			);
 			delete nestedAppOptions.inputs!.iModalApplication;

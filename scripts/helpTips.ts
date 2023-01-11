@@ -104,8 +104,7 @@
 			}
 
 			// See if they specified data-content directly on trigger element.
-			const content = h.data('bs-content') ?? h.next().html();
-
+			const content = h.attr('data-bs-content') ?? h.data('bs-content') ?? h.next().html();
 			// Replace {Label} in content with the trigger provided...used in Error Messages
 			const labelFix = h.data("label-fix");
 

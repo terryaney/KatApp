@@ -45,11 +45,11 @@
 		);
 	};
 
-	private static _pageParameters: IStringIndexer<string> | undefined;
-	private static readPageParameters(): IStringIndexer<string> {
-		if (this._pageParameters == undefined) {
-			this._pageParameters = {};
-			const paramsArray = window.location.search.substr(1).split('&');
+	public static parseQueryString( qs: string | undefined ): IStringIndexer<string> {
+		const qsValues: IStringIndexer<string> = {};
+
+		if ( qs != undefined && qs != "") {
+			const paramsArray = ( qs.startsWith( "?" ) ? qs.substr(1) : qs ).split('&');
 
 			for (let i = 0; i < paramsArray.length; ++i) {
 				const param = paramsArray[i]
@@ -58,14 +58,18 @@
 				if (param.length !== 2)
 					continue;
 
-				this._pageParameters[param[0].toLowerCase()] = decodeURIComponent(param[1].replace(/\+/g, " "));
+				qsValues[param[0].toLowerCase()] = decodeURIComponent(param[1].replace(/\+/g, " "));
 			}
 		}
 
-		return this._pageParameters;
+		return qsValues;
 	}
 
 	public static pageParameters = this.readPageParameters();
+	private static _pageParameters: IStringIndexer<string> | undefined;
+	private static readPageParameters(): IStringIndexer<string> {
+		return this._pageParameters ?? (this._pageParameters = this.parseQueryString(window.location.search));
+	}
 
 	public static trace(application: KatApp, callerType: string, methodName: string, message: string, verbosity: TraceVerbosity, ...groupItems: Array<any>): void {
 		const verbosityOption = application.options.debug.traceVerbosity ?? TraceVerbosity.None;

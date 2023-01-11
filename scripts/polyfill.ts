@@ -28,18 +28,15 @@
 	if (String.formatTokens === undefined) {
 		String.formatTokens = function (template, parameters): string {
 			// String.formatTokens( "{greeting} {who}!", {greeting: "Hello", who: "world"} )
-			let that = template;
-
-			for (const propertyName in parameters) {
-				const re = new RegExp('{' + propertyName + '}', 'gm');
-				const valueType = typeof parameters[propertyName];
+			return template.replace(/{([^}]+)}/g, function (match, token) {
+				const valueType = typeof parameters[token];
 
 				// If class/width/other RBLe custom columns were used, their values
 				// would be assigned as attributes, so a #text property on the object would
 				// exist, and that is probably what they want.
 				let jsonValue = valueType == "object"
-					? parameters[propertyName]["#text"] ?? parameters[propertyName]
-					: parameters[propertyName];
+					? parameters[token]["#text"] ?? parameters[token]
+					: parameters[token];
 
 				// https://stackoverflow.com/a/6024772/166231 - first attempt
 				// https://stackoverflow.com/a/13418900/166231
@@ -47,18 +44,13 @@
 					jsonValue = jsonValue.replace(new RegExp('\\$', 'gm'), '$$$$');
 				}
 
-				that = that.replace(re, jsonValue)
-
 				// If I didn't want to hard code the $0 check, this answer suggested using a function, but I didn't want the overhead
 				// https://stackoverflow.com/a/6024692/166231
 				// that = that.replace(re, function() { return json[propertyName]; });
-			}
 
-			// const leftOverTokens = new RegExp('\{\S*\}', 'gm');
-			// return that.replace(leftOverTokens, "").replace("_", "_");
+				return jsonValue || token;
+			});
 
-			// don't know why I have this replace in here
-			return that.replace("_", "_");
 		};
 	}
 })();

@@ -126,7 +126,8 @@ class KatApp implements IKatApp {
 				debugResourcesDomain: Utils.pageParameters["localserver"],
 			},
 			calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
-			kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx"
+			kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
+			kamlVerifyUrl: "api/katapp/verify-katapp"
 		};
 
 		this.options = Utils.extend<IKatAppOptions>(
@@ -252,9 +253,17 @@ class KatApp implements IKatApp {
 					const t = (tabDef[table] ?? (tabDef[table] = [])) as ITabDefTable;
 					const toPush = rows instanceof Array ? rows : [rows];
 
-					toPush.forEach((r, i) => r["@id"] = r["@id"] ?? "_pushId_" + (t.length + i));
+					toPush.forEach((row, i) => {
+						row["@id"] = row["@id"] ?? "_pushId_" + (t.length + i);
 
-					t.push(...toPush);
+						const index = t.findIndex(r => r["@id"] == row["@id"]);
+						if (index > -1) {
+							t[index] = row;
+						}
+						else {
+							t.push(row);
+						}
+					});
 				},
 				boolean() {
 					const argList = Array.from(arguments);
@@ -475,13 +484,22 @@ class KatApp implements IKatApp {
 				? [...(await this.getViewTemplatesAsync(viewElement)), this.id].reverse()
 				: [this.id];
 
+			const inputs = this.options.inputs;
+			const processInputTokens = (value: string | null): string | null => {
+				if (value == undefined) return value;
+
+				return value.replace(/{([^}]+)}/g, function (match, token) {
+					return inputs?.[token] as string || match;
+				});
+			};
+
 			this.calcEngines = viewElement != undefined
 				? Array.from(viewElement.querySelectorAll("rbl-config calc-engine")).map(c => {
 					const ce: ICalcEngine = {
 						key: c.getAttribute("key") ?? "default",
-						name: c.getAttribute("name") ?? "UNAVAILABLE",
+						name: processInputTokens( c.getAttribute("name") ) ?? "UNAVAILABLE",
 						inputTab: c.getAttribute("input-tab") ?? "RBLInput",
-						resultTabs: c.getAttribute("result-tabs")?.split(",") ?? ["RBLResult"],
+						resultTabs: processInputTokens( c.getAttribute("result-tabs") )?.split(",") ?? ["RBLResult"],
 						preCalcs: c.getAttribute("precalcs") ?? undefined, // getAttribute returned 'null' and I want undefined
 						allowConfigureUi: c.getAttribute("configure-ui") != "false",
 						manualResult: false,
@@ -502,7 +520,7 @@ class KatApp implements IKatApp {
 			}
 
 			if (viewElement != undefined) {
-				if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1) {
+				if (this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == "1") {
 					if (this.options.content != undefined) {
 						if (typeof this.options.content == "string") {
 							this.select(".modal-body").html(this.options.content);
@@ -540,7 +558,7 @@ class KatApp implements IKatApp {
 					this.state.components[propertyName] = this.updateOptions.components[propertyName];
 				}
 			}
-			if (this.updateOptions?.options?.modalAppOptions != undefined && this.state.inputs.iModalApplication == 1) {
+			if (this.updateOptions?.options?.modalAppOptions != undefined && this.state.inputs.iModalApplication == "1") {
 				Utils.extend(this.options, { modalAppOptions: this.updateOptions.options.modalAppOptions });
 			}
 			if (this.updateOptions?.options?.inputs != undefined) {
@@ -548,7 +566,7 @@ class KatApp implements IKatApp {
 			}
 
 			if (this.options.hostApplication != undefined) {
-				if (this.options.inputs?.iModalApplication == 1) {
+				if (this.options.inputs?.iModalApplication == "1") {
 
 					if (this.options.modalAppOptions?.buttonsTemplate != undefined) {
 						this.select(".modal-footer-buttons button").remove();
@@ -564,7 +582,7 @@ class KatApp implements IKatApp {
 
 					await this.options.hostApplication.triggerEventAsync("modalAppInitialized", this);
 				}
-				else if (this.options.inputs?.iNestedApplication == 1) {
+				else if (this.options.inputs?.iNestedApplication == "1") {
 					await this.options.hostApplication.triggerEventAsync("nestedAppInitialized", this);
 				}
 			}
@@ -604,7 +622,7 @@ class KatApp implements IKatApp {
 					});
 			}
 
-			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == 1;
+			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == "1";
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
@@ -616,7 +634,7 @@ class KatApp implements IKatApp {
 					}
 				});
 				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
-				await this.calculateAsync({ _iConfigureUI: 1, iConfigureUI: 1, iDataBind: 1 });
+				await this.calculateAsync({ _iConfigureUI: "1", iConfigureUI: "1", iDataBind: "1" });
 			}
 
 			this.vueApp = PetiteVue.createApp(this.state);
@@ -651,7 +669,7 @@ class KatApp implements IKatApp {
 			await this.processDomElementsAsync(); // process main application
 			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
 
-			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == 1) {
+			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == "1") {
 				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
 			}
 		} catch (ex) {
@@ -699,11 +717,11 @@ class KatApp implements IKatApp {
 			'<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static">\
                 <div class="modal-dialog">\
                     <div class="modal-content">\
-                    <div class="modal-header d-none">\
-                        <h5 class="modal-title"></h5>\
-                        <button type="button" class="btn-close" aria-label="Close"></button>\
-                    </div>\
-                    <div class="modal-body"></div>\
+						<div class="modal-header d-none">\
+							<h5 class="modal-title"></h5>\
+							<button type="button" class="btn-close" aria-label="Close"></button>\
+						</div>\
+	                    <div class="modal-body"></div>\
                         <div class="modal-footer">\
 							<div class="modal-footer-buttons d-none">\
 								<button type="button" :class="[\'' + cssCancel + '\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">' + labelCancel + '</button>\
@@ -903,14 +921,17 @@ class KatApp implements IKatApp {
 
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
 		// First calculation done before application is even mounted, just get the results setup
-		const isConfigureUICalculation = customInputs?._iConfigureUI === 1;
+		const isConfigureUICalculation = customInputs?._iConfigureUI === "1";
 		if (!isConfigureUICalculation) {
 			this.traceStart = this.traceLast = new Date();
 		}
 		Utils.trace(this, "KatApp", "calculateAsync", `Start: ${(calcEngines ?? this.calcEngines).map( c => c.name ).join(", ")}`, TraceVerbosity.Detailed);
 
 		try {
-			const serviceUrl = this.getUrlWithId( /* this.options.registerDataWithService ? this.options.{what url should this be} : */ this.options.calculationUrl);
+			const serviceUrl = /* this.options.registerDataWithService 
+				? this.options.{what url should this be} 
+				: */ this.getApiUrl(this.options.calculationUrl);
+
 			const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 				async submitApiOptions => {
 					await this.triggerEventAsync("updateApiOptions", submitApiOptions, serviceUrl.split("?")[0]);
@@ -974,7 +995,7 @@ class KatApp implements IKatApp {
 					if (!isConfigureUICalculation) {
 						// Sometimes KAMLs call a iConfigureUI calc at different intervals (outside of the normal 'mount' flow) and if iConfigureUI=1, 
 						// but I'm not in the 'mountAsync configureUI calc', then I want to trigger the event
-						if (inputs.iConfigureUI == 1) {
+						if (inputs.iConfigureUI == "1") {
 							await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
 						}
 						await this.triggerEventAsync("calculation", this.lastCalculation);
@@ -1013,8 +1034,10 @@ class KatApp implements IKatApp {
 		await this.triggerEventAsync("hostNotification", name, information, from);
 	}
 
-	public async apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
+	public async apiAsync(endpoint: string, apiOptions: IApiOptions | undefined, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
 		// calculationSubmitApiConfiguration is only passed internally, when apiAsync is called within the calculation pipeline and there is already a configuration determined
+
+		apiOptions = apiOptions ?? {};
 
 		const isDownload = apiOptions.isDownload ?? false;
 
@@ -1054,13 +1077,15 @@ class KatApp implements IKatApp {
 
 			const rbleApiConfiguration = ["Token", "TraceEnabled", "SaveCE", "RefreshCalcEngine", "AuthID", "AdminAuthID", "Client", "TestCE", "CurrentPage", "RequestIP", "CurrentUICulture", "Environment", "Framework"];
 
+			const isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/rble/calculation";
 			const submitData: ISubmitApiData = {
 				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v),
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
+				ApiParameters: isDotNetCore && apiOptions.apiParameters != undefined ? apiOptions.apiParameters : undefined,
 				Configuration: Utils.extend(
-					Utils.clone(this.options, (k, v) => ["manualResults", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation"].indexOf(k) > -1 ? undefined : v),
+					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
-					apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
+					!isDotNetCore && apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
                     // Endpoints only ever use first calc engine...so reset calcEngines property in case kaml
                     // changed calcEngine in the onCalculationOptions.
 					calcEngine != undefined
@@ -1080,8 +1105,10 @@ class KatApp implements IKatApp {
 				)
 			};
 
-			// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
-			( submitData as IStringAnyIndexer )["inputTablesRaw"] = submitData.InputTables != undefined ? JSON.stringify(submitData.InputTables) : undefined;
+			if (!isDotNetCore) {
+				// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
+				(submitData as IStringAnyIndexer)["inputTablesRaw"] = submitData.InputTables != undefined ? JSON.stringify(submitData.InputTables) : undefined;
+			}
 
 			// const startResult = this.triggerEvent("apiStart", endpoint, apiOptions, trigger);
 			const startResult = await this.triggerEventAsync("apiStart", endpoint, submitData, trigger, apiOptions);
@@ -1089,12 +1116,14 @@ class KatApp implements IKatApp {
 				return undefined;
 			}
 
-			const formData = this.buildFormData(submitData);
+			const formData = apiOptions.files == undefined
+				? JSON.stringify(submitData) 
+				: this.buildFormData(submitData);
 
 			if (apiOptions.files != undefined) {
 				Array.from(apiOptions.files)
 					.forEach((f,i) => {
-						formData.append("PostedFiles[" + i + "]", f);
+						( formData as FormData ).append("PostedFiles[" + i + "]", f);
 					});
 			}
 
@@ -1172,15 +1201,28 @@ class KatApp implements IKatApp {
 	}
 
 	private getApiUrl(endpoint: string): string {
-		let url = "api/" + endpoint;
 		const urlParts = this.options.calculationUrl.split("?");
-		if (urlParts.length === 2) {
-			url += (url.indexOf("?") > -1 ? "&" : "?") + urlParts[1];
+		const endpointParts = endpoint.split("?");
+
+		var qsAnchored = Utils.parseQueryString(this.options.anchoredQueryStrings ?? (urlParts.length == 2 ? urlParts[1] : undefined));
+		var qsEndpoint = Utils.parseQueryString(endpointParts.length == 2 ? endpointParts[1] : undefined);
+		var qsUrl = Utils.extend<IStringIndexer<string>>(qsAnchored, qsEndpoint, { katapp: this.selector ?? this.id });
+
+
+		let url = endpointParts[0];
+		Object.keys(qsUrl).forEach((key, index) => {
+			url += `${(index == 0 ? "?" : "&")}${key}=${qsUrl[key]}`;
+		});
+
+		if (!url.startsWith("api/")) {
+			url = "api/" + url;
 		}
-		return this.getUrlWithId( url );
-	}
-	private getUrlWithId(url: string): string {
-		return url + (url.indexOf("?") > -1 ? "&" : "?") + `katapp=${this.selector ?? this.id}`;
+
+		if (this.options.baseUrl) {
+			url = this.options.baseUrl + url;
+		}
+
+		return url;
 	}
 
 	private buildFormData(submitData: ISubmitApiData): FormData {
@@ -1194,10 +1236,8 @@ class KatApp implements IKatApp {
 					}
 					else {
 						const formName = parentKey ? `${parentKey}[${key}]` : key;
-						const createDictionary =
-							formName == "Inputs" || formName == "Configuration[customInputs]" || formName == "Configuration[manualInputs]";
-
-						if (key != "manualResults") {
+						const createDictionary = formName == "Inputs";
+						if (key != "manualResults" && key != "manualResultsEndpoint") {
 							buildForm(formData, data[key], formName, createDictionary);
 						}
 					}
@@ -1218,27 +1258,6 @@ class KatApp implements IKatApp {
 		buildForm(fd, submitData);
 
 		return fd;
-		/*
-		const useFormData = true; // Used to pass this in...but upload and apiAction both use 'FormData'
-
-		if ( useFormData ) {
-		}
-		else {
-			// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
-		    
-			// If I start using 'raw data' to submit, need to figure out how to make a 'key/value' dictionary like above
-			if ( submitData.Inputs != undefined ) {
-				submitData[ "inputsRaw" ] = JSON.stringify( submitData.Inputs );
-			}
-			if ( submitData.Configuration.manualInputs != undefined ) {
-				submitData.Configuration[ "manualInputsRaw" ] = JSON.stringify( submitData.Configuration.manualInputs );
-			}
-			if ( submitData.Configuration[ "customInputs" ] != undefined ) {
-				submitData.Configuration[ "customInputsRaw" ] = JSON.stringify( submitData.Configuration[ "customInputs" ] );
-			}
-			return submitData;
-		}
-		*/
 	}
 
 	private async processDomElementsAsync() {
@@ -1621,7 +1640,7 @@ class KatApp implements IKatApp {
 					Utils.clone(options, (k, v) => ["content", "view"].indexOf(k) > -1 ? undefined : v)
 				),
 				inputs: {
-					iModalApplication: 1
+					iModalApplication: "1"
 				}
 			};
 
@@ -1674,7 +1693,7 @@ class KatApp implements IKatApp {
 
 		const submitConfiguration: ISubmitApiConfiguration = {
 			Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
-			TraceEnabled: this.nextCalculation.trace ? 1 : 0,
+			TraceEnabled: this.nextCalculation.trace ? "1" : "0",
 			SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
 			RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
 			// Should we be using JWT for AuthID, AdminAuthID, Client?
@@ -2036,10 +2055,10 @@ class KatApp implements IKatApp {
 	private async getViewElementAsync(): Promise<HTMLElement | undefined> {
 		const viewElement: HTMLElement = document.createElement("div");
 
-		if ((this.options.modalAppOptions != undefined || this.options.inputs?.iNestedApplication == 1) && this.options.view != undefined ) {
+		if ((this.options.modalAppOptions != undefined || this.options.inputs?.iNestedApplication == "1") && this.options.view != undefined ) {
 			const view = this.options.view;
 
-			const url = this.getApiUrl(`katapp/verify-katapp?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
+			const url = this.getApiUrl(`${this.options.kamlVerifyUrl}?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
 				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: url, dataType: "json" });

@@ -11,7 +11,7 @@
 		const submitCalculationConfiguration =
 			calcEngines.filter(c => !c.manualResult && c.enabled)
 				.map(c => ({
-					CalcEngine: c.name,
+					Name: c.name,
 					InputTab: c.inputTab,
 					ResultTabs: c.resultTabs,
 					PreCalcs: c.preCalcs
@@ -141,7 +141,7 @@
 						: jqXHR.responseJSON ?? (jqXHR.responseText.startsWith("{") ? JSON.parse(jqXHR.responseText) : { Exceptions: [{ Message: "No additional details available." }] });
 
 					const response: ICalculationFailedResponse = {
-						calcEngine: submitCalculationConfiguration.map(c => c.CalcEngine).join(", "),
+						calcEngine: submitCalculationConfiguration.map(c => c.Name).join(", "),
 						exception: {
 							message: apiResponse.Validations?.[0]?.Message ?? status,
 							detail: apiResponse.Exceptions.map(e => {
@@ -176,7 +176,7 @@
 			};
 
 			failedResponses.push({
-				calcEngine: submitCalculationConfiguration.map( c => c.CalcEngine ).join( ", "),
+				calcEngine: submitCalculationConfiguration.map( c => c.Name ).join( ", "),
 				exception: exception
 			});
 

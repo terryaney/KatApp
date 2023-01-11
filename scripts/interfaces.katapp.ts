@@ -12,6 +12,8 @@ enum TraceVerbosity {
 interface IKatAppDefaultOptions {
 	calculationUrl: string;
 	kamlRepositoryUrl: string;
+	kamlVerifyUrl: string;
+	anchoredQueryStrings?: string;
 
 	debug: {
 		traceVerbosity: TraceVerbosity;
@@ -32,6 +34,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	content?: string;
 
+	baseUrl?: string;
 	dataGroup: string;
 	currentPage: string;
 	userIdHash?: string; // User ID hashed to be used in different caching scenarios
@@ -114,12 +117,12 @@ interface IUpdateApplicationOptions {
 	directives?: IStringIndexer<(ctx: DirectiveContext<Element>) => (() => void) | void>;
 }
 
-interface ICalculationInputs extends IStringAnyIndexer {
-	iConfigureUI?: number;
-	iDataBind?: number;
+interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | undefined> {
+	iConfigureUI?: string;
+	iDataBind?: string;
 	iInputTrigger?: string;
-	iNestedApplication?: number;
-	iModalApplication?: number;
+	iNestedApplication?: string;
+	iModalApplication?: string;
 	tables?: ICalculationInputTable[];
 }
 

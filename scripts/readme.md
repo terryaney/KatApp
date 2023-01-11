@@ -3053,7 +3053,11 @@ Property | Type | Description
 `view` | `string \| undefined` | The name of the Kaml View to use in the KatApp in the format of `folder:name`.  Non-modal KatApps will always pass in a view via `"view": "Channel.Home"`.  The only time `view` is `undefined` is when [application.showModalAsync](#ikatappshowmodalasync) is called and static HTML content is passed in via the [IModalOptions.content](#imodaloptionscontent) or [IModalOptions.contentSelector](#imodaloptionscontentselector).
 `calculationUrl` | `string` | Url (usually an api endpoint in Host Environment) where RBLe Framework calculations should be posted to. A common endpoint that is used is `api/rble/sessionless-proxy`.
 `kamlRepositoryUrl` | `string \| undefined` | Url of where to download Kaml View and Template files from if they are not hosted in Host Environment.  If not provided, defaults to `https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx`
+`kamlVerifyUrl` | `string` | Url (api endpoint in Host Environment) where Kaml views requested modal and nested KatApp applications are verified.  If not provided, defaults to `api/katapp/verify-katapp`.
+`anchoredQueryStrings` | `string?` | Optional query string that should be merged with every api call.  If not provided, it will use the query string (if any) that is present on the `calculationUrl`.
 `debug` | [`IKatAppDebugOptions \| undefined`](#ikatappdebugoptions) | Provide debug configuration used throughout lifetime of KatApp.
+`dataGroup` | `string` | The name of the current 'data group' that the user data is tied to.  Used as identification in tracing.
+`baseUrl` | `string?` | Optional string to indicate the base url to use before calling api endpoints.  It will be prepended before the `api/`.
 `currentPage` | `string` | The name of the current page as it is known in the Host Environment.  If a Kaml View is a shared view for various functionalities, this can be used in Kaml View javascript or a CalcEngine to help distinguish in which 'context' a Kaml View is running.
 `userIdHash` | `string` | If the Kaml View is running in the context of a logged in user, a `userIdHash` can be passed in.  This value is used during caching operations that use browser sessionStorage.
 `environment` | `string` | The name of the current environment as it is known in the Host Environment. This can be used in Kaml View javascript or a CalcEngine if different functionality needs to occur based on which environment (i.e. DEV, QA, PROD) a Kaml View is running<br/><br/>This value is passed into the RBLe Framework calculations via the `iEnvironment` input.
@@ -3389,7 +3393,7 @@ Name | Description
 [`calculateStart`](#ikatappcalculatestart) | Triggered at the start of a RBLe Framework calculation submission.
 [`inputsCache`](#ikatappinputscache) | Triggered during a RBLe Framework calculation before inputs are cached to `sessionStorage` allowing for modification if needed.
 [`resultsProcessing`](#ikatappresultsprocessing) | Triggered during a RBLe Framework calculation before framework processing of RBLe results allowing for modification of raw results if needed.
-[`configureUICalculation`](#ikatappconfigureuicalculation) | Triggered after successful RBLe Framework calculation processing if `iConfigureUI = 1`.
+[`configureUICalculation`](#ikatappconfigureuicalculation) | Triggered after successful RBLe Framework calculation processing if `iConfigureUI = "1"`.
 [`calculation`](#ikatappcalculation) | Triggered after successful RBLe Framework calculation processing.
 [`calculationErrors`](#ikatappcalculationerrors) | Triggered when an exception is thrown during RBLe Framework calculation processing.
 [`calculateEnd`](#ikatappcalculateend) | Triggered at the completion of a RBLe Framework calculation submission, regardless of success or not.
@@ -3442,7 +3446,7 @@ This event is triggered after a nested application has been initialized. It allo
 ```html
 <!-- 
     Sample showing a Kaml View turning off ConfigureUI calculations (via configure-ui="false") and waiting until
-    a nested application successfully triggers 'configureUICalculation' before calling a `iConfigureUI=1` calculation.
+    a nested application successfully triggers 'configureUICalculation' before calling a `iConfigureUI="1"` calculation.
  -->
 <rbl-config templates="NexgenVue:Templates.Shared">
 	<calc-engine key="Home" configure-ui="false" name="Conduent_Nexgen_Home_SE" result-tabs="RBLHome"></calc-engine>
@@ -3452,7 +3456,7 @@ This event is triggered after a nested application has been initialized. It allo
 application.on("nestedAppInitialized.ka", (e, nestedApplication) => {
     nestedApplication.on("configureUICalculation", async () => {
         await application.apiAsync( "common/qna", { calculationInputs: { iAction: "get-credit-card-info" } } );
-        await application.calculateAsync({ iConfigureUI: 1, iDataBind: 1 });
+        await application.calculateAsync({ iConfigureUI: "1", iDataBind: "1" });
     });
 });
 </script>
@@ -3511,7 +3515,7 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
     var refreshKeys = [];
     refreshKeys.push("hwCoverages", "hwCoveredDependents");
 
-    if (submitOptions.inputs.iConfigureUI == 1) {
+    if (submitOptions.inputs.iConfigureUI == "1") {
         //run once.
         refreshKeys.push("hwEventHistory");
     }
@@ -3558,13 +3562,13 @@ application.on("resultsProcessing.ka", (event, results, inputs) => {
 
 **`configureUICalculation( event: Event, lastCalculation: ILastCalculation, application: IKatApp )`**
 
-This event is triggered during RBLe Framework calculation _after a successful calculation and result processing_ and _only_ for a calculation where `iConfigureUI == 1`.  The `configureUICalculation` event is a one time calculation event and can be used to finish setting up Kaml View UI where logic is dependent upon the first calculation results being processed.
+This event is triggered during RBLe Framework calculation _after a successful calculation and result processing_ and _only_ for a calculation where `iConfigureUI == "1"`.  The `configureUICalculation` event is a one time calculation event and can be used to finish setting up Kaml View UI where logic is dependent upon the first calculation results being processed.
 
 #### IKatApp.calculation
 
 **`calculation( event: Event, lastCalculation: ILastCalculation, application: IKatApp )`**
 
-This event is triggered during RBLe Framework calculation _after a successful calculation and result processing_ (even if the calculation has `iConfigureUI == 1`).  Use this handler to process any additional requirements that may be dependent on calculation results.
+This event is triggered during RBLe Framework calculation _after a successful calculation and result processing_ (even if the calculation has `iConfigureUI == "1"`).  Use this handler to process any additional requirements that may be dependent on calculation results.
 
 Note: If calculation contains 'jwt data updating' instructions all the standard [API Lifecycle events](#api-lifecycle) will occur with the `endpoint` being set to `rble/jwtupdate`.
 
@@ -3697,15 +3701,15 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
 ```javascript
 {
     // Framework sets this to 1 on Configure UI calc
-	"iConfigureUI": 1,
+	"iConfigureUI": "1",
     // Framework sets this to 1 on Configure UI calc
-	"iDataBind": 1,
+	"iDataBind": "1",
     // Optional; If changing input triggered calculation, this will contain input name
 	"iInputTrigger": "iFirstName",
 	// Framework sets this to 1 if running via v-ka-app
-    "iNestedApplication": 0, 
+    "iNestedApplication": "0", 
 	// Framework sets this to 1 if running via v-ka-modal
-    "iModalApplication": 0, 
+    "iModalApplication": "0", 
 	// Only assignable from Kaml Views in updateApiOptions
     "tables": [ 
         {
@@ -4037,7 +4041,7 @@ On/Off Flags | General | All RBLe Framework/KatApp Framework columns that are 'f
 `/export-blanks` | Table Switch | By default, columns with blank values are not returned from RBLe service (except for the first row which always contains all columns to provide a table schema to the caller).  Excluding columns with blank values helps reduce network bandwidth.  , however, if table processing requires all columns to be present even when blank to avoid `null`/`undefined` errors, use the `/export-blanks` switch on the column header. **Note**: This switch is only needed for legacy frameworks because the KatApp framework automatically inspects the RBLe Framework results and ensures that all rows have all columns (injecting a 'blank' value for any missing columns; instead of `undefined`) *except* for tables that expect `undefined` to be present to aid in detection of 'not supplied' versus an 'empty value' supplied (i.e. for the [`rbl-input.value`](#rbl-input-table) result column).
 `'` (text forced) | Column Value | As described in the `/export-blanks` switch, blank columns are not exported. If you want to ensure a column is present inside the result row with a 'blank' value and *not* removed, set the CalcEngine column value to `'` and it will be returned and treated as an 'empty value' versus a 'missing value'.
 `/configure-ui` | Table Switch<br/>Column Switch | To configure a table or column to _only_ export during a [`iConfigureUI`](#framework-inputs) calculation, append the `/configure-ui` switch.  This removes the need of providing `on` column or `table-output-control` logic that checks the `iConfigureUI` input explicitly.
-`/iAnd:` `/iOr:` | Table Switch<br/>Column Switch | To configure a table or column to _only_ export when one or more input values are matched. These switches can be used together *and* appear more than one time in a specified configuration.<br/><br/>The format for these switches are a `\|` delimitted list of input match patterns in the format of `/iAnd:iInput1=value1\|iInput2=value2\|...`.  When using `/iAnd:`, every input match pattern must evaluate to `true` to export the current item.  When using `iOr:`, if any input match pattern evaluates to `true` the current item will be exported.<br/><br/>These switches are the successor to the `/configure-ui` switch, but they can be used together.  The `/configure-ui` switch is simply translated into `/iAnd:iConfigureUI=1` before processing.<br/><br/>When these switches are table switches, they accomplish the same functionality as the `table-output-control` feature described above with the benefit of not requiring every table that needs export control to be added to the `table-output-control` table, especially when the logic is simple (i.e. tied to a single input value) and can be view directly with the table.<br/><br/>When these switches are used as a column switch too, which accomplishes the same functionality as the `on` Row ID feature described above with the benefit of easily seeing the 'on' logic and using familiar syntax when used as table switch.
+`/iAnd:` `/iOr:` | Table Switch<br/>Column Switch | To configure a table or column to _only_ export when one or more input values are matched. These switches can be used together *and* appear more than one time in a specified configuration.<br/><br/>The format for these switches are a `\|` delimitted list of input match patterns in the format of `/iAnd:iInput1=value1\|iInput2=value2\|...`.  When using `/iAnd:`, every input match pattern must evaluate to `true` to export the current item.  When using `iOr:`, if any input match pattern evaluates to `true` the current item will be exported.<br/><br/>These switches are the successor to the `/configure-ui` switch, but they can be used together.  The `/configure-ui` switch is simply translated into `/iAnd:iConfigureUI="1"` before processing.<br/><br/>When these switches are table switches, they accomplish the same functionality as the `table-output-control` feature described above with the benefit of not requiring every table that needs export control to be added to the `table-output-control` table, especially when the logic is simple (i.e. tied to a single input value) and can be view directly with the table.<br/><br/>When these switches are used as a column switch too, which accomplishes the same functionality as the `on` Row ID feature described above with the benefit of easily seeing the 'on' logic and using familiar syntax when used as table switch.
 `[]` Nesting | Column Switch | Optional syntax to specify that a column contains result nesting information.  Note that if any `/switch` flags are to be used on this column (i.e. `/text`), they should appear _after_ the closing `]`.  See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
 `/child-only` | Table Switch | By default, any tables used as a child table are still exported normally, so the data appears twice in the results; once nested, and once at root level.  If you want to supress the exporting of data at the normal/root level, you can add the `/child-only` flag indicating that it will only appear in the results nested in its parent table.  _If the parent is not exported, child tables remain supressed._ See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.
 `/type:dataType` | Column Switch | When calculation results are turned into a JSON object (usually in conjunction with `[]` Nesting), by default, all column values will be treated as a `string`.  If certain columns need to be of a different data type, the following values can be provided: `Date`, `Integer`, `Double`, or `Boolean`. See [Table Nesting Configuration](#Table-Nesting-Configuration) for more information.

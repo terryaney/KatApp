@@ -74,7 +74,7 @@ class InputComponent {
 				application.state.inputs[name] = value;
 			}
 
-			value = application.state.inputs[name];
+			value = application.state.inputs[name] as string;
 
 			if (value != undefined) {
 				// If just attaching v-ka-input to a raw input, they might not be using :value="value", so when mounted, just assign it...
@@ -478,7 +478,7 @@ class InputComponent {
 		};
 
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
-		const defaultValue = (name: string) => application.state.inputs[name] ?? props.value;
+		const defaultValue = (name: string) => application.state.inputs[name] as string ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
 			let ceFormat = getInputCeValue("display-format") ?? "";
@@ -517,7 +517,7 @@ class InputComponent {
 			//		- To solve, I followed https://stackoverflow.com/a/56348565/166231 and had to emit my own events.  So I created a
 			//			KatApp.setInput() method that assigned textbox, state.inputs, and (conditionally) dispatches a change event
 			// 4. Went back to method #2 and KatApp.setInput() so that I could support 'range' inputs, b/c v-model currently issue with range support
-			get value() { return application.state.inputs[name] ?? props.value ?? ""; },
+			get value() { return application.state.inputs[name] as string ?? props.value ?? ""; },
 
 			/*
 			// Keeping code here...was going to make it possible to detect if property is reactive or not and use it, but it didn't keep
@@ -653,7 +653,7 @@ class TemplateMultipleInputComponent {
 		}
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
-			return application.state.inputs[names[index]] ?? values[index];
+			return application.state.inputs[names[index]] as string ?? values[index];
 		}
 		const mask = function (name: string) {
 			const index = names.indexOf(name);
