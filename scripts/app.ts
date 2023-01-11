@@ -1693,7 +1693,7 @@ class KatApp implements IKatApp {
 
 		const submitConfiguration: ISubmitApiConfiguration = {
 			Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
-			TraceEnabled: this.nextCalculation.trace ? "1" : "0",
+			TraceEnabled: this.nextCalculation.trace ? 1 : 0,
 			SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
 			RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
 			// Should we be using JWT for AuthID, AdminAuthID, Client?
