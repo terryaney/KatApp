@@ -25,7 +25,7 @@
 			);
 
 		const submitData: ISubmitApiData = {
-			Inputs: Utils.clone(inputs, (k, v) => k == "tables" ? undefined : v),
+			Inputs: Utils.clone(inputs, (k, v) => k == "tables" ? undefined : v?.toString()),
 			InputTables: inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
 			Configuration: submitConfiguration
 		};
@@ -53,7 +53,7 @@
 					? { 'x-rble-session': submitConfiguration.Token, 'Content-Type': undefined }
 					: undefined
 			}).then(
-				function (response, status, jqXHR) {
+				async function (response, status, jqXHR) {
 					Utils.trace(application, "Calculation", "calculateAsync", "Received Success Response", TraceVerbosity.Detailed);
 
 					let result: IRblCalculationSuccessResponses = jqXHR.responseJSON ?? response;
@@ -62,19 +62,20 @@
 						result = JSON.parse(result);
 					}
 
-					result.Results.forEach(r => {
+					for (var i = 0; i < result.Results.length; i++) {
+						var r = result.Results[i];
 						const cacheKey = r.CacheKey;
 
 						if (cacheKey != undefined) {
 							if (r.Result == undefined) {
-								const cacheResult = sessionStorage.getItem(`RBLCache:${cacheKey}`);
+								const cacheResult = await application.getCacheAsync(`RBLCache:${cacheKey}`);
 								if (cacheResult == undefined) {
 									Utils.trace(application, "Calculation", "calculateAsync", `Cache miss for ${r.CalcEngine} with key ${cacheKey}`, TraceVerbosity.Detailed);
 								}
 								else {
 									Utils.trace(application, "Calculation", "calculateAsync", `Use cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
 								}
-								r.Result = JSON.parse(cacheResult!);
+								r.Result = cacheResult! as IRblCalculationSuccessResponse;
 							}
 							else if (r.Result.Exception != undefined) {
 								Utils.trace(application, "Calculation", "calculateAsync", `(RBL exception) Remove cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
@@ -82,10 +83,10 @@
 							}
 							else {
 								Utils.trace(application, "Calculation", "calculateAsync", `Set cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
-								sessionStorage.setItem(`RBLCache:${cacheKey}`, JSON.stringify(r.Result));
+								await application.setCacheAsync(`RBLCache:${cacheKey}`, r.Result);
 							}
 						}
-					});
+					}
 
 					const mergedResults = result as IMergedRblCalculationSuccessResponses;
 

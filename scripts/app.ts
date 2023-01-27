@@ -127,7 +127,9 @@ class KatApp implements IKatApp {
 			},
 			calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
 			kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
-			kamlVerifyUrl: "api/katapp/verify-katapp"
+			kamlVerifyUrl: "api/katapp/verify-katapp",
+			encryptCache: data => typeof (data) == "string" ? data : JSON.stringify(data),
+			decryptCache: cipher => cipher.startsWith("{") ? JSON.parse(cipher) : cipher
 		};
 
 		this.options = Utils.extend<IKatAppOptions>(
@@ -135,8 +137,9 @@ class KatApp implements IKatApp {
 			defaultOptions,
 			options,
 			// for now, I want inspector disabled
-			{ debug: { showInspector: false } }
+			{ debug: { showInspector: false } },
 		);
+		this.options.isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/katapp/calculation";
 
 		const nc = this.nextCalculation;
 		if (nc.trace) {
@@ -237,7 +240,7 @@ class KatApp implements IKatApp {
 
 			uiBlocked: false,
 			needsCalculation: false,
-			inputs: Utils.extend({}, this.options.inputs, this.getLocalStorageInputs()),
+			inputs: Utils.extend({}, this.options.inputs, this.getSessionStorageInputs()),
 			errors: [],
 			warnings: [],
 			onAll(...values: any[]) {
@@ -510,10 +513,10 @@ class KatApp implements IKatApp {
 				: [];
 
 			if (this.options.manualResultsEndpoint != undefined) {
-				const url = this.getApiUrl(this.options.manualResultsEndpoint);
+				const apiUrl = this.getApiUrl(this.options.manualResultsEndpoint);
 
 				try {
-					this.options.manualResults = await $.ajax({ method: "GET", url: url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
+					this.options.manualResults = await $.ajax({ method: "GET", url: apiUrl.url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
 				} catch (e) {
 					Utils.trace(this, "KatApp", "mountAsync", `Error downloading manualResults ${this.options.manualResultsEndpoint}`, TraceVerbosity.None, e);
 				}
@@ -602,9 +605,14 @@ class KatApp implements IKatApp {
 				if (!hasCalcEngines) {
 					const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 						async submitApiOptions => {
-							await this.triggerEventAsync("updateApiOptions", submitApiOptions, this.options.calculationUrl.split("-")[0]);
+							await this.triggerEventAsync(
+								"updateApiOptions",
+								submitApiOptions,
+								this.getApiUrl(this.options.calculationUrl).endpoint
+							);
 						},
-						{}
+						{},
+						true
 					);
 
 					await this.triggerEventAsync("resultsProcessing", manualResultTabDefs, getSubmitApiConfigurationResults.inputs, getSubmitApiConfigurationResults.configuration);
@@ -901,6 +909,29 @@ class KatApp implements IKatApp {
 		return d;
 	}
 
+	public async navigateAsync(navigationId: string, options?: INavigationOptions) {
+		if (options?.inputs != undefined) {
+			const cachingKey =
+				navigationId == undefined // global
+					? "katapp:navigationInputs:global"
+					: options.persistInputs ?? false
+						? "katapp:navigationInputs:" + navigationId.split("?")[0] + ":" + (this.options.userIdHash ?? "Everyone")
+						: "katapp:navigationInputs:" + navigationId.split("?")[0];
+
+			// Shouldn't be previous inputs b/c didn't implement setNavigationInputs method
+			/*
+			const currentInputsJson = sessionStorage.getItem(cachingKey);
+			const currentInputs = currentInputsJson != undefined ? JSON.parse(currentInputsJson) : undefined;
+			Utils.extend(currentInputs, inputs);
+			sessionStorage.setItem(cachingKey, JSON.stringify(currentInputs));
+			*/
+
+			sessionStorage.setItem(cachingKey, JSON.stringify(options.inputs));
+		}
+
+		await this.triggerEventAsync("katAppNavigate", navigationId);
+	}
+
 	public on<TType extends string>(events: TType, handler: JQuery.TypeEventHandler<HTMLElement, undefined, HTMLElement, HTMLElement, TType> | false): KatApp {
 
 		const kaEvents = events.split(" ").map(e => e.endsWith(".ka") ? e : e + ".ka").join(" ") as TType;
@@ -919,6 +950,27 @@ class KatApp implements IKatApp {
 		return this;
 	}
 
+	public async setCacheAsync(key: string, data: string | object): Promise<void> {
+		var cacheResult = this.options.encryptCache(data);
+		if (cacheResult instanceof Promise) {
+			cacheResult = await cacheResult;
+		}
+		sessionStorage.setItem(key, cacheResult);
+	}
+	public async getCacheAsync(key: string): Promise<string | object | undefined> {
+		const data = sessionStorage.getItem(key);
+
+		if (data == undefined) return undefined;
+
+		let cacheResult = this.options.decryptCache(data);
+
+		if (cacheResult instanceof Promise) {
+			cacheResult = await cacheResult;
+		}
+
+		return cacheResult;
+	}
+
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
 		// First calculation done before application is even mounted, just get the results setup
 		const isConfigureUICalculation = customInputs?._iConfigureUI === "1";
@@ -928,15 +980,17 @@ class KatApp implements IKatApp {
 		Utils.trace(this, "KatApp", "calculateAsync", `Start: ${(calcEngines ?? this.calcEngines).map( c => c.name ).join(", ")}`, TraceVerbosity.Detailed);
 
 		try {
+			const apiUrl = this.getApiUrl(this.options.calculationUrl);
 			const serviceUrl = /* this.options.registerDataWithService 
 				? this.options.{what url should this be} 
-				: */ this.getApiUrl(this.options.calculationUrl);
+				: */ apiUrl.url;
 
 			const getSubmitApiConfigurationResults = await this.getSubmitApiConfigurationAsync(
 				async submitApiOptions => {
-					await this.triggerEventAsync("updateApiOptions", submitApiOptions, serviceUrl.split("?")[0]);
+					await this.triggerEventAsync("updateApiOptions", submitApiOptions, apiUrl.endpoint);
 				},
-				customInputs
+				customInputs,
+				true
 			);
 
 			if (!processResults) {
@@ -1037,22 +1091,38 @@ class KatApp implements IKatApp {
 	public async apiAsync(endpoint: string, apiOptions: IApiOptions | undefined, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
 		// calculationSubmitApiConfiguration is only passed internally, when apiAsync is called within the calculation pipeline and there is already a configuration determined
 
+		if (!this.el[0].hasAttribute("ka-cloak")) {
+			this.traceStart = this.traceLast = new Date();
+		}
+
 		apiOptions = apiOptions ?? {};
 
 		const isDownload = apiOptions.isDownload ?? false;
-
+		const that = this;
 		const xhr = new XMLHttpRequest();
-		xhr.onreadystatechange = function (): void {
-			// https://stackoverflow.com/a/29039823/166231
-			if (xhr.readyState == 2) {
-				if (isDownload && xhr.status == 200) {
-					xhr.responseType = "blob";
-				} else {
-					// We are always returning json (binary/responseBinary) from our endpoints
-					xhr.responseType = "json";
+
+		if (!this.options.isDotNetCore) {
+			xhr.onreadystatechange = function (): void {
+				// https://stackoverflow.com/a/29039823/166231
+				if (xhr.readyState == 2) {
+					if (isDownload && xhr.status == 200) {
+						xhr.responseType = "blob";
+					}
+					else {
+						// We are always returning json (binary/responseBinary) from our endpoints
+						xhr.responseType = "json";
+					}
 				}
-			}
-		};
+			};
+		}
+		else {
+			xhr.onreadystatechange = function (): void {
+				// https://stackoverflow.com/a/29039823/166231
+				if (xhr.readyState == 2 && isDownload && xhr.status == 200) {
+					xhr.responseType = "blob";
+				}
+			};
+		}
 
 		this.blockUI();
 		this.state.errors = [];
@@ -1060,32 +1130,31 @@ class KatApp implements IKatApp {
 
 		let successResponse: IStringAnyIndexer | Blob | undefined = undefined;
 		let errorResponse: IApiErrorResponse | undefined = undefined;
+		const apiUrl = this.getApiUrl(endpoint);
 
 		try {
-			const url = this.getApiUrl(endpoint);
-
 			const getSubmitApiConfigurationResults =
 				calculationSubmitApiConfiguration ??
 				await this.getSubmitApiConfigurationAsync(
 					async submitApiOptions => {
-						await this.triggerEventAsync("updateApiOptions", submitApiOptions, endpoint);
+						await this.triggerEventAsync("updateApiOptions", submitApiOptions, apiUrl.endpoint);
 					},
-					apiOptions.calculationInputs
+					apiOptions.calculationInputs,
+					false
 				);
 
 			const calcEngine = this.calcEngines.find(c => !c.manualResult);
 
 			const rbleApiConfiguration = ["Token", "TraceEnabled", "SaveCE", "RefreshCalcEngine", "AuthID", "AdminAuthID", "Client", "TestCE", "CurrentPage", "RequestIP", "CurrentUICulture", "Environment", "Framework"];
 
-			const isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/rble/calculation";
 			const submitData: ISubmitApiData = {
-				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v),
+				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v?.toString()),
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
-				ApiParameters: isDotNetCore && apiOptions.apiParameters != undefined ? apiOptions.apiParameters : undefined,
+				ApiParameters: this.options.isDotNetCore ? apiOptions.apiParameters : undefined,
 				Configuration: Utils.extend(
 					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
-					!isDotNetCore && apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
+					!this.options.isDotNetCore && apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
                     // Endpoints only ever use first calc engine...so reset calcEngines property in case kaml
                     // changed calcEngine in the onCalculationOptions.
 					calcEngine != undefined
@@ -1105,20 +1174,17 @@ class KatApp implements IKatApp {
 				)
 			};
 
-			if (!isDotNetCore) {
+			if (!this.options.isDotNetCore) {
 				// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
 				(submitData as IStringAnyIndexer)["inputTablesRaw"] = submitData.InputTables != undefined ? JSON.stringify(submitData.InputTables) : undefined;
 			}
 
-			// const startResult = this.triggerEvent("apiStart", endpoint, apiOptions, trigger);
-			const startResult = await this.triggerEventAsync("apiStart", endpoint, submitData, trigger, apiOptions);
+			const startResult = await this.triggerEventAsync("apiStart", apiUrl.endpoint, submitData, trigger, apiOptions);
 			if (typeof startResult == "boolean" && !startResult) {
 				return undefined;
 			}
 
-			const formData = apiOptions.files == undefined
-				? JSON.stringify(submitData) 
-				: this.buildFormData(submitData);
+			const formData = this.buildFormData(submitData);
 
 			if (apiOptions.files != undefined) {
 				Array.from(apiOptions.files)
@@ -1129,16 +1195,17 @@ class KatApp implements IKatApp {
 
 			successResponse = await $.ajax({
 				method: "POST",
-				url: url,
+				url: apiUrl.url,
 				data: formData,
+				xhr: function () { return xhr; },
 				contentType: false,
 				processData: false,
-				headers: { "Content-Type": undefined },/*
+				headers: { "Content-Type": undefined }
+				/*, 
 				beforeSend: function (_xhr, settings) {
 					// Enable jquery to assign 'binary' results so I can grab later.
 					(settings as IStringAnyIndexer)["responseFields"]["binary"] = "responseBinary";
 				},*/
-				xhr: function () { return xhr; }
 			});
 
 			if (isDownload) {
@@ -1161,11 +1228,13 @@ class KatApp implements IKatApp {
 			}
 
 			if (!isDownload) {
-				await this.triggerEventAsync("apiComplete", endpoint, successResponse, trigger, apiOptions);
+				await this.triggerEventAsync("apiComplete", apiUrl.endpoint, successResponse, trigger, apiOptions);
 				return successResponse;
 			}
 		} catch (e) {
-			errorResponse = xhr.response as IApiErrorResponse ?? {};
+			errorResponse = this.options.isDotNetCore
+				? (e as JQuery.jqXHR<any>).responseJSON as IApiErrorResponse ?? {}
+				: xhr.response as IApiErrorResponse ?? {};
 
 			this.state.errors = (errorResponse.Validations ?? []).map(v => ({ "@id": v.ID, text: v.Message }));
 			if (this.state.errors.length == 0) {
@@ -1176,7 +1245,7 @@ class KatApp implements IKatApp {
 
 			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, [errorResponse, this.state.errors]);
 
-			await this.triggerEventAsync("apiFailed", endpoint, errorResponse, trigger, apiOptions);
+			await this.triggerEventAsync("apiFailed", apiUrl.endpoint, errorResponse, trigger, apiOptions);
 
 			throw new ApiError("Unable to complete API submitted to " + endpoint, e instanceof Error ? e : undefined, errorResponse);
 		}
@@ -1200,7 +1269,7 @@ class KatApp implements IKatApp {
 		window.URL.revokeObjectURL(url);
 	}
 
-	private getApiUrl(endpoint: string): string {
+	private getApiUrl(endpoint: string): { url: string, endpoint: string } {
 		const urlParts = this.options.calculationUrl.split("?");
 		const endpointParts = endpoint.split("?");
 
@@ -1218,11 +1287,10 @@ class KatApp implements IKatApp {
 			url = "api/" + url;
 		}
 
-		if (this.options.baseUrl) {
-			url = this.options.baseUrl + url;
-		}
-
-		return url;
+		return {
+			url: this.options.baseUrl ? this.options.baseUrl + url : url,
+			endpoint: url.split("?")[0].substring(4)
+		};
 	}
 
 	private buildFormData(submitData: ISubmitApiData): FormData {
@@ -1461,7 +1529,10 @@ class KatApp implements IKatApp {
 				}
 
 			} catch (error) {
-				Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
+				// apiAsync already traces error, so I don't need to do again
+				if (!(error instanceof ApiError)) {
+					Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
+				}
 			}
 
 			try {
@@ -1498,7 +1569,10 @@ class KatApp implements IKatApp {
 				return eventResult;
 
 			} catch (error) {
-				Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, error);
+				// apiAsync already traces error, so I don't need to do again
+				if (!(error instanceof ApiError)) {
+					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, error);
+				}
 			}
 			return true;
 		} finally {
@@ -1507,8 +1581,9 @@ class KatApp implements IKatApp {
 	}
 
 	private get nextCalculation(): INextCalculation {
-		let cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
 		let from = "app";
+
+		let cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
 
 		if (cacheValue == undefined) {
 			cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.options.hostApplication?.selector);
@@ -1675,7 +1750,7 @@ class KatApp implements IKatApp {
 		}
     }
 
-	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: ISubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs): Promise<ISubmitApiOptions> {
+	private async getSubmitApiConfigurationAsync(triggerEventAsync: (submitApiOptions: ISubmitApiOptions) => Promise<void>, customInputs?: ICalculationInputs, isCalculation: boolean = false): Promise<ISubmitApiOptions> {
 		const currentInputs = this.getInputs(customInputs);
 
 		if (currentInputs.tables == undefined) {
@@ -1684,8 +1759,9 @@ class KatApp implements IKatApp {
 
 		const submitApiOptions: ISubmitApiOptions = {
 			inputs: currentInputs,
-			configuration: {}
-		}
+			configuration: {},
+			isCalculation: isCalculation
+		};
 		
 		await triggerEventAsync(submitApiOptions);
 
@@ -1713,7 +1789,8 @@ class KatApp implements IKatApp {
 			configuration: Utils.extend<ISubmitApiConfiguration>(
 				submitConfiguration,
 				submitApiOptions.configuration
-			)
+			),
+			isCalculation: isCalculation
 		};
 	}
 
@@ -2058,10 +2135,10 @@ class KatApp implements IKatApp {
 		if ((this.options.modalAppOptions != undefined || this.options.inputs?.iNestedApplication == "1") && this.options.view != undefined ) {
 			const view = this.options.view;
 
-			const url = this.getApiUrl(`${this.options.kamlVerifyUrl}?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
+			const apiUrl = this.getApiUrl(`${this.options.kamlVerifyUrl}?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
-				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: url, dataType: "json" });
+				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: apiUrl.url, dataType: "json" });
 
 				Utils.extend( this.options, { view: response.path, currentPath: view } );
 
@@ -2127,7 +2204,7 @@ class KatApp implements IKatApp {
 		});
 	}
 
-	private getLocalStorageInputs(): ICalculationInputs {
+	private getSessionStorageInputs(): ICalculationInputs {
 		const inputCachingKey = "katapp:cachedInputs:" + this.options.currentPage + ":" + (this.options.userIdHash ?? "EveryOne");
 		const cachedInputsJson = this.options.inputCaching ? sessionStorage.getItem(inputCachingKey) : undefined;
 		const cachedInputs = cachedInputsJson != undefined && cachedInputsJson != null ? JSON.parse(cachedInputsJson) : undefined;
@@ -2141,9 +2218,8 @@ class KatApp implements IKatApp {
 		const persistedInputsJson = sessionStorage.getItem(persistedInputsKey);
 		const persistedInputs = persistedInputsJson != undefined ? JSON.parse(persistedInputsJson) : undefined;
 
-		const localStorageInputs = Utils.extend<ICalculationInputs>({}, cachedInputs, persistedInputs, oneTimeInputs);
-
-		return localStorageInputs;
+		const sessionStorageInputs = Utils.extend<ICalculationInputs>({}, cachedInputs, persistedInputs, oneTimeInputs);
+		return sessionStorageInputs;
 	}
 
 	private processKamlMarkup(kaml: Element, resourceKey: string): void {

@@ -25,10 +25,13 @@ interface IKatAppDefaultOptions {
 	};
 
 	// Not really used yet, no one setting to 'true', only defaults to false
-	inputCaching: boolean; // Whether or not inputs are cached to/restored from LocalStorage
+	inputCaching: boolean; // Whether or not inputs are cached to/restored from LocalStorage,
+	encryptCache(data: string | object): string | Promise<string>;
+	decryptCache(cipher: string): string | object | Promise<string | object>;
 }
 
 interface IKatAppOptions extends IKatAppDefaultOptions {
+	isDotNetCore: boolean; /* customParameters - hack check for .net core project */
 	// Only missing when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	view?: string;
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
@@ -107,7 +110,7 @@ interface IKatApp {
 }
 
 interface IUpdateApplicationOptions {
-	model?: any;
+	model?: IStringAnyIndexer;
 	options?: {
 		modalAppOptions?: IModalAppOptions;
 		inputs?: ICalculationInputs;
@@ -142,8 +145,8 @@ interface IApplicationData {
 	_inspectors: IStringIndexer<number>;
 	_inspectorMounted: (el: Element, inspectorCommentId: string) => void;
 	_domElementMounted: (el: HTMLElement) => void;
-	_templateItemMounted: (templateId: string, el: Element, scope?: any) => void;
-	_templateItemUnmounted: (templateId: string, el: Element, scope?: any) => void;
+	_templateItemMounted: (templateId: string, el: Element, scope?: unknown) => void;
+	_templateItemUnmounted: (templateId: string, el: Element, scope?: unknown) => void;
 
 	components: IStringIndexer<IStringAnyIndexer>;
 
@@ -178,6 +181,7 @@ interface IRblApplicationData {
 interface ISubmitApiOptions {
 	inputs: ICalculationInputs,
 	configuration: ISubmitApiConfiguration | IStringIndexer<string>;
+	isCalculation: boolean;
 }
 
 interface ILastCalculation {
@@ -215,8 +219,8 @@ interface IModalAppOptions extends IModalOptions {
 
 	// These methods are used when the modal needs to return more than just true/false to the caller
 	// in conjunction with creating their own toolbar
-	confirmedAsync?: (response?: any) => Promise<void>;
-	cancelled?: (response?: any) => void;
+	confirmedAsync?: (response?: unknown) => Promise<void>;
+	cancelled?: (response?: unknown) => void;
 	triggerLink?: JQuery;
 
 	// If a dialog does its own buttons and is a 'step' based dialog and at the final step hides all but 'ok', the 'X' at the top of the dialog needs to trigger 'confirm' as well.
@@ -224,7 +228,7 @@ interface IModalAppOptions extends IModalOptions {
 }
 interface IModalResponse {
 	confirmed: boolean;
-	response: any;
+	response: unknown;
 }
 
 
@@ -240,7 +244,10 @@ interface IApiErrorResponse {
 	ValidationWarnings: { ID: string, Message: string }[] | undefined;
 	Result: IStringAnyIndexer;
 }
-
+interface INavigationOptions {
+	inputs?: ICalculationInputs;
+	persistInputs?: boolean;
+}
 
 // Directive Options
 interface IKaNavigateModel {
@@ -252,9 +259,9 @@ interface IKaNavigateModel {
 	model?: string;
 }
 interface IKaModalModel extends IModalOptions {
-	confirmed?: (response: any | undefined, application: KatApp) => void;
-	cancelled?: (response: any | undefined, application: KatApp) => void;
-	catch?: (e: any | undefined, application: KatApp) => void;
+	confirmed?: (response: unknown | undefined, application: KatApp) => void;
+	cancelled?: (response: unknown | undefined, application: KatApp) => void;
+	catch?: (e: unknown | undefined, application: KatApp) => void;
 	model?: string;
 }
 interface IKaAppModel {
@@ -265,7 +272,7 @@ interface IKaAppModel {
 interface IKaApiModel extends IApiOptions {
 	endpoint: string;
 	then?: (response: IStringAnyIndexer | undefined, application: KatApp) => void;
-	catch?: (e: any | undefined, application: KatApp) => void;
+	catch?: (e: unknown | undefined, application: KatApp) => void;
 	confirm?: IModalOptions;
 }
 interface IKaHighchartModel {

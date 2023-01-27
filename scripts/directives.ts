@@ -177,7 +177,6 @@ class DirectiveKaNavigate implements IKaDirective {
 				}
 
 				const inputs = scope.inputs ?? (scope.ceInputs != undefined ? {} : undefined);
-				let persistInputs = scope.persistInputs ?? false;
 
 				// ceInputs are 'key="" key=""' string returned from CalcEngine, used to just put {inputs} into template markup and it dumped attribute
 				// if there, otherwise not, so parse them and assign as inputs
@@ -194,26 +193,7 @@ class DirectiveKaNavigate implements IKaDirective {
 					}
 				}
 
-				if (inputs != undefined) {
-					const cachingKey =
-						navigationId == undefined // global
-							? "katapp:navigationInputs:global"
-							: persistInputs
-								? "katapp:navigationInputs:" + navigationId + ":" + (application.options.userIdHash ?? "Everyone")
-								: "katapp:navigationInputs:" + navigationId;
-
-					// Shouldn't be previous inputs b/c didn't implement setNavigationInputs method
-					/*
-					const currentInputsJson = sessionStorage.getItem(cachingKey);
-					const currentInputs = currentInputsJson != undefined ? JSON.parse(currentInputsJson) : {};
-					Utils.extend(currentInputs, inputs);
-					sessionStorage.setItem(cachingKey, JSON.stringify(currentInputs));
-					*/
-
-					sessionStorage.setItem(cachingKey, JSON.stringify(inputs));
-				}
-
-				await application.triggerEventAsync("katAppNavigate", navigationId);
+				await application.navigateAsync(navigationId, { inputs: inputs, persistInputs: scope.persistInputs ?? false });
 
 				return false;
 			};

@@ -83,6 +83,7 @@
 			const startDelta = Math.abs(currentTrace.getTime() - startTrace.getTime());
 			const lastDelta = Math.abs(currentTrace.getTime() - lastTrace.getTime());
 			application.traceLast = currentTrace;
+			// Date MillisecondsFromStart MilliscondsFromLastTrace DataGroup KatAppId CallerType CallerMethod Message
 			const log = `${String.localeFormat("{0:yyyy-MM-dd hh:mm:ss:ff}", currentTrace)}\t${String(startDelta).padStart(5, "0")}\t${String(lastDelta).padStart(5, "0")}\t${application.options.dataGroup}\t${katApp ?? "Unavailable"}\t${origin}\t${methodName}: ${message}`;
 
 			if (groupItems.length > 0) {

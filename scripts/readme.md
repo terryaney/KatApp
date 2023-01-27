@@ -3147,6 +3147,7 @@ Name | Description
 [`update`](#ikatappupdate) | Allows for the Kaml View to update options provided in the [`IUpdateApplicationOptions`](#iupdateapplicationoptions).
 [`on`](#ikatappon) | Allows for the Kaml View to listen to KatApp events.
 [`off`](#ikatappoff) | Allows for the Kaml View to stop listening to KatApp events.
+[`navigateAsync`](#ikatappnavigateasync) | Manually trigger a navigation.
 [`calculateAsync`](#ikatappcalculateasync) | Manually call a RBLe Framework calculation.
 [`apiAsync`](#ikatappapiasync) | Use an [`IApiOptions`](#iapioptions) and [`ISubmitApiOptions`](#ISubmitApiOptions) object to submit a payload to an api endpoint.
 [`showModalAsync`](#ikatappshowmodalasync) | Manually show a modal dialog configured by the [`IModalOptions`](#imodaloptions) parameter.
@@ -3180,9 +3181,15 @@ The `on` method is a pass through to the [JQuery.on](#https://api.jquery.com/on/
 
 The `off` method is a pass through to the [JQuery.off](#https://api.jquery.com/off/) method with the benefit of ensuring that the `.ka` namespace is automatically added if needed and the method is based off of the `IKatApp` which helps provide a fluent api for calling the `update` and `off` methods.
 
+#### IKatApp.navigateAsync
+
+**`navigateAsync(navigationId: string, options?: INavigationOptions): Promise<void>;`**
+
+Manually trigger a navigation.  The [INavigationOptions](#inavigationoptions) object allows for passing (and optionally persisting) inputs to be passed to the next application.
+
 #### IKatApp.calculateAsync
 
-**`calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;`**
+**`calculateAsync(customInputs?: [ICalculationInputs](#icalculationinputs), processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;`**
 
 Manually call a RBLe Framework calculation.  The parameters allow for a list of additional inputs to be passed in, whether or not the results should be [processed](#rbl-framework-result-processing-in-katapp-state) or simply return the raw results and an optional list of `ICalcEngines` to run in place of the KatApp's configured CalcEngines.
 
@@ -3691,6 +3698,16 @@ const validation: IValidation = {
 ```
 
 If the `@id` property of an `IValidation` item inside [state.errors](#errors:-Array<IValidation>) or [state.warnings](#warnings:-Array<IValidation>) matches the 'name' of an [v-ka-input](#v-ka-input) item, the `error` or `warning` property of the [v-ka-input Scope](#v-ka-input-Scope), respectively, will be set to the `IValidation.text` property.
+
+### INavigationOptions
+
+`INavigationOptions` allows for additional actions to occur during a navigation lifecycle.  The options available are described below.
+
+Property | Type | Description
+---|---|---
+`inputs` | [`ICalculationInputs`](#icalculationinputs) | If inputs should be passed to the KatApp being navigated to, an `ICalculationInputs` object can be provided.
+`persistInputs` | `boolean` | Whether or not to persist the inputs in sessionStorage.  If `true` and the user navigates away from current view and comes back the inputs will automatically be injected into the KatApp.  If `false` and the user navigates away and returns the input values will not longer be present. The default value is `false`.
+
 
 ### ICalculationInputs
 

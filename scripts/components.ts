@@ -20,7 +20,7 @@ class InputComponent {
 		return ((str: string) => {
 			const hit = this.stringCache[str]
 			return hit || (this.stringCache[str] = fn(str))
-		}) as any;
+		}) as T;
 	}
 
 	public static unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
@@ -391,7 +391,7 @@ class InputComponent {
 						middle: (e) => 'button' in e && (e as MouseEvent).button !== 1,
 						right: (e) => 'button' in e && (e as MouseEvent).button !== 2,
 						exact: (e, modifiers) =>
-							systemModifiers.some((m) => (e as any)[`${m}Key`] && !modifiers[m])
+							systemModifiers.some((m) => (e as unknown as IStringIndexer<boolean>)[`${m}Key`] && !modifiers[m])
 					};
 
 					// map modifiers
@@ -400,7 +400,7 @@ class InputComponent {
 						if (modifiers.middle) arg = 'mouseup'
 					}
 
-					const hyphenate = this.cacheStringFunction((str: string) => {
+					const hyphenate = this.cacheStringFunction(str => {
 						const hyphenateRE = /\B([A-Z])/g;
 						return str.replace(hyphenateRE, '-$1').toLowerCase();
 					});
