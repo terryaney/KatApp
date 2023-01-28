@@ -1745,7 +1745,7 @@ class KatApp implements IKatApp {
 		if (this.options.inputCaching) {
 			const inputCachingKey = "katapp:cachedInputs:" + this.options.currentPage + ":" + (this.options.userIdHash ?? "EveryOne");
 			const cachedInputs = Utils.clone<ICalculationInputs>(inputs);
-			await this.triggerEventAsync("inputsCache", cachedInputs);
+			await this.triggerEventAsync("inputsCached", cachedInputs);
 			sessionStorage.setItem(inputCachingKey, JSON.stringify(cachedInputs));
 		}
     }

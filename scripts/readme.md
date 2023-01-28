@@ -3064,12 +3064,15 @@ Property | Type | Description
 `requestIP` | `string` | The IP address of the browser running the current KatApp.
 `currentUICulture` | `string` | The current culture as it is known in the Host Environment.  This enables culture specific number and date formatting and is in the format of `languagecode2-country/regioncode2`.  The default value is `en-US`.<br/><br/>This value is passed into the RBLe Framework calculations via the `iCurrentUICulture` input.
 `inputs` | [`ICalculationInputs`](#icalculationinputs) | The Host Environment can pass in inputs that serve as the default values to inputs rendered in the Kaml View or simply as 'fixed' inputs (if no matching rendered inputs are present that would update them) that will be passed to every RBLe Framework calculation.  This value becomes the initial value for [`IApplicationData.inputs`](#iapplicationdatainputs-icalculationinputs) when the KatApp is created.
+`inputCaching` | `boolean` | Whether or not the page inputs are cached after each calculation.  This allows the user to leave a page and come back and the inputs would automatically be retored.  The default is `false`.
 `manualResults`<sup>1</sup> | [`Array<IManualTabDef>`](#imanualtabdef) | The Host Environment can pass in 'manual results'.  These are results that are usually generated one time on the server and cached as needed.  Passing manual results to a KatApp removes the overhead needed to perform a RBLe Framework calculation.  
 `manualResultsEndpoint` | `string` | Similiar to `manualResults`, if provided, this endpoint could be called to retrieve a `manualResults` object from the Host Environment that is of type [`Array<IManualTabDef>`](#imanualtabdef).  Used to leverage browser caching.
 `relativePathTemplates`<sup>2</sup> | `IStringIndexer<string>` | If the Host Environment hosts all its own Kaml Views and Kaml Template files, instead of the KAT CMS, all the relative paths to existing Kaml Template files can be provided, instructing KatApp Framework to request it via relative path.
 `modalAppOptions` | [`IModalAppOptions`](#imodalappoptions) | Read Only; When a KatApp is being rendered as a modal ([v-ka-modal](#v-ka-modal)) application, the KatApp Framework will automatically assign this property; a [IModalAppOptions](#imodalappoptions) created from the [IModalOptions](#imodaloptions) parameter passed in when creating modal application.<br/><br/>This property is not accessed often; `modalAppOptions` is accessed when a Kaml View, launched as a modal, needs to call `modalAppOptions.cancelled` or `modalAppOptions.confirmedAsync`.
 `hostApplication` | [`IKatApp`](#ikatapp) | Read Only; When a KatApp is being rendered as a nested ([v-ka-app](#v-ka-app)) or modal ([v-ka-modal](#v-ka-modal)) application, the KatApp Framework will automatically assign this property to a reference of the KatApp application that is creating the nested or modal application.<br/><br/>This property is not acesed often; `hostApplication` is access when a Kaml View needs to call [`KatApp.notifyAsync`](#ikatappnotifyasync).
 `katAppNavigate` | `(id: string, props: IModalOptions, el: HTMLElement) => void \| undefined` | To allow navigation to occur from within a KatApp (via [v-ka-navigate](#v-ka-navigate)), a reference to a javascript function must be assigned to this property. The KatApp Framework will call this function (created by the Host Environment) when a navigation request has been issued.  It is up to the Host Environment's javascript to do the appropriate processing to initiate a successful navigation.
+`encryptCache` | `(data: object) => string \| Promise<string>` | RBL results are cached in browser storage.  This delegate allows the client to provide a JavaScript function that will encrypt the data before storing the results.  By default, the results are not cached.
+`decryptCache` | `(cipher: string) => object \| Promise<object>` | If the RBL results were encrypted before caching in browser storage, this delegate allows the client to provide a JavaScript function that will decrypt the data before returning the results.  By default, the results are not cached.
 
 <sup>1</sup> Not only can the manual results be a RBLe Framework calculation performed on the server, it can also be post processed and modified a bit before passing in to the KatApp or the manual results can be completely generated via server side code without using the RBLe Framework.  As long as the results match the `IManualTabDef` interface, it can be used.
 
@@ -3365,7 +3368,7 @@ When a calculation is initiated via an [input change triggering a calculation](#
 
 1. [updateApiOptions](#ikatappupdateapioptions) - allow Kaml View to update inputs and configuration used during calculation
 1. [calculateStart](#ikatappcalculatestart)
-1. [inputsCache](#ikatappinputscache) - allow Kaml View to provide additional inputs/information to cache before caching current inputs (if configured to cache)
+1. [inputsCached](#ikatappinputscached) - allow Kaml View to provide additional inputs/information to cache before caching current inputs (if configured to cache)
 1. Success events
     1. [resultsProcessing](#ikatappresultsprocessing) - all Kaml View to inspect and/or modify the calculation results before they are [processed](#rbl-framework-result-processing-in-katapp-state)
     1. All events in [Api Lifecycle](#api-lifecycle) if `jwt-updates` result table is provided and processed
@@ -3398,7 +3401,7 @@ Name | Description
 [`nestedAppRendered`](#ikatappnestedapprendered) | Triggered on host application after a nested application has been rendered.
 [`updateApiOptions`](#ikatappupdateapioptions) | Triggered immediately before submission to server side API calls to allow for Kaml Views to modify inputs or configuration settings before submission.
 [`calculateStart`](#ikatappcalculatestart) | Triggered at the start of a RBLe Framework calculation submission.
-[`inputsCache`](#ikatappinputscache) | Triggered during a RBLe Framework calculation before inputs are cached to `sessionStorage` allowing for modification if needed.
+[`inputsCached`](#ikatappinputscached) | Triggered during a RBLe Framework calculation before inputs are cached to `sessionStorage` allowing for modification if needed.
 [`resultsProcessing`](#ikatappresultsprocessing) | Triggered during a RBLe Framework calculation before framework processing of RBLe results allowing for modification of raw results if needed.
 [`configureUICalculation`](#ikatappconfigureuicalculation) | Triggered after successful RBLe Framework calculation processing if `iConfigureUI = "1"`.
 [`calculation`](#ikatappcalculation) | Triggered after successful RBLe Framework calculation processing.
@@ -3537,9 +3540,9 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
 
 This event is triggered at the start of a RBLe Framework calculation after the `updateApiOptions` has been triggered.  Use this event to perform any actions that need to occur before the calculation is submitted (i.e. custom processing of UI blockers or enabled state of inputs).  If the handler returns `false` or calls `e.preventDefault()`, then the calculation is immediately cancelled and only the `calculateEnd` event will be triggered.
 
-#### IKatApp.inputsCache
+#### IKatApp.inputsCached
 
-**`inputsCache( event: Event, cachedInputs: ICalculationInputs, application: IKatApp )`**
+**`inputsCached( event: Event, cachedInputs: ICalculationInputs, application: IKatApp )`**
 
 This event is triggered immediately before inputs are cached to `sessionStorage` (if `options.inputCaching == true`).  It allows Kaml Views to massage the inputs before being cached if needed.
 
