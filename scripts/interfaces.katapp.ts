@@ -26,8 +26,8 @@ interface IKatAppDefaultOptions {
 
 	// Not really used yet, no one setting to 'true', only defaults to false
 	inputCaching: boolean; // Whether or not inputs are cached to/restored from LocalStorage,
-	encryptCache(data: string | object): string | Promise<string>;
-	decryptCache(cipher: string): string | object | Promise<string | object>;
+	encryptCache(data: object): string | Promise<string>;
+	decryptCache(cipher: string): object | Promise<object>;
 }
 
 interface IKatAppOptions extends IKatAppDefaultOptions {

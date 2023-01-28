@@ -20,7 +20,7 @@
 		return false;
 	}
 
-	public static processHelpTips(application: KatApp, container: JQuery, selector?: string): void {
+	public static processHelpTips(application: KatApp, container: JQuery, selector?: string, tipsToProcess?: JQuery): void {
 
 		const isContainerKatApp = container.closest("[ka-id]").length == 1;
 
@@ -113,7 +113,7 @@
 				: content;
 		};
 
-		select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container)
+		(tipsToProcess ?? select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container))
 			.not('[ka-init-tip="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);

@@ -950,14 +950,14 @@ class KatApp implements IKatApp {
 		return this;
 	}
 
-	public async setCacheAsync(key: string, data: string | object): Promise<void> {
+	public async setCacheAsync(key: string, data: object): Promise<void> {
 		var cacheResult = this.options.encryptCache(data);
 		if (cacheResult instanceof Promise) {
 			cacheResult = await cacheResult;
 		}
 		sessionStorage.setItem(key, cacheResult);
 	}
-	public async getCacheAsync(key: string): Promise<string | object | undefined> {
+	public async getCacheAsync(key: string): Promise<object | undefined> {
 		const data = sessionStorage.getItem(key);
 
 		if (data == undefined) return undefined;
