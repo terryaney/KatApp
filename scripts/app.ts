@@ -851,11 +851,13 @@ class KatApp implements IKatApp {
 		};
 
 		if (isInvalid) {
-			this.select(".modal-footer-buttons button, .modal-footer-buttons a.btn").remove();
-			this.select(".modal-footer-buttons").append(
-				$(`<button type="button" class="${options.css!.continue} continueButton">Close</button>`)
-			);
-			this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
+			const hasCloseButton = this.select(".modal-header .btn-close").length == 1;
+			this.select(".modal-footer-buttons button, .modal-footer-buttons a.btn, .modal-header .btn-close").remove();
+			this.select(".modal-footer-buttons").append($(`<button type="button" class="${options.css!.continue} continueButton">Close</button>`));
+			if (hasCloseButton) {
+				this.select(".modal-header").append($('<button type="button" class="btn-close" aria-label="Close"></button>'));
+			}
+			this.select('.modal-footer-buttons .continueButton, .modal-header .btn-close').on("click.ka", async (e) => {
 				e.preventDefault();
 				await options.cancelled!();
 			});
