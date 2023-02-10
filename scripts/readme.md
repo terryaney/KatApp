@@ -4561,4 +4561,4 @@ Configure two CalcEngines with different tabs to run in the pipeline before the 
 1. Original Docs: See [calculate With Different CalcEngine](#calculate-With-Different-CalcEngine) for information about running secondary calculations via javascript and without requiring configuration up front.
 1. Comment about how errors/warnings are cleared out everytime there is a 'normal calculation' or apiAsync call
 1. Section about how 'modals work' and different ways to call them and work with them (see cheatsheet)
-1. Section discussing the 'automatic' flows; a) when I load kaml views and b) after calculations (i.e. help tips and anything else automagic)
+1. Section discussing the 'automatic' flows; a) when I load kaml views and b) after calculations (i.e. help tips (and .ka-ht-js class) and anything else automagic)
