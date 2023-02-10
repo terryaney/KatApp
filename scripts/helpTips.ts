@@ -33,7 +33,7 @@
 		if ($("html").attr("ka-init-tip") != "true") {
 			$("html")
 				.on("click.ka", e => {
-					if (e.target.tagName == 'A' || e.target.tagName == 'BUTTON' || $(e.target).closest(".popover-header, .popover-body").length == 0 || $(e.target).closest("a, button").length > 0) {
+					if ((e.target.tagName == 'A' && !e.target.classList.contains("ka-ht-js")) || e.target.tagName == 'BUTTON' || $(e.target).closest(".popover-header, .popover-body").length == 0 || $(e.target).closest("a, button").not(".ka-ht-js").length > 0) {
 						HelpTips.hideVisiblePopover();
 					}
 				})

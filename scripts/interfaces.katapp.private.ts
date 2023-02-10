@@ -165,14 +165,6 @@ interface IRblCalculationSuccessResponse {
 		}
 	}
 }
-interface IRblCalculationFailedResponse {
-	Validations?: Array<{ Message: string }>;
-	Exceptions: Array<{
-		Type: string;
-		Message: string;
-		StackTrace: Array<string>;
-	}>;
-}
 
 // Interfaces used by KatApp framework
 interface ICalculationFailedResponse {

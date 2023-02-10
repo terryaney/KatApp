@@ -197,28 +197,27 @@
 		} catch (e) {
 			Utils.trace(application, "Calculation", "calculateAsync", "Received Error Response", TraceVerbosity.Detailed);
 
-			const errorResponse =
+			const errorResponse: IApiErrorResponse =
 				(e as JQuery.jqXHR<any>).responseJSON ??
 				(((e as JQuery.jqXHR<any>).responseText?.startsWith("{") ?? false) ? JSON.parse((e as JQuery.jqXHR<any>).responseText) : undefined) ??
-				{ Exceptions: [{ Message: "No additional details available." }] };
-
-			const apiResponse: IRblCalculationFailedResponse = errorResponse.Message && errorResponse.MessageDetail
-				? { Exceptions: [{ Message: errorResponse.Message }] }
-				: errorResponse;
+				{ exceptions: [{ message: "No additional details available." }] };
 
 			const response: ICalculationFailedResponse = {
 				calcEngine: (submitData.Configuration as ISubmitCalculationConfiguration).CalcEngines.map(c => c.Name).join(", "),
 				exception: {
-					message: apiResponse.Validations?.[0]?.Message ?? status,
-					detail: apiResponse.Exceptions.map(e => {
+					message:
+						errorResponse.errors?.[Object.keys(errorResponse.errors)[0]][0] ??
+						(errorResponse.exceptions?.[0] ?? {}).message ??
+						status,
+					detail: errorResponse.exceptions?.map(e => {
 						const detail: ICalculationResponseExceptionDetail = {
-							message: e.Message,
-							type: e.Type,
-							stackTrace: e.StackTrace
+							message: e.message,
+							type: e.type,
+							stackTrace: e.stackTrace
 						};
 
 						return detail;
-					}),
+					}) ?? [],
 					configuration: submitData.Configuration,
 					inputs: inputs
 				}

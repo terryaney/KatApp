@@ -1238,14 +1238,22 @@ class KatApp implements IKatApp {
 				? (e as JQuery.jqXHR<any>).responseJSON as IApiErrorResponse ?? {}
 				: xhr.response as IApiErrorResponse ?? {};
 
-			this.state.errors = (errorResponse.Validations ?? []).map(v => ({ "@id": v.ID, text: v.Message }));
+			if (errorResponse.errors != undefined) {
+				for (var id in errorResponse.errors) {
+					this.state.errors.push({ "@id": id, text: errorResponse.errors[id][0] });
+				}
+			}
 			if (this.state.errors.length == 0) {
 				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
 			}
 
-			this.state.warnings = (errorResponse.ValidationWarnings ?? []).map(v => ({ "@id": v.ID, text: v.Message }));
+			if (errorResponse.warnings != undefined) {
+				for (var id in errorResponse.warnings) {
+					this.state.warnings.push({ "@id": id, text: errorResponse.warnings[id][0] });
+				}
+			}
 
-			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, [errorResponse, this.state.errors]);
+			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, errorResponse!.errors != undefined ? [errorResponse, this.state.errors.map(e => ({ "@id": e[ "@id" ], "text": e.text }) )] : errorResponse );
 
 			await this.triggerEventAsync("apiFailed", apiUrl.endpoint, errorResponse, trigger, apiOptions);
 
@@ -1573,7 +1581,7 @@ class KatApp implements IKatApp {
 			} catch (error) {
 				// apiAsync already traces error, so I don't need to do again
 				if (!(error instanceof ApiError)) {
-					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, error);
+					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, ( error as IStringAnyIndexer ).responseJSON ?? error);
 				}
 			}
 			return true;

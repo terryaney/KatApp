@@ -239,11 +239,28 @@ interface IApiOptions {
 	calculateOnSuccess?: boolean | ICalculationInputs
 	files?: FileList | null;
 }
+// .net core ValidationProblem format
 interface IApiErrorResponse {
-	Validations: { ID: string, Message: string }[] | undefined;
-	ValidationWarnings: { ID: string, Message: string }[] | undefined;
-	Result: IStringAnyIndexer;
+	status: number;
+	title: string;
+	type: string;
+	errors?: IStringIndexer<Array<string>>;
+	warnings?: IStringIndexer<Array<string>>;
+
+	// extensions
+	exceptions?: Array<IExceptionDetail>;
+	traceId?: string;
+	apiResult?: IStringAnyIndexer;
+	apiPayload?: IStringAnyIndexer;
 }
+
+interface IExceptionDetail {
+	message: string;
+	type: string;
+	stackTrace: Array<string>;
+	innerException?: IExceptionDetail;
+};
+
 interface INavigationOptions {
 	inputs?: ICalculationInputs;
 	persistInputs?: boolean;
@@ -305,6 +322,7 @@ interface IKaInputModel {
 	maxLength?: number;
 	displayFormat?: string;
 	mask?: string;
+	keypressRegex?: string;
 
 	min?: number | string;
 	max?: number | string;
@@ -396,7 +414,7 @@ interface IKaInputGroupModel {
 	css?: IKaInputScopeCss[];
 	displayFormats?: string[];
 	masks?: string[];
-
+	keypressRegexs?: string[];
 	maxLengths?: number[];
 	mins?: string[];
 	maxes?: string[];

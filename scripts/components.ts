@@ -42,6 +42,7 @@ class InputComponent {
 		noCalc: (name: string) => boolean,
 		displayFormat: (name: string) => string | undefined,
 		mask: (name: string) => string | undefined,
+		keypressRegex: (name: string) => string | undefined,
 		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>,
 		refs: IStringIndexer<HTMLElement>
 	) {
@@ -118,13 +119,21 @@ class InputComponent {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, input, type, mask, removeError, inputEventAsync);
+			this.bindInputEvents(application, name, input, type, mask, keypressRegex, removeError, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
 	}
 
-	private static bindInputEvents(application: KatApp, name: string, input: HTMLInputElement, type: string | null, mask: (name: string) => string | undefined, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void>): void {
+	private static bindInputEvents(
+		application: KatApp,
+		name: string,
+		input: HTMLInputElement, type: string | null,
+		mask: (name: string) => string | undefined,
+		keypressRegex: (name: string) => string | undefined,
+		removeError: () => void,
+		inputEventAsync: (calculate: boolean) => Promise<void>
+	): void {
 		input.addEventListener("change", async () => await inputEventAsync(true));
 
 		if (type != "file" && type != "checkbox" && input.tagName != "SELECT") {
@@ -146,6 +155,18 @@ class InputComponent {
 					}
 				});
 			}
+		}
+
+		const inputKeypressRegex = keypressRegex(name);
+
+		if (inputKeypressRegex != null) {
+			const kpRegex = new RegExp(inputKeypressRegex);
+
+			input.addEventListener("beforeinput", (event: InputEvent) => {
+				if (event.inputType == "insertText" && event.data != null && !kpRegex.test(event.data)) {
+					event.preventDefault();
+				}
+			});
 		}
 
 		const inputMask = mask(name);
@@ -478,6 +499,7 @@ class InputComponent {
 		};
 
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
+		const keypressRegex = (name: string) => getInputCeValue("keypress-regex") ?? props.keypressRegex;
 		const defaultValue = (name: string) => application.state.inputs[name] as string ?? props.value;
 		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
@@ -588,7 +610,7 @@ class InputComponent {
 				try {
 					await application.apiAsync(props.uploadEndpoint, { files: files });
 				} catch (e) {
-					Utils.trace(application, "InputComponent", "uploadAsync", `API Upload to ${props.uploadEndpoint} failed.`, TraceVerbosity.None, e);
+					// logged in apiAsync already
 				}
 				finally {
 					application.setInputValue(name, undefined);
@@ -596,7 +618,7 @@ class InputComponent {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, mask, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 
 		return scope;
 	}
@@ -623,6 +645,7 @@ class TemplateMultipleInputComponent {
 		const placeHolders = props.placeHolders != undefined ? props.placeHolders : names.map(n => '');		
 		const displayFormats = props.displayFormats != undefined ? props.displayFormats : names.map(n => undefined);
 		const masks = props.masks != undefined ? props.masks : names.map(n => undefined);
+		const keypressRegexs = props.keypressRegexs != undefined ? props.keypressRegexs : names.map(n => undefined);
 		const helps = props.helps != undefined ? props.helps : names.map(n => undefined);
 		const css = props.css != undefined ? props.css : names.map(n => undefined);
 		const maxLengths = props.maxLengths != undefined ? props.maxLengths : names.map(n => undefined);
@@ -659,6 +682,10 @@ class TemplateMultipleInputComponent {
 			const index = names.indexOf(name);
 			return getInputCeValue(index, "mask") ?? masks[index];
 		}
+		const keypressRegex = function (name: string) {
+			const index = names.indexOf(name);
+			return getInputCeValue(index, "keypressRegex") ?? keypressRegexs[index];
+		}		
 		const displayFormat = function (name: string) {
 			const index = names.indexOf(name);
 			let ceFormat = getInputCeValue(index, "display-format") ?? "";
@@ -728,7 +755,7 @@ class TemplateMultipleInputComponent {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, mask, props.events, refs);
+			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;
