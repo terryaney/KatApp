@@ -2,7 +2,6 @@
 //	1. Demo site
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/profile/address
 //		- https://oneportal.uxgroup.com/LWConnect/Demo/index.html#/theme
-
 //	1. Inspector
 //		- channel.pension doesn't work, throws error when turning switch on and off
 //		- Common.Profile doesn't work, change from addresses to email and back and get error
