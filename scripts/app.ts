@@ -1595,9 +1595,14 @@ class KatApp implements IKatApp {
 
 		let cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
 
-		if (cacheValue == undefined) {
-			cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.options.hostApplication?.selector);
-			from = cacheValue != undefined ? "host" : "default";
+		let hostApp = this.options.hostApplication;
+
+		while (cacheValue == undefined && hostApp != undefined) {
+			cacheValue = sessionStorage.getItem("katapp:debugNext:" + hostApp.selector);
+			if (cacheValue != undefined) {
+				from = cacheValue != undefined ? "host" : "default";
+			}
+			hostApp = hostApp.options.hostApplication;
 		}
 		
 		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
