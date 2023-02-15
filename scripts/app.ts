@@ -1590,41 +1590,38 @@ class KatApp implements IKatApp {
 	}
 
 	private get nextCalculation(): INextCalculation {
-		let from = "app";
+		let app: IKatApp = this;
 
-		let cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
-
-		let hostApp = this.options.hostApplication;
-
-		while (cacheValue == undefined && hostApp != undefined) {
-			cacheValue = sessionStorage.getItem("katapp:debugNext:" + hostApp.selector);
-			if (cacheValue != undefined) {
-				from = cacheValue != undefined ? "host" : "default";
-			}
-			hostApp = hostApp.options.hostApplication;
+		// Always get the root application
+		while (app.options.hostApplication != undefined) {
+			app = this.options.hostApplication!;
 		}
-		
+
+		const from = app.selector;
+		const cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
 		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
+
 		if (cacheValue == undefined) {
 			debugNext.originalVerbosity = this.options.debug.traceVerbosity;
 		}
-		debugNext.from = from;
 
 		return debugNext;
 	}
 	private set nextCalculation(value: INextCalculation | undefined) {
-		const appDebugKey = "katapp:debugNext:" + this.selector;
-		const hostDebugKey = "katapp:debugNext:" + this.options.hostApplication?.selector;
+		let app: IKatApp = this;
+
+		// Always set in the root application
+		while (app.options.hostApplication != undefined) {
+			app = this.options.hostApplication!;
+		}
+
+		const cacheKey = "katapp:debugNext:" + app.selector;
 
 		if (value == undefined) {
-			sessionStorage.removeItem(appDebugKey);
-			sessionStorage.removeItem(hostDebugKey);
+			sessionStorage.removeItem(cacheKey);
 		}
 		else {
-			var debugKey = value.from == "host" ? hostDebugKey : appDebugKey;
-			var saveValue = Utils.clone<INextCalculation>(value);
-			delete saveValue.from;
-			sessionStorage.setItem(debugKey, JSON.stringify(saveValue));
+			sessionStorage.setItem(cacheKey, JSON.stringify(value));
 		}
 	}
 

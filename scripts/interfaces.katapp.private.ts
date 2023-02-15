@@ -26,7 +26,6 @@ interface INextCalculation {
 	saveLocations: { location: string, serverSideOnly: boolean }[];
 	expireCache: boolean;
 	trace: boolean;
-	from?: string;
 	originalVerbosity: TraceVerbosity;
 }
 interface IStringIndexer<T> extends Record<string, T> { }
