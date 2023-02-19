@@ -511,6 +511,16 @@ class KatApp implements IKatApp {
 				})
 				: [];
 
+			if (this.options.resourceStringsEndpoint != undefined) {
+				const apiUrl = this.getApiUrl(this.options.resourceStringsEndpoint);
+
+				try {
+					this.options.resourceStrings = await $.ajax({ method: "GET", url: apiUrl.url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
+				} catch (e) {
+					Utils.trace(this, "KatApp", "mountAsync", `Error downloading resourceStrings ${this.options.resourceStringsEndpoint}`, TraceVerbosity.None, e);
+				}
+			}
+
 			if (this.options.manualResultsEndpoint != undefined) {
 				const apiUrl = this.getApiUrl(this.options.manualResultsEndpoint);
 
@@ -1323,7 +1333,7 @@ class KatApp implements IKatApp {
 					else {
 						const formName = parentKey ? `${parentKey}[${key}]` : key;
 						const createDictionary = formName == "Inputs";
-						if (key != "manualResults" && key != "manualResultsEndpoint") {
+						if (key != "manualResults" && key != "manualResultsEndpoint" && key != "resourceStringsEndpoint") {
 							buildForm(formData, data[key], formName, createDictionary);
 						}
 					}
@@ -1497,6 +1507,24 @@ class KatApp implements IKatApp {
 			// Sometimes have to select the child app to ask for inputs and selector will have rbl-app= in it, so allow
 			return $(this).parents("[ka-id]").attr("ka-id") == appId;
 		}) as JQuery<T>;
+	}
+
+	public getLocalizedString(key: string, formatObject?: IStringAnyIndexer, defaultValue?: string): string {
+		const currentCulture = this.options.currentUICulture ?? "en-us";
+		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
+		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
+		const cultureStrings = this.options.resourceStrings?.[currentCulture];
+		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
+
+		const value =
+			cultureStrings?.[key] ??
+			baseCultureStrings?.[key] ??
+			defaultRegionStrings?.[key] ??
+			defaultLanguageStrings?.[key] ??
+			defaultValue ??
+			key;
+
+		return String.formatTokens(value, formatObject ?? {} );
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {

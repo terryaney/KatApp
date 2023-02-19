@@ -47,7 +47,9 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 
 	inputs?: ICalculationInputs;
 	manualResults?: IManualTabDef[];
+	resourceStrings?: IStringAnyIndexer;
 	manualResultsEndpoint?: string;
+	resourceStringsEndpoint?: string;
 	relativePathTemplates?: IStringIndexer<string>;
 
 	onKatAppNavigate?: (id: string, props: IModalOptions, el: HTMLElement) => void;

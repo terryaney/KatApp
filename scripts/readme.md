@@ -1470,6 +1470,7 @@ When an element is toggled, the element and its contained directives are destroy
 Similiar to common Vue directives, the KatApp Framework provides custom directives that help rendering markup by leveraging/accessing RBLe Framework calculation results.  The majority of the KatApp Framework directives take a 'model' coming in describing how the directive should function. [`v-ka-template`](#v-ka-template), [`v-ka-input`](#v-ka-input) and [`v-ka-input-group`](#v-ka-input-group) take a model *and* return a 'scope' object that can be used by the markup contained by the template. [`v-ka-needs-calc`](#v-ka-needs-calc) and [`v-ka-inline`](#v-ka-inline) are 'marker' directives and do not take a model or return a scope.
 
 - [v-ka-value](#v-ka-value) - Update element's `innerHTML` from designated RBLe Framework result.
+- [v-ka-resource](#v-ka-resource) - When a KatApp needs to support localization (different language translations), the `v-ka-resource` can work in conjunction with the [IKatAppOptions.resourceStrings](#ikatappoptions) to replace the element's `innerHTML` with a translated string.
 - [v-ka-input](#v-ka-input) - Render input template or bind existing inputs to RBLe Framework calculations.
 - [v-ka-input-group](#v-ka-input-group) - Render template representing multiple inputs of the same type and bind to RBLe Framework calculations.
 - [v-ka-navigate](#v-ka-navigate) - Configure navigation within Kaml Views to other Kaml Views in Host Environment.
@@ -1485,7 +1486,7 @@ Similiar to common Vue directives, the KatApp Framework provides custom directiv
 
 ## v-ka-value
 
-The `v-ka-value` directive is responsible assigning element HTML content from the calculation results.  It is simply a shorthand syntax to use in place of [`v-html`](#v-html--v-text) and [`rbl.value()`](#iapplicationdatarblvalue).
+The `v-ka-value` directive is responsible for assigning element HTML content from the calculation results.  It is simply a shorthand syntax to use in place of [`v-html`](#v-html--v-text) and [`rbl.value()`](#iapplicationdatarblvalue).
 
 - [v-ka-value Model](#v-ka-value-model) - Discusses the properties that can be passed in to configure the `v-ka-value` directive.
 - [v-ka-value Samples](#v-ka-value-samples) - Various use examples of how to use `v-ka-value`.
@@ -1560,6 +1561,138 @@ table.keyValue.returnField.keyField.calcEngine.tab
 ```
 
 The only required property is `keyValue`, the rest can be `undefined` or excluded.  If `table` is undefined, `rbl-value` will be used. Even though this sytax can be longer than using `v-html="rbl.value()`, it has the benefit of leaving the default element content if the value is not present in the results.
+
+## v-ka-resource
+
+The `v-ka-resource` directive is responsible for assigning element HTML content from localized resource strings based on the current culture.  
+
+- [v-ka-resource Model](#v-ka-resource-model) - Discusses the properties that can be passed in to configure the `v-ka-resource` directive.
+- [v-ka-resource Samples](#v-ka-resource-samples) - Various use examples of how to use `v-ka-resource`.
+
+### v-ka-resource Model
+
+The model used to configure how a `v-ka-resource` will find the appropriate translated string has a `key` property and optional properties that can be used via the `String.formatTokens` method.  If the `key` property is not provided, the HTML element's inner HTML is assumed to be the key.
+
+**Note**: If the token format values can changed due to reactivity, a [javascript getter](#https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) must be used.
+
+```javascript
+// Simple model specifying a key
+{ 'key': 'Good.Morning' }
+
+// Simple model specifying a key and name/dob tokens
+{ 'key': 'Good.Morning', 'name': 'Fred', 'dob': '5/9/73' }
+
+// Model specifying a key and reactive calculation value
+{ 'key': 'Retirement.Summary', 'name': 'Fred', get savings() { return rbl.value('total-savings'); } }
+```
+
+The flow for locating a localized string is as follows:
+
+1. Use localized string for full 'languagecode-country/regioncode' if present.
+1. Used localized string for 'languagecode' if present.
+1. Use localized string for 'en-us' if present.
+1. Use localized string for 'en' if present.
+1. Use the `key` value when no localized string is found.
+
+The `v-ka-resource` directive has a couple shorthand capabilities which allows for more terse markup.
+
+### v-ka-resource Samples
+
+All the markup samples will assume the following [IKatAppOptions.resourceStrings](#ikatappoptions) object is available:
+
+```javascript
+{
+    "en": {
+        "defaultLanguageOnly": "'en' default language.",
+        "defaultRegionOverride": "'en', but is overridden.",
+        "cultureLanguageOverride": "'en', but is overridden.",
+        "cultureRegionOverride": "'es', but is overridden.",
+        
+        "Good.Morning": "Good morning {name}, how are you?",
+        "Good.Night": "Good night {name}, sleep well."
+    },
+    "en-us": {
+        "defaultRegionOnly": "'en-us' default region.",
+        "defaultRegionOverride": "'en-us' default region override.",
+        "cultureLanguageOverride": "'en-us', but is overridden.",
+        "cultureRegionOverride": "'es', but is overridden."
+    },
+    "es": {
+        "cultureLanguageOnly": "'es' culture language.",
+        "cultureLanguageOverride": "'es' culture language override.",
+        "cultureRegionOverride": "'es', but is overridden.",
+
+        "Good.Morning": "¿Buenas dias {name}, cómo estás?"
+    },    
+    "es-es": {
+        "cultureRegionOnly": "'es-es' culture region.",
+        "cultureRegionOverride": "'es-es' culture region override."
+    }
+}
+```
+
+```html
+<!-- Assuming CurrentCultureUI is es-es -->
+
+<!-- 
+    All three of the following samples return: 'en' default language. 
+    The second two are just terse/shorthand ways of providing a localization string when no format tokens are needed via:
+
+    1. v-ka-resource string literal value
+    2. The content of the element decorated with the v-ka-resource directive.
+-->
+<div v-ka-resource="{ key: 'defaultLanguageOnly' }"></div>
+<div v-ka-resource="defaultLanguageOnly"></div>
+<div v-ka-resource>defaultLanguageOnly</div>
+
+<!-- Returns: 'en-us' default region. -->
+<div v-ka-resource="defaultRegionOnly"></div>
+
+<!-- Returns: 'es' culture language. -->
+<div v-ka-resource="cultureLanguageOnly"></div>
+
+<!-- Returns: 'es-es' culture region. -->
+<div v-ka-resource="cultureRegionOnly"></div>
+
+<!-- 
+    Returns: 'en-us' default region override.
+    Ignores 'en' language value since 'en-us' is more specific. 
+-->
+<div v-ka-resource="defaultRegionOverride"></div>
+
+<!-- 
+    Returns: 'es' culture language override.
+    Ignores 'en' and 'en-us' language values since 'es' is more specific. 
+-->
+<div v-ka-resource="cultureLanguageOverride"></div>
+
+<!-- 
+    Returns: 'es-es' culture region.
+    Ignores 'en', 'en-us', and 'es' language values since 'es-es' is more specific. 
+-->
+<div v-ka-resource="cultureRegionOverride"></div>
+
+<!-- 
+    Returns: Missing.Key
+    Since no languages provide a translation for this key.
+-->
+<div v-ka-resource="{ key: 'Missing.Key' }"></div>
+<div v-ka-resource="Missing.Key"></div>
+<div v-ka-resource>Missing.Key</div>
+
+<!-- 
+    Returns: ¿Buenas dias Terry, cómo estás?
+    Ignores 'en' language value since 'es' is more specific. 
+-->
+<div v-ka-resource="{ key: 'Good.Morning', name: 'Terry' }"></div>
+<div v-ka-resource="{ name: 'Terry' }">Good.Morning</div>
+
+<!-- 
+    Returns: Good night name, sleep well.
+    Only 'en' has a localized string, and since 'name' token wasn't provided, it just uses the value of the token.
+-->
+<div v-ka-resource="Good.Night"></div>
+```
 
 ## v-ka-input
 
@@ -3092,6 +3225,9 @@ Property | Type | Description
 `manualResults`<sup>1</sup> | [`Array<IManualTabDef>`](#imanualtabdef) | The Host Environment can pass in 'manual results'.  These are results that are usually generated one time on the server and cached as needed.  Passing manual results to a KatApp removes the overhead needed to perform a RBLe Framework calculation.  
 `manualResultsEndpoint` | `string` | Similiar to `manualResults`, if provided, this endpoint could be called to retrieve a `manualResults` object from the Host Environment that is of type [`Array<IManualTabDef>`](#imanualtabdef).  Used to leverage browser caching.
 `relativePathTemplates`<sup>2</sup> | `IStringIndexer<string>` | If the Host Environment hosts all its own Kaml Views and Kaml Template files, instead of the KAT CMS, all the relative paths to existing Kaml Template files can be provided, instructing KatApp Framework to request it via relative path.
+`resourceStrings` | [`IResourceStrings`](#iresourcestrings) | The Host Environment can pass in 'resource strings'.  This object is usually generated one time on the server and cached as needed and provides the KatApp the ability to localize its strings via the [v-ka-resource](#v-ka-resource) directive or via the [IKatApp.getLocalizedString](#ikatappgetlocalizedstring) method. 
+`resourceStringsEndpoint` | `string` | Similiar to `resourceStrings`, if provided, this endpoint could be called to retrieve the `resourceStrings` object from the Host Environment that is of type [`IResourceStrings`](#iresourcestrings).  Used to leverage browser caching.
+`relativePathTemplates`<sup>2</sup> | `IStringIndexer<string>` | If the Host Environment hosts all its own Kaml Views and Kaml Template files, instead of the KAT CMS, all the relative paths to existing Kaml Template files can be provided, instructing KatApp Framework to request it via relative path.
 `modalAppOptions` | [`IModalAppOptions`](#imodalappoptions) | Read Only; When a KatApp is being rendered as a modal ([v-ka-modal](#v-ka-modal)) application, the KatApp Framework will automatically assign this property; a [IModalAppOptions](#imodalappoptions) created from the [IModalOptions](#imodaloptions) parameter passed in when creating modal application.<br/><br/>This property is not accessed often; `modalAppOptions` is accessed when a Kaml View, launched as a modal, needs to call `modalAppOptions.cancelled` or `modalAppOptions.confirmedAsync`.
 `hostApplication` | [`IKatApp`](#ikatapp) | Read Only; When a KatApp is being rendered as a nested ([v-ka-app](#v-ka-app)) or modal ([v-ka-modal](#v-ka-modal)) application, the KatApp Framework will automatically assign this property to a reference of the KatApp application that is creating the nested or modal application.<br/><br/>This property is not acesed often; `hostApplication` is access when a Kaml View needs to call [`KatApp.notifyAsync`](#ikatappnotifyasync).
 `katAppNavigate` | `(id: string, props: IModalOptions, el: HTMLElement) => void \| undefined` | To allow navigation to occur from within a KatApp (via [v-ka-navigate](#v-ka-navigate)), a reference to a javascript function must be assigned to this property. The KatApp Framework will call this function (created by the Host Environment) when a navigation request has been issued.  It is up to the Host Environment's javascript to do the appropriate processing to initiate a successful navigation.
@@ -3189,6 +3325,7 @@ Name | Description
 [`notifyAsync`](#ikatappnotifyasync) | Allow a nested application to send information to its [`hostApplication`](#ikatappoptionshostapplication).
 [`debugNext`](#ikatappdebugnext) | Helper method to indicate to the KatApp what debugging features should be used during the next calculation.
 [`getTemplateContent`](#ikatappgettemplatecontent) | Returns the 'content' of a requested template.
+[`getLocalizedString`](#ikatappgetlocalizedstring) | Returns the localized string of a requested key.
 
 #### IKatApp.update
 
@@ -3370,6 +3507,29 @@ Setting `expireCache` to `true` instructs the RBLe Framework to immediately chec
 **`getTemplateContent(name: string): DocumentFragment;`**
 
 `getTemplateContent` returns the 'content' of a requested template.  This can be helpful if the Host Environment needs to render template content outside the context of a KatApp. The most common scenario is when a Host Environment needs to get the content for a `validation-summary` to render errors before a KatApp can finish rendering property.
+
+#### IKatApp.getLocalizedString
+
+**`getLocalizedString(key: string, formatObject?: IStringAnyIndexer, defaultValue?: string): string;`**
+
+`getLocalizedString` returns the localized 'content' of the requested requested key based on the KatApp's [`options.currentUICulture'](#ikatappoptionscurrentuiculture).  In the KatApp markup/html, a [v-ka-resource](#v-ka-resource) will be used, but if a localized string is needed inside of a KatApp's `script` section, this method can be used.
+
+```javascript
+// Returns string with 'Name.First' key.
+application.getLocalizedString('Name.First');
+
+// When no match, key is returned.  The following returns: This is actually the content and the key, if no key matches, this content will be returned.
+application.getLocalizedString('This is actually the content and the key, if no key matches, this content will be returned.');
+
+// Token substition is supported too.
+// The following returns: Good morning Fred, how are you?
+application.getLocalizedString('Good morning {name}, how are you?', { 'name': 'Fred' });
+
+// Returns string with 'Default value for Name First' key when 'Name.First' key value is not found.
+application.getLocalizedString('Name.First', undefined, 'Default value for Name First');
+```
+
+See `v-ka-resource` for full documentation.
 
 ### IKatApp Lifecycles
 
@@ -3777,6 +3937,25 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
 ### ITabDefRow
 
 `ITabDefRow` represents each row in a `ITabDef` table returned from a RBLe Framework calculation.  Note that it is simply a shorthand name for the underlying `IStringIndexer<string>` interface since every value returned from the RBLe Framework is typed as a `string`.  If a 'value' needs to be treated as `number` or `date`, the KatApp Framework or Kaml Views will need to first parse it into the appropriate type.
+
+### IResourceStrings
+
+`IResourceStrings` represents the resource strings available for use by the KatApp.  Its structure is dynamic based on the languages supported, but it should have the following pattern.
+
+```javascript
+{
+    "lang1": {
+        "key1": "lang1 key1 string value",
+        "key2": "lang1 key2 string value"
+    },
+    "lang2": {
+        "key1": "lang2 key1 string value",
+        "key2": "lang2 key2 string value"
+    }
+}
+```
+
+The object can have 0 to N languages it supports and 0 to N 'key/value' translations.
 
 ### IManualTabDef
 

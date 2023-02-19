@@ -18,6 +18,8 @@ interface AsyncDirective<T = Element> {
 interface Directive<T = Element> {
 	(ctx: DirectiveContext<T>): (() => void) | void;
 }
+
+
 interface DirectiveContext<T = Element> {
 	el: T;
 	get: (exp?: string) => any;
