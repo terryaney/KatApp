@@ -1233,6 +1233,11 @@ results: {
 }
 ```
 
+### Using the `:key` Attribute with v-for
+
+It is advised to use the [`:key`](#https://vuejs.org/api/built-in-special-attributes.html#key) attribute any time a `v-for` directive is used. This is to give a hint to Vue about how to uniquely identify each row when rendering, otherwise unexpected behavior could result.
+
+
 - [v-for With rbl.source](#v-for-with-rblsource) - Most common syntax of using `v-for` directive with results from a CalcEngine.
 - [v-for With template Element](#v-for-with-template-element) - Describes the benefit of using a HTML Template element with `v-for` to eliminate the rendering of a parent HTML element if not desired.
 - [v-for With v-bind Attributes](#v-for-with-v-bind-attributes) - Example using both `v-for` and `v-bind` directives on the same element.
@@ -2210,7 +2215,7 @@ inputs: {
 The `v-ka-template` directive is responsible for manually rendering a template with or without a data source. The data source can be a simple javascript object or it can be an array of data (usually obtained via [rbl.source()](#iapplicationdatarblsource)).  When the source is an `Array<>`, the template can get access to this property via the scope's `rows` properties.
 
 - [v-ka-template Model](#v-ka-template-model) - Discusses the properties that can be passed in to configure the `v-ka-template` directive.
-- [v-ka-template Scope](#v-ka-template-scope) - Discusses how/which properties are exposed on the `v-ka-template` scope and can be used in Kaml View markup.
+- [v-ka-template Scope](#v-ka-template-scope) - Discusses how/which properties are exposed on the `v-ka-template` scope and can be used in Kaml View markup.  See [Scopes with Properties that are Reactive](#scopes-with-properties-that-are-reactive) for information on how to define the `source` property when information is reactive (i.e. a custom source defining a `rows` property that changes via new calculation results).
 - [v-ka-template Samples](#v-ka-template-samples) - Examples illustrating different scenario usages for `v-ka-template` directive.
 
 ### v-ka-template Model
@@ -2242,10 +2247,27 @@ Property | Type | Description
 `$renderId` | `string` | Unique identifier for this template's rendered output to aid in selection scoping.
 `source` Properties | `any` | If the model `source` is **not** of type `Array<ITabDefRow>`, the exact object passed in from `model.source` is treated as the scope and any defined public properties are available to the template.
 
-**Scopes of type `Array<ITabDefRow>`**  
+#### Scopes with Properties that are Reactive
+
 If the scope could change due to reactivity (i.e. a calculation or javascript changes the array), the `model.source` property **must** be written as a [javascript getter](#https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) or the scope will not participate in reactivity.
 
-Additionally, it is advised to use the [`:key`](#https://vuejs.org/api/built-in-special-attributes.html#key) attribute as well in this scenario to give a hint to Vue about how to uniquely identify each row when rendering, otherwise unexpected behavior could result.
+Note: If the `source` property of the `v-ka-template` scope is simply an `Array<>`, the KatApp framework will automatically make it reactive.
+
+```html
+<!--
+    The KatApp framework will automatically make this template reactive.
+-->
+<div v-ka-template="{ name: 'templateName', source: rbl.source( 'resultTable', r => r.field == '1' ) }"></div>
+
+<!--
+    When a custom source scope is built, the 'source' property of the scope must be reactive:
+        get source() { return { ... }; }
+
+    Additionally, any part of the scope that must be reactive must be written as a getter:
+        get rows() { return rbl.source( 'resultTable', r => r.field == '1' ); }
+-->
+<div v-ka-template="{ name: 'templateWithCustomSource', get source() { return { staticProp: true, get rows() { return rbl.source( 'resultTable', r => r.field == '1' ); } } } }"></div>
+```
 
 ### v-ka-template Samples
 

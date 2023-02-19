@@ -1273,6 +1273,15 @@ class KatApp implements IKatApp {
 		tempEl.classList.add("d-none");
 		const url = window.URL.createObjectURL(blob);
 		tempEl.href = url;
+
+		filename = filename.replace(/ /g, '+');
+		if (filename.startsWith("\"")) {
+			filename = filename.substring(1);
+		}
+		if (filename.endsWith("\"")) {
+			filename = filename.substring(0, filename.length - 1);
+		}
+
 		tempEl.download = filename;
 		tempEl.click();
 		window.URL.revokeObjectURL(url);
