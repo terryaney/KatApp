@@ -1725,7 +1725,9 @@ class KatApp implements IKatApp {
 
 			const selectorContent = $("<div/>");
 			// Use this instead of .html() so I keep my bootstrap events
-			selectorContent.append(selectContent.contents().clone(true));
+			const modalContent = selectContent.contents().clone(true);
+			modalContent.removeAttr("v-pre");
+			selectorContent.append(modalContent);
 
 			options.content = selectorContent;
 		}
