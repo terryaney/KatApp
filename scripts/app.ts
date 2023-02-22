@@ -196,16 +196,16 @@ class KatApp implements IKatApp {
 				: that.calcEngines[0];
 
 			if (ce == undefined) {
-				throw new Error(String.formatTokens("Can not find CalcEngine {ce} in rbl-config.", { ce: calcEngine }));
+				throw new Error(`Can not find CalcEngine ${calcEngine} in rbl-config.`);
 			}
 
 			const tabName = tab ?? that.state.rbl.options?.tab ?? ce.resultTabs[0];
 
 			if (ce.resultTabs.indexOf(tabName) == -1) {
-				throw new Error(String.formatTokens("Can not find Tab {tab} for {ce} in rbl-config.", { ce: calcEngine, tab: tabName }));
+				throw new Error(`Can not find Tab ${tabName} for ${calcEngine} in rbl-config.`);
 			}
 
-			const key = String.formatTokens("{ce}.{tab}", { ce: ce.key, tab: tabName });
+			const key = `${ce.key}.${tabName}`;
 			return (that.state.rbl.results[key]?.[table] ?? []) as Array<T>;
 		};
 
@@ -230,6 +230,8 @@ class KatApp implements IKatApp {
 			return !(!v);
 		};
 
+		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
+
 		const state: IApplicationData = {
 			kaId: this.id,
 
@@ -249,8 +251,8 @@ class KatApp implements IKatApp {
 				return values.find(v => (v ?? "") != "" && isTrue(v)) != undefined;
 			},
 			rbl: {
-				results: {},
-				options: {},
+				results: cloneHost ? Utils.clone(this.options.hostApplication!.state.rbl.results) : {},
+				options: cloneHost ? Utils.clone(this.options.hostApplication!.state.rbl.options) : {},
 				pushTo(tabDef, table, rows) {
 					const t = (tabDef[table] ?? (tabDef[table] = [])) as ITabDefTable;
 					const toPush = rows instanceof Array ? rows : [rows];
@@ -305,7 +307,7 @@ class KatApp implements IKatApp {
 						((row: infer T) => boolean) | undefined ? T : never;
 					*/
 					const result = predicate
-						? getResultTableRows<any>(table, calcEngine, tab).filter(r => predicate!( r ))
+						? getResultTableRows<any>(table, calcEngine, tab).filter(r => predicate!(r))
 						: getResultTableRows<any>(table, calcEngine, tab);
 
 					return result;
@@ -332,8 +334,8 @@ class KatApp implements IKatApp {
 				}
 			},
 
-			model: {},
-			handlers: {},
+			model: cloneHost ? Utils.clone(this.options.hostApplication!.state.model) : {},
+			handlers: cloneHost ? Utils.clone(this.options.hostApplication!.state.handlers ?? {}) : {},
 			components: {},
 
 			// Private
@@ -692,9 +694,7 @@ class KatApp implements IKatApp {
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
 				Utils.trace(this, "KatApp", "mountAsync", "Error during resource download", TraceVerbosity.None,
-					...ex.results.map(r =>
-						String.formatTokens("{resource}: {errorMessage}", { resource: r.resource, errorMessage: r.errorMessage })
-					)
+					...ex.results.map(r => `${r.resource}: ${r.errorMessage}` )
 				);
 			}
 
@@ -731,7 +731,7 @@ class KatApp implements IKatApp {
 		const cssContinue = options.css!.continue;
 
 		const modal = $(
-			'<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static">\
+			`<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${this.options.view}">\
                 <div class="modal-dialog">\
                     <div class="modal-content">\
 						<div class="modal-header d-none">\
@@ -741,13 +741,13 @@ class KatApp implements IKatApp {
 	                    <div class="modal-body"></div>\
                         <div class="modal-footer">\
 							<div class="modal-footer-buttons d-none">\
-								<button type="button" :class="[\'' + cssCancel + '\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">' + labelCancel + '</button>\
-								<button type="button" :class="[\'' + cssContinue + '\', \'continueButton\', { disabled: uiBlocked}]">' + labelContinue + '</button>\
+								<button type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\
+								<button type="button" :class="[\'${cssContinue}\', \'continueButton\', { disabled: uiBlocked}]">${labelContinue}</button>\
 	                        </div>\
                         </div>\
                     </div>\
                 </div>\
-            </div>');
+            </div>`);
 
 		if (options.scrollable) {
 			$(".modal-dialog", modal).addClass("modal-dialog-scrollable");
@@ -1163,7 +1163,7 @@ class KatApp implements IKatApp {
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
 				ApiParameters: this.options.isDotNetCore ? apiOptions.apiParameters : undefined,
 				Configuration: Utils.extend(
-					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
+					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "resourceStrings", "resourceStringsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
 					!this.options.isDotNetCore && apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
                     // Endpoints only ever use first calc engine...so reset calcEngines property in case kaml
@@ -1333,7 +1333,7 @@ class KatApp implements IKatApp {
 					else {
 						const formName = parentKey ? `${parentKey}[${key}]` : key;
 						const createDictionary = formName == "Inputs";
-						if (key != "manualResults" && key != "manualResultsEndpoint" && key != "resourceStringsEndpoint") {
+						if (key != "manualResults" && key != "manualResultsEndpoint" && key != "resourceStrings" && key != "resourceStringsEndpoint") {
 							buildForm(formData, data[key], formName, createDictionary);
 						}
 					}
@@ -1710,10 +1710,18 @@ class KatApp implements IKatApp {
 
 	// public so HelpTips can call when needed
 	public cloneOptions(includeManualResults: boolean): IKatAppOptions {
-		return Utils.clone<IKatAppOptions>(this.options, (k, v) => ["handlers", "view", "content", "modalAppOptions", "hostApplication"].indexOf(k) > -1 || (!includeManualResults && k == "manualResults") ? undefined : v)
+		return Utils.clone<IKatAppOptions>(
+			this.options,
+			(k, v) =>
+				["handlers", "view", "content", "modalAppOptions", "hostApplication"].indexOf(k) > -1 || (!includeManualResults && k == "manualResults")
+					? undefined
+					: v
+		);
 	}
 		
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
+		let cloneHost = false;
+
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
 
@@ -1723,12 +1731,10 @@ class KatApp implements IKatApp {
 				throw new Error(`The content selector (${options.contentSelector}) did not return any content.`);
 			}
 
+			cloneHost = selectContent[0].hasAttribute("v-pre");
 			const selectorContent = $("<div/>");
 			// Use this instead of .html() so I keep my bootstrap events
-			const modalContent = selectContent.contents().clone(true);
-			modalContent.removeAttr("v-pre");
-			selectorContent.append(modalContent);
-
+			selectorContent.append(selectContent.contents().clone());
 			options.content = selectorContent;
 		}
 
@@ -1761,7 +1767,7 @@ class KatApp implements IKatApp {
 				currentPage: options.view ?? this.options.currentPage,
 				hostApplication: this,
 				modalAppOptions: Utils.extend<IModalAppOptions>(
-					{ promise: d, triggerLink: triggerLink },
+					{ promise: d, triggerLink: triggerLink, cloneHost: cloneHost },
 					Utils.clone(options, (k, v) => ["content", "view"].indexOf(k) > -1 ? undefined : v)
 				),
 				inputs: {
@@ -1947,7 +1953,7 @@ class KatApp implements IKatApp {
 	}
 	
 	private copyTabDefToRblState(ce: string, tab: string, t: IKaTabDef, propName: string) {
-		const key = String.formatTokens("{ce}.{tab}", { ce: ce, tab: tab })
+		const key = `${ce}.${tab}`;
 		if (this.state.rbl.results[key] == undefined) {
 			this.state.rbl.results[key] = {};
 		}
@@ -1961,7 +1967,7 @@ class KatApp implements IKatApp {
 			tab = this.calcEngines[0].resultTabs[0];
 		}
 
-		const key = String.formatTokens("{ce}.{tab}", { ce: ce, tab: tab })
+		const key = `${ce}.${tab}`;
 		if (this.state.rbl.results[key] == undefined) {
 			this.state.rbl.results[key] = {};
 		}
@@ -2635,7 +2641,7 @@ class KatApp implements IKatApp {
 			.forEach(template => {
 				const keyParts = resourceKey.split(":"); // In case "Rel:"
 				const containerId = keyParts[keyParts.length - 1].split("?")[0]; // Cache buster
-				template.id = String.formatTokens("{id}_{containerId}", { id: template.id, containerId: containerId });
+				template.id = `${template.id}_${containerId}`;
 
 				// Only process template markup once (in case same template file is requested for multiple apps on the page)
 				if (kaResources.querySelector(`template[id=${template.id}]`) == undefined) {

@@ -606,8 +606,8 @@ class DirectiveKaHighchart implements IKaDirective {
 				let t = 0;
 
 				const pointTemplate = Sys.CultureInfo.CurrentCulture.name.startsWith("fr")
-					? "<br/>{name} : {value}"
-					: "<br/>{name}: {value}";
+					? "<br/>{{name}} : {{value}}"
+					: "<br/>{{name}}: {{value}}";
 
 				this.points.forEach((point, index) => {
 					if (point.y > 0) {
@@ -823,9 +823,7 @@ class DirectiveKaHighchart implements IKaDirective {
 			// are available when they aren't really mentioned anywhere.
 			// **NOTE**: Also, if I simply use what's inside { } instead of the function f() { ... } f.call(this);
 			//           it also seems to work.
-			const f = this.removeRBLEncoding(
-				String.formatTokens("function f() {function} f.call(this);", { function: value.substring(value.indexOf("{")) })
-			);
+			const f = this.removeRBLEncoding(`function f() ${value.substring(value.indexOf("{"))} f.call(this);`);
 
 			return function (): any { return eval(f!); } // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion
 		}
