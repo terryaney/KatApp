@@ -488,7 +488,8 @@ class KatApp implements IKatApp {
 				await PetiteVue.nextTick();
 			}
 
-			// If event is cancelled, return false;
+			const isReturnable = (result: false | undefined) => result != undefined && typeof(result) == "boolean" && ["calculateStart", "apiStart"].indexOf(eventName) > -1 && !result;
+
 			const eventArgs = [...args, this];
 
 			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector == this.selector).map( e => e.events))) {
@@ -500,7 +501,7 @@ class KatApp implements IKatApp {
 						delegateResult = await delegateResult;
 					}
 						
-					if (delegateResult != undefined) {
+					if ( isReturnable(delegateResult) ) {
 						return delegateResult;
 					}
 	
@@ -512,6 +513,8 @@ class KatApp implements IKatApp {
 				}
 			}
 			
+			/*
+			// If event is cancelled, return false;
 			try {
 				const event = jQuery.Event(eventName + ".ka");
 
@@ -543,15 +546,17 @@ class KatApp implements IKatApp {
 					return false;
 				}
 
-				return eventResult;
-
+				if ( isReturnable(eventResult) ) {
+					return eventResult;
+				}
 			} catch (error) {
 				// apiAsync already traces error, so I don't need to do again
 				if (!(error instanceof ApiError)) {
 					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, ( error as IStringAnyIndexer ).responseJSON ?? error);
 				}
 			}
-
+			*/
+			
 			return true;
 		} finally {
 			Utils.trace(this, "KatApp", "triggerEventAsync", `Complete: ${eventName}.`, TraceVerbosity.Detailed);
