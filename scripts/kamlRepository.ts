@@ -207,7 +207,7 @@
 			resourceUrl = tryLocalWebServer
 				? localServerUrl.substring(0, 4) + localServerUrl.substring(5)
 				: !isResourceInManagementSite
-					? (currentOptions.baseUrl ?? "/") + ( currentOptions.isDotNetCore ? resourceName.substring(1) : resourceName )
+					? ( currentOptions.isDotNetCore ? currentOptions.baseUrl + resourceName.substring(1) : resourceName )
 					: currentOptions.kamlRepositoryUrl;
 
 			if (!tryLocalWebServer && isResourceInManagementSite) {

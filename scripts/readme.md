@@ -3488,6 +3488,8 @@ var nameLabel application.closest(name, "label");
 await hostApplication.notifyAsync(application, "myNotificationName", { moreData: "dataValue" });
 ```
 
+For an application to receive this notification, it must have a `IKatAppEventsConfiguration.notification` delegate provided.
+
 #### IKatApp.debugNext
 
 **`debugNext(saveLocations?: string | boolean, serverSideOnly?: boolean, trace?: boolean, expireCache?: boolean): void`**

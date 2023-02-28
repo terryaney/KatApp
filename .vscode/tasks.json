@@ -14,18 +14,6 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "publish",
-                "${workspaceFolder}/KatAppVUE.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
             "label": "watch",
             "command": "dotnet",
             "type": "process",
@@ -39,8 +27,25 @@
         },
         {
             "label": "ts",
+            "dependsOn":[
+                "ts - comments",
+                "ts - no comments"
+            ],
+            "problemMatcher": "$tsc",
+        },
+        {
+            "label": "ts - comments",
+            "hide": true,
             "type": "typescript",
             "tsconfig": "tsconfig.json",
+            "problemMatcher": "$tsc",
+            "group": "build"
+        },
+        {
+            "label": "ts - no comments",
+            "hide": true,
+            "type": "typescript",
+            "tsconfig": "tsconfig.d.json",
             "problemMatcher": "$tsc",
             "group": "build"
         }

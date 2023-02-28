@@ -89,6 +89,7 @@ class InputComponent {
 			removeError();
 
 			if (!exclude) {
+				application.state.inputs.haveChanged = Date.now();
 				application.state.inputs[name] = application.getInputValue(name);
 
 				if (!skipCalc && !noCalc(name)) {
@@ -148,11 +149,6 @@ class InputComponent {
 			if (type != "radio" && input.tagName == "INPUT") {
 				input.addEventListener("input", async e => {
 					await inputEventAsync(false);
-				});
-				input.addEventListener("keypress", async e => {
-					if (e.keyCode == 13) {
-						await inputEventAsync(true);
-					}
 				});
 			}
 		}

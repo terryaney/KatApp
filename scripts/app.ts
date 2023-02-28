@@ -26,7 +26,8 @@
 // TODO: Decide on modules vs iife? Modules seems better/recommended practices, but iife and static methods support console debugging better
 
 class KatApp implements IKatApp {
-	private static applications: KatApp[] = [];
+	private static applications: Array<KatApp> = [];
+	private static globalEventConfigurations: Array<{ selector: string, events: IKatAppEventsConfiguration }> = [];
 
 	public static remove(item: KatApp): void {
 		if (item.vueApp != undefined) {
@@ -67,6 +68,12 @@ class KatApp implements IKatApp {
 		return undefined;
 	}
 
+	public static handleEvents(selector: string, configAction: (config: IKatAppEventsConfiguration) => void): void {
+		const config: IKatAppEventsConfiguration = {};
+		configAction(config);
+		this.globalEventConfigurations.push({ selector: selector, events: config });
+	}
+
 	public static async createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp> {
 		let katApp: KatApp | undefined;
 		try {
@@ -99,10 +106,13 @@ class KatApp implements IKatApp {
 	private viewTemplates?: string[];
 	private mountedTemplates: IStringIndexer<boolean> = {};
 	private isMounted = false;
-	private updateOptions: IUpdateApplicationOptions | undefined;
+	
+	private configureOptions: IConfigureOptions | undefined;
 
 	private calcEngines: ICalcEngine[] = [];
 	private uiBlockCount = 0;
+
+	private eventConfigurations: Array<IKatAppEventsConfiguration> = [];
 
 	private domElementQueued = false;
 	private domElementQueue: Array<HTMLElement> = [];
@@ -232,6 +242,9 @@ class KatApp implements IKatApp {
 
 		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
+		const katAppInputs: ICalculationInputs = {
+			haveChanged: Date.now()
+		};
 		const state: IApplicationData = {
 			kaId: this.id,
 
@@ -241,7 +254,7 @@ class KatApp implements IKatApp {
 
 			uiBlocked: false,
 			needsCalculation: false,
-			inputs: Utils.extend({}, this.options.inputs, this.getSessionStorageInputs()),
+			inputs: Utils.extend(katAppInputs, this.options.inputs, this.getSessionStorageInputs()),
 			errors: [],
 			warnings: [],
 			onAll(...values: any[]) {
@@ -467,13 +480,115 @@ class KatApp implements IKatApp {
 		this.state = PetiteVue.reactive(state);
 	}
 
-	public update(options: IUpdateApplicationOptions): IKatApp {
-		if (this.isMounted) {
-			throw new Error("You cannot call 'update' after the KatApp has been mounted.");
+	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
+		Utils.trace(this, "KatApp", "triggerEventAsync", `Start: ${eventName}.`, TraceVerbosity.Detailed);
+
+		try {
+			if (eventName == "calculation" || eventName == "configureUICalculation") {
+				await PetiteVue.nextTick();
+			}
+
+			// If event is cancelled, return false;
+			const eventArgs = [...args, this];
+
+			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector == this.selector).map( e => e.events))) {
+				try {
+					// Make application.element[0] be 'this' in the event handler
+					let delegateResult = (eventConfiguration as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
+
+					if (delegateResult instanceof Promise) {
+						delegateResult = await delegateResult;
+					}
+						
+					if (delegateResult != undefined) {
+						return delegateResult;
+					}
+	
+				} catch (error) {
+					// apiAsync already traces error, so I don't need to do again
+					if (!(error instanceof ApiError)) {
+						Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
+					}
+				}
+			}
+			
+			try {
+				const event = jQuery.Event(eventName + ".ka");
+
+				const currentEvents = $._data(this.el[0], "events")?.[eventName];
+
+				// Always prevent bubbling, KatApp events should never bubble up, had a problem where
+				// events were triggered on a nested rbl-app view element, but every event was then
+				// bubbled up to the containing application handlers as well
+				if (currentEvents != undefined) {
+					currentEvents.filter(e => e.namespace == "ka" && (e.kaProxy ?? false) == false).forEach(e => {
+						e.kaProxy = true;
+						const origHandler = e.handler;
+						e.handler = function () {
+							arguments[0].stopPropagation();
+							return origHandler.apply(this, arguments);
+						}
+					});
+
+					$(this.el).trigger(event, eventArgs);
+				}
+
+				let eventResult = (event as JQuery.TriggeredEvent).result;
+
+				if (eventResult instanceof Promise) {
+					eventResult = await eventResult;
+				}
+
+				if (event.isDefaultPrevented()) {
+					return false;
+				}
+
+				return eventResult;
+
+			} catch (error) {
+				// apiAsync already traces error, so I don't need to do again
+				if (!(error instanceof ApiError)) {
+					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, ( error as IStringAnyIndexer ).responseJSON ?? error);
+				}
+			}
+
+			return true;
+		} finally {
+			Utils.trace(this, "KatApp", "triggerEventAsync", `Complete: ${eventName}.`, TraceVerbosity.Detailed);
 		}
-		this.updateOptions = options;
+	}
+
+
+	public configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
+		if (this.isMounted) {
+			throw new Error("You cannot call 'configure' after the KatApp has been mounted.");
+		}
+
+		const config: IConfigureOptions = {
+			events: {}
+		};
+
+		configAction(config, this.state.rbl, this.state.model, this.state.inputs, this.state.handlers);
+
+		let hasEventHandlers = false;
+        for (const propertyName in config.events) {
+			hasEventHandlers = true;
+			break;
+        }
+		if (hasEventHandlers) {
+			this.eventConfigurations.push(config.events);
+		}
+
+		this.configureOptions = config;
 
 		// Fluent api
+		return this;
+	}
+
+	public handleEvents(configAction: (config: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
+		const config: IKatAppEventsConfiguration = {};
+		configAction(config, this.state.rbl, this.state.model, this.state.inputs, this.state.handlers);
+		this.eventConfigurations.push(config);
 		return this;
 	}
 
@@ -564,19 +679,30 @@ class KatApp implements IKatApp {
 
 			Components.initializeCoreComponents(this, name => this.getTemplateId(name));
 
-			this.state.model = this.updateOptions?.model ?? {};
-			this.state.handlers = this.updateOptions?.handlers ?? {};
+			// Couldn't do this b/c the model passed in during configure() delegate was then reassigned so
+			// any references to 'model' in code 'inside' delegate was using old/original model.
+			// this.state.model = this.configureOptions?.model ?? {};
 
-			if (this.updateOptions?.components != undefined) {
-				for (const propertyName in this.updateOptions.components) {
-					this.state.components[propertyName] = this.updateOptions.components[propertyName];
+			// Couldn't do this b/c any reactivity coded against model was triggered
+			// i.e.Nexgen Common.Footer immediately triggered the get searchResults() because searchString was updated, but rbl.source
+			// was not yet valid b/c no calculation ran, so it threw an error.
+			// Utils.extend(this.state.model, this.configureOptions?.model ?? {});		
+
+			// Using below (copied from code in Petite Vue) and it seems to 'modify' model so that code inside configure() delegate that
+			// used it always had 'latest' model, but it also didn't trigger reactivity 'at this point'
+			Object.defineProperties(this.state.model, Object.getOwnPropertyDescriptors(this.configureOptions?.model ?? {}))
+			Object.defineProperties(this.state.handlers, Object.getOwnPropertyDescriptors(this.configureOptions?.handlers ?? {}))
+
+			if (this.configureOptions != undefined) {
+				for (const propertyName in this.configureOptions.components) {
+					this.state.components[propertyName] = this.configureOptions.components[propertyName];
 				}
-			}
-			if (this.updateOptions?.options?.modalAppOptions != undefined && this.state.inputs.iModalApplication == "1") {
-				Utils.extend(this.options, { modalAppOptions: this.updateOptions.options.modalAppOptions });
-			}
-			if (this.updateOptions?.options?.inputs != undefined) {
-				Utils.extend(this.state.inputs, this.updateOptions.options.inputs);
+				if (this.configureOptions.options?.modalAppOptions != undefined && this.state.inputs.iModalApplication == "1") {
+					Utils.extend(this.options, { modalAppOptions: this.configureOptions.options.modalAppOptions });
+				}
+				if (this.configureOptions.options?.inputs != undefined) {
+					Utils.extend(this.state.inputs, this.configureOptions.options.inputs);
+				}
 			}
 
 			if (this.options.hostApplication != undefined) {
@@ -594,10 +720,10 @@ class KatApp implements IKatApp {
 							.children().remove();
 					}
 
-					await this.options.hostApplication.triggerEventAsync("modalAppInitialized", this);
+					await ( this.options.hostApplication as KatApp ).triggerEventAsync("modalAppInitialized", this);
 				}
 				else if (this.options.inputs?.iNestedApplication == "1") {
-					await this.options.hostApplication.triggerEventAsync("nestedAppInitialized", this);
+					await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppInitialized", this);
 				}
 			}
 			await this.triggerEventAsync("initialized");
@@ -646,11 +772,13 @@ class KatApp implements IKatApp {
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
 			if (!initializedErrors && isConfigureUICalculation) {
-				this.on("calculationErrors", async (_e, key, ex) => {
-					if (key == "SubmitCalculation.ConfigureUI") {
-						this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
-						Utils.trace(this, "KatApp", "mountAsync", isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", TraceVerbosity.None, ex);
-					}
+				this.handleEvents(events => {
+					events.calculationErrors = async (key, exception) => {
+						if (key == "SubmitCalculation.ConfigureUI") {
+							this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+							Utils.trace(this, "KatApp", "mountAsync", isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", TraceVerbosity.None, exception);
+						}
+					};
 				});
 				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
 				await this.calculateAsync({ _iConfigureUI: "1", iConfigureUI: "1", iDataBind: "1" });
@@ -660,9 +788,9 @@ class KatApp implements IKatApp {
 
 			Directives.initializeCoreDirectives(this.vueApp, this);
 
-			if (this.updateOptions?.directives != undefined) {
-				for (const propertyName in this.updateOptions.directives) {
-					this.vueApp.directive(propertyName, this.updateOptions.directives[propertyName]);
+			if (this.configureOptions != undefined) {
+				for (const propertyName in this.configureOptions.directives) {
+					this.vueApp.directive(propertyName, this.configureOptions.directives[propertyName]);
 				}
 			}
 
@@ -689,7 +817,7 @@ class KatApp implements IKatApp {
 			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
 
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == "1") {
-				await this.options.hostApplication.triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
+				await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
 			}
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
@@ -730,10 +858,16 @@ class KatApp implements IKatApp {
 		const labelContinue = options.labels!.continue;
 		const cssContinue = options.css!.continue;
 
+		const viewName =
+			this.options.view ??
+			(this.options.modalAppOptions.contentSelector != undefined ? `selector: ${this.options.modalAppOptions.contentSelector}` : "static content");
+		
 		const modal = $(
-			`<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${this.options.view}">\
+			`<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${viewName}">\
                 <div class="modal-dialog">\
                     <div class="modal-content">\
+						<div v-if="uiBlocked" class="ui-blocker"></div>
+
 						<div class="modal-header d-none">\
 							<h5 class="modal-title"></h5>\
 							<button type="button" class="btn-close" aria-label="Close"></button>\
@@ -940,46 +1074,7 @@ class KatApp implements IKatApp {
 			sessionStorage.setItem(cachingKey, JSON.stringify(options.inputs));
 		}
 
-		await this.triggerEventAsync("katAppNavigate", navigationId);
-	}
-
-	public on<TType extends string>(events: TType, handler: JQuery.TypeEventHandler<HTMLElement, undefined, HTMLElement, HTMLElement, TType> | false): KatApp {
-
-		const kaEvents = events.split(" ").map(e => e.endsWith(".ka") ? e : e + ".ka").join(" ") as TType;
-		$(this.el).on(kaEvents, handler);
-
-		// Fluent api
-		return this;
-	}
-
-	public off<TType extends string>(events: TType): KatApp {
-
-		const kaEvents = events.split(" ").map(e => e.endsWith(".ka") ? e : e + ".ka").join(" ") as TType;
-		$(this.el).off(kaEvents);
-
-		// Fluent api
-		return this;
-	}
-
-	public async setCacheAsync(key: string, data: object): Promise<void> {
-		var cacheResult = this.options.encryptCache(data);
-		if (cacheResult instanceof Promise) {
-			cacheResult = await cacheResult;
-		}
-		sessionStorage.setItem(key, cacheResult);
-	}
-	public async getCacheAsync(key: string): Promise<object | undefined> {
-		const data = sessionStorage.getItem(key);
-
-		if (data == undefined) return undefined;
-
-		let cacheResult = this.options.decryptCache(data);
-
-		if (cacheResult instanceof Promise) {
-			cacheResult = await cacheResult;
-		}
-
-		return cacheResult;
+		await this.options.katAppNavigate?.(navigationId);
 	}
 
 	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
@@ -1096,7 +1191,7 @@ class KatApp implements IKatApp {
 	}
 
 	public async notifyAsync(from: KatApp, name: string, information?: IStringAnyIndexer) {
-		await this.triggerEventAsync("hostNotification", name, information, from);
+		await this.triggerEventAsync("notification", name, information, from);
 	}
 
 	public async apiAsync(endpoint: string, apiOptions: IApiOptions | undefined, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
@@ -1358,6 +1453,12 @@ class KatApp implements IKatApp {
 
 	private async processDomElementsAsync() {
 		// console.log(this.selector + " domUpdated: " + this.domElementQueue.length);
+		const addUiBlockerWrapper = function (el: HTMLElement): void {
+			if (el.parentElement != undefined) {
+				el.parentElement.classList.add("ui-blocker-wrapper");
+			}
+		};
+
 		for (const el of this.domElementQueue) {
 			// console.log(this.selector + " charts: " + this.select('[data-highcharts-chart]', $(el)).length + ", hasCloak: " + el.hasAttribute("ka-cloak"));
 
@@ -1371,15 +1472,11 @@ class KatApp implements IKatApp {
 			this.select('[data-highcharts-chart]', $(el)).each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
 
 			if (el.classList.contains("ui-blocker")) {
-				if (el.parentElement != undefined) {
-					el.parentElement.classList.add("ui-blocker-wrapper");
-				}
+				addUiBlockerWrapper(el);
 			}
 			else {
 				this.select(".ui-blocker", $(el)).each((i, e) => {
-					if (e.parentElement != undefined) {
-						e.parentElement.classList.add("ui-blocker-wrapper");
-					}
+					addUiBlockerWrapper(e);
 				});
 			}
 		}
@@ -1390,9 +1487,11 @@ class KatApp implements IKatApp {
 		await this.triggerEventAsync("domUpdated", elementsProcessed);
 	}
 
+	/* Not sure what this is or if I need this
 	public async nextDomUpdate(): Promise<void> {
 		await PetiteVue.nextTick();
 	}
+	*/
 
 	public getInputValue(name: string, allowDisabled = false): string | undefined {
 		const el = this.select<HTMLInputElement>("." + name);
@@ -1532,7 +1631,7 @@ class KatApp implements IKatApp {
 		return (document.querySelector(templateId!) as HTMLTemplateElement)!.content;
 	}
 
-	public getTemplateId(name: string): string | undefined {
+	private getTemplateId(name: string): string | undefined {
 		let templateId: string | undefined;
 
 		// Find template by precedence
@@ -1555,77 +1654,6 @@ class KatApp implements IKatApp {
 		return templateId;
 	}
 
-	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
-		Utils.trace(this, "KatApp", "triggerEventAsync", `Start: ${eventName}.`, TraceVerbosity.Detailed);
-
-		try {
-			if (eventName == "calculation" || eventName == "configureUICalculation") {
-				await PetiteVue.nextTick();
-			}
-
-			// If event is cancelled, return false;
-			const eventArgs = [...args, this];
-
-			try {
-				// Make application.element[0] be 'this' in the event handler
-				const delegateResult = (this.options as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
-
-				if (delegateResult != undefined) {
-					return delegateResult;
-				}
-
-			} catch (error) {
-				// apiAsync already traces error, so I don't need to do again
-				if (!(error instanceof ApiError)) {
-					Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
-				}
-			}
-
-			try {
-				const event = jQuery.Event(eventName + ".ka");
-
-				const currentEvents = $._data(this.el[0], "events")?.[eventName];
-
-				// Always prevent bubbling, KatApp events should never bubble up, had a problem where
-				// events were triggered on a nested rbl-app view element, but every event was then
-				// bubbled up to the containing application handlers as well
-				if (currentEvents != undefined) {
-					currentEvents.filter(e => e.namespace == "ka" && (e.kaProxy ?? false) == false).forEach(e => {
-						e.kaProxy = true;
-						const origHandler = e.handler;
-						e.handler = function () {
-							arguments[0].stopPropagation();
-							return origHandler.apply(this, arguments);
-						}
-					});
-
-					$(this.el).trigger(event, eventArgs);
-				}
-
-				let eventResult = (event as JQuery.TriggeredEvent).result;
-
-				if (eventResult instanceof Promise) {
-					eventResult = await eventResult;
-				}
-
-				if (event.isDefaultPrevented()) {
-					return false;
-				}
-
-				return eventResult;
-
-			} catch (error) {
-				// apiAsync already traces error, so I don't need to do again
-				if (!(error instanceof ApiError)) {
-					Utils.trace(this, "KatApp", "triggerEventAsync", `Error triggering ${eventName}`, TraceVerbosity.None, ( error as IStringAnyIndexer ).responseJSON ?? error);
-				}
-			}
-			return true;
-		} finally {
-			Utils.trace(this, "KatApp", "triggerEventAsync", `Complete: ${eventName}.`, TraceVerbosity.Detailed);
-		}
-	}
-
 	private get nextCalculation(): INextCalculation {
 		let app: IKatApp = this;
 
@@ -1634,8 +1662,7 @@ class KatApp implements IKatApp {
 			app = this.options.hostApplication!;
 		}
 
-		const from = app.selector;
-		const cacheValue = sessionStorage.getItem("katapp:debugNext:" + this.selector);
+		const cacheValue = sessionStorage.getItem("katapp:debugNext:" + app.selector);
 		const debugNext: INextCalculation = JSON.parse(cacheValue ?? "{ \"saveLocations\": [], \"expireCache\": false, \"trace\": false }");
 
 		if (cacheValue == undefined) {

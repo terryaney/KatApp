@@ -41,7 +41,7 @@
 			// If any items are returned as cache, verify they are there...
 			for (var i = 0; i < cachedResults.length; i++) {
 				const r = calculationResults.Results[i];
-				const cacheResult = await application.getCacheAsync(`RBLCache:${r.CacheKey}`);
+				const cacheResult = await this.getCacheAsync(`RBLCache:${r.CacheKey}`, application.options.decryptCache);
 				if (cacheResult == undefined) {
 					Utils.trace(application, "Calculation", "calculateAsync", `Cache miss for ${r.CalcEngine} with key ${r.CacheKey}`, TraceVerbosity.Detailed);
 				}
@@ -84,7 +84,7 @@
 					}
 					else {
 						Utils.trace(application, "Calculation", "calculateAsync", `Set cache for ${r.CalcEngine}`, TraceVerbosity.Detailed);
-						await application.setCacheAsync(`RBLCache:${cacheKey}`, r.Result!);
+						await this.setCacheAsync(`RBLCache:${cacheKey}`, r.Result!, application.options.encryptCache);
 					}
 				}
 			}
@@ -225,7 +225,28 @@
 
 			throw new CalculationError("Unable to complete calculation(s)", [response]);
 		}
-    }
+	}
+	
+	static async setCacheAsync(key: string, data: object, encryptCache: (data: object) => string | Promise<string>): Promise<void> {
+		var cacheResult = encryptCache(data);
+		if (cacheResult instanceof Promise) {
+			cacheResult = await cacheResult;
+		}
+		sessionStorage.setItem(key, cacheResult);
+	}
+	static async getCacheAsync(key: string, decryptCache: (cipher: string) => object | Promise<object>): Promise<object | undefined> {
+		const data = sessionStorage.getItem(key);
+
+		if (data == undefined) return undefined;
+
+		let cacheResult = decryptCache(data);
+
+		if (cacheResult instanceof Promise) {
+			cacheResult = await cacheResult;
+		}
+
+		return cacheResult;
+	}
 }
 
 class CalculationError extends Error {

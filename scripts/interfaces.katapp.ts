@@ -52,7 +52,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	resourceStringsEndpoint?: string;
 	relativePathTemplates?: IStringIndexer<string>;
 
-	onKatAppNavigate?: (id: string, props: IModalOptions, el: HTMLElement) => void;
+	katAppNavigate?: (id: string, props?: IModalOptions, el?: HTMLElement) => void;
 
 	// Set by framework when nested/modal app
 	modalAppOptions?: IModalAppOptions;
@@ -64,16 +64,16 @@ interface IManualTabDef extends IStringIndexer<string | undefined | ITabDefTable
 	"@name": string | undefined;
 }
 
-interface ITabDef extends IStringIndexer<ITabDefTable> {
-}
+interface ITabDef extends IStringIndexer<ITabDefTable> { }
 interface ITabDefTable extends Array<ITabDefRow> { };
 interface ITabDefRow extends IStringIndexer<string> { };
 interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { };
 interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { };
 
-interface KatAppStatic {
+interface IKatAppStatic {
 	createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp>;
 	get(key: string | number | Element): KatApp | undefined;
+	handleEvents(selector: string, configAction: (config: IKatAppEventsConfiguration) => void): void;
 }
 
 interface IKatApp {
@@ -84,17 +84,17 @@ interface IKatApp {
 	state: IApplicationData;
 	selector: string;
 
-	update(options: IUpdateApplicationOptions): IKatApp;
-	on<TType extends string>(events: TType, handler: JQuery.TypeEventHandler<HTMLElement, undefined, HTMLElement, HTMLElement, TType> | false): KatApp;
-	off<TType extends string>(events: TType): KatApp;
-
+	configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
+	handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
+	allowCalculation(ceKey: string, enabled: boolean): void;
+	
 	calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;
 	apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;
 	showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse>;
+	navigateAsync(navigationId: string, options?: INavigationOptions): void;
 
 	blockUI(): void;
 	unblockUI(): void;
-	allowCalculation(ceKey: string, enabled: boolean): void;
 
 	getInputs(customInputs?: ICalculationInputs): ICalculationInputs;
 	getInputValue(name: string, allowDisabled?: boolean): string | undefined;
@@ -104,31 +104,61 @@ interface IKatApp {
 	closest(element: JQuery | HTMLElement, selector: string): JQuery;
 
 	notifyAsync(from: KatApp, name: string, information?: IStringAnyIndexer): Promise<void>;
-	triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined>;
+	getTemplateContent(name: string): DocumentFragment;
 
 	debugNext(saveLocations?: string | boolean, serverSideOnly?: boolean, trace?: boolean, expireCache?: boolean): void;
-
-	getTemplateContent(name: string): DocumentFragment;
 }
 
-interface IUpdateApplicationOptions {
-	model?: IStringAnyIndexer;
+interface IKatAppEventsConfiguration {
+	initialized?: (application: IKatApp) => void;
+	modalAppInitialized?: (modalApplication: IKatApp, hostApplication: IKatApp) => void;
+	nestedAppInitialized?: (nestedApplication: IKatApp, hostApplication: IKatApp) => void;
+	rendered?: (initializationErrors: IValidation[] | undefined, application: IKatApp) => void;
+	nestedAppRendered?: (nestedApplication: IKatApp, initializationErrors: IValidation[] | undefined, hostApplication: IKatApp) => void;
+	updateApiOptions?: (submitApiOptions: ISubmitApiOptions, endpoint: string, application: IKatApp) => void;
+	calculateStart?: (submitApiOptions: ISubmitApiOptions, application: IKatApp) => void | false;
+	inputsCached?: (cachedInputs: ICalculationInputs, application: IKatApp) => void;
+	resultsProcessing?: (results: Array<ITabDef>, inputs: ICalculationInputs, submitApiOptions: ISubmitApiOptions, application: IKatApp) => void;
+	configureUICalculation?: (lastCalculation: ILastCalculation, application: IKatApp) => void;
+	calculation?: (lastCalculation: ILastCalculation, application: IKatApp) => void;
+	calculationErrors?: (key: string, exception: Error | undefined, application: IKatApp) => void;
+	calculateEnd?: (application: IKatApp) => void;
+	domUpdated?: (elements: Array<HTMLElement>, application: IKatApp) => void;
+	apiStart?: (endpoint: string, submitData: ISubmitApiData, trigger: JQuery<HTMLElement> | undefined, apiOptions: IApiOptions, application: IKatApp) => void | false;
+	apiComplete?: (endpoint: string, successResponse: IStringAnyIndexer | undefined, trigger: JQuery<HTMLElement> | undefined, apiOptions: IApiOptions, application: IKatApp) => void;
+	apiFailed?: (endpoint: string, errorResponse: IApiErrorResponse, trigger: JQuery<HTMLElement> | undefined, apiOptions: IApiOptions, application: IKatApp) => void;
+	/**
+	 * The 'notification' delegate is invoked when another KatApp wants to notify this application via the `notifyAsync` method.
+	 * @param {string} name - The name of the notification.
+	 * @param {IStringAnyIndexer | undefined} information - Optional information to pass along during the notification to contain additional properties other than the notification name (i.e. IDs, messages, etc.).
+	 * @param {IKatApp} from - The KatApp that sent the notification.
+	 */
+	notification?: (name: string, information: IStringAnyIndexer | undefined, from: IKatApp) => void;
+	input?: (name: string, calculate: boolean, input: HTMLElement, scope: IKaInputScope | IKaInputGroupScope) => void;
+}
+
+interface IConfigureOptions {
 	options?: {
 		modalAppOptions?: IModalAppOptions;
 		inputs?: ICalculationInputs;
 	}
-	handlers?: IStringAnyIndexer;
+	model?: IStringAnyIndexer;
+	handlers?: IHandlers;
 	components?: IStringAnyIndexer;
 	directives?: IStringIndexer<(ctx: DirectiveContext<Element>) => (() => void) | void>;
+	events: IKatAppEventsConfiguration;
 }
 
-interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | undefined> {
+interface IHandlers extends IStringAnyIndexer { };
+	
+interface ICalculationInputs extends IStringIndexer<string | number | ICalculationInputTable[] | undefined> {
 	iConfigureUI?: string;
 	iDataBind?: string;
 	iInputTrigger?: string;
 	iNestedApplication?: string;
 	iModalApplication?: string;
 	tables?: ICalculationInputTable[];
+	haveChanged?: number;
 }
 
 interface IApplicationData {
@@ -141,7 +171,7 @@ interface IApplicationData {
 
 	model: IStringAnyIndexer;
 
-	handlers?: IStringAnyIndexer;
+	handlers?: IHandlers;
 
 	// Private...
 	_inspectors: IStringIndexer<number>;
@@ -192,7 +222,6 @@ interface ILastCalculation {
 	configuration: ISubmitApiConfiguration;
 }
 
-
 interface IModalOptions {
 	view?: string;
 	content?: string | JQuery;
@@ -234,7 +263,6 @@ interface IModalResponse {
 	confirmed: boolean;
 	response: unknown;
 }
-
 
 interface IApiOptions {
 	calculationInputs?: ICalculationInputs;
