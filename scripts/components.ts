@@ -9,10 +9,7 @@
 	}
 }
 
-class InputComponent {
-	constructor(private props: IKaInputModel) {
-	}
-
+class InputComponentBase {
 	// My impl of Vue's cacheStringFunction
 	private static stringCache: Record<string, string> = Object.create(null);
 
@@ -23,9 +20,9 @@ class InputComponent {
 		}) as T;
 	}
 
-	public static unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
+	protected unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
 		// input is always 'isConnected = false' so don't need to use scoped application.closest, just use DOM input.closest event
-		if (clearOnUnmount || input.classList.contains("rbl-clear-on-unmount") || input.closest(".rbl-clear-on-unmount") != undefined) {
+		if (clearOnUnmount || input.hasAttribute("ka-unmount-clears-inputs") || input.closest("[ka-unmount-clears-inputs]") != undefined) {
 			const name = input.getAttribute("name");
 			if (name != undefined) {
 				delete application.state.inputs[name];
@@ -33,12 +30,13 @@ class InputComponent {
 		}
 	}
 
-	public static mounted(
+	protected mounted(
 		application: KatApp,
 		scope: IStringAnyIndexer,
 		name: string,
 		input: HTMLInputElement,
 		defaultValue: (name: string) => string | undefined,
+		isExcluded: boolean,
 		noCalc: (name: string) => boolean,
 		displayFormat: (name: string) => string | undefined,
 		mask: (name: string) => string | undefined,
@@ -65,8 +63,8 @@ class InputComponent {
 		const checkValue = type == "checkbox" ? (input.hasAttribute("checked") ? "1" : "0" ) : undefined;
 		const textValue = type == "text" ? input.getAttribute("value") : undefined;
 
-		const exclude = input.classList.contains("rbl-exclude") || application.closest(input, ".rbl-exclude").length != 0;
-		const skipCalc = input.classList.contains("rbl-nocalc") || application.closest(input, ".rbl-nocalc").length != 0;
+		const exclude = isExcluded || input.hasAttribute("ka-rbl-exclude") || application.closest(input, "[ka-rbl-exclude]").length != 0;
+		const skipCalc = input.hasAttribute("ka-rbl-no-calc") || application.closest(input, "[ka-rbl-no-calc]").length != 0;
 
 		if (!exclude) {
 			let value = defaultValue(name) ?? checkValue ?? radioValue ?? textValue;
@@ -93,7 +91,7 @@ class InputComponent {
 				application.state.inputs[name] = application.getInputValue(name);
 
 				if (!skipCalc && !noCalc(name)) {
-					// Don't trigger calc if rbl-nocalc/rbl-exclude class as well
+					// Don't trigger calc if ka-rbl-no-calc/ka-rbl-exclude attribute as well
 					if (calculate) {
 						application.state.inputs.iInputTrigger = name;
 						await application.calculateAsync();
@@ -126,7 +124,7 @@ class InputComponent {
 		this.bindCustomEvents(application, input, events, scope);
 	}
 
-	private static bindInputEvents(
+	private bindInputEvents(
 		application: KatApp,
 		name: string,
 		input: HTMLInputElement, type: string | null,
@@ -220,7 +218,7 @@ class InputComponent {
 
 	static percentFormat = /([/s/S]*?){0:p\d*}/;
 
-	private static bindRangeEvents(name: string, input: HTMLInputElement, refs: IStringIndexer<HTMLElement>, displayFormat: (name: string) => string | undefined, inputEventAsync: (calculate: boolean) => Promise<void>): void {
+	private bindRangeEvents(name: string, input: HTMLInputElement, refs: IStringIndexer<HTMLElement>, displayFormat: (name: string) => string | undefined, inputEventAsync: (calculate: boolean) => Promise<void>): void {
 		// https://css-tricks.com/value-bubbles-for-range-inputs/
 		let bubbleTimer: number | undefined;
 		const bubble = refs.bubble != undefined ? $(refs.bubble) : undefined;
@@ -312,7 +310,7 @@ class InputComponent {
 		}
 	}
 
-	private static bindDateEvents(application: KatApp, name: string, input: HTMLInputElement, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void> ): void {
+	private bindDateEvents(application: KatApp, name: string, input: HTMLInputElement, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void> ): void {
 		// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
 
 		// So flow:
@@ -365,7 +363,7 @@ class InputComponent {
 		});
 	}
 
-	private static bindCustomEvents(application: KatApp, input: HTMLInputElement, events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, scope: IStringAnyIndexer ): void {
+	private bindCustomEvents(application: KatApp, input: HTMLInputElement, events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>, scope: IStringAnyIndexer ): void {
 		if (events != undefined) {
 			// Would love to use VUE's v-on code as base, but no access, so I have to duplicate bunch here.
 			// Cant' just put @ event handlers into templates b/c someone might call them without handlers attached.  Also,
@@ -417,7 +415,7 @@ class InputComponent {
 						if (modifiers.middle) arg = 'mouseup'
 					}
 
-					const hyphenate = this.cacheStringFunction(str => {
+					const hyphenate = InputComponentBase.cacheStringFunction(str => {
 						const hyphenateRE = /\B([A-Z])/g;
 						return str.replace(hyphenateRE, '-$1').toLowerCase();
 					});
@@ -448,7 +446,7 @@ class InputComponent {
 		}
 	}
 
-	private static getModifiers(property: string): IStringIndexer<true> | undefined {
+	private getModifiers(property: string): IStringIndexer<true> | undefined {
 		if (property.indexOf(".") == -1) return undefined;
 
 		const modifiers: IStringIndexer<true> = {};
@@ -460,6 +458,12 @@ class InputComponent {
 		}
 
 		return modifiers;
+	}
+}
+
+class InputComponent extends InputComponentBase {
+	constructor(private props: IKaInputModel) {
+		super();
 	}
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputScope | undefined {
@@ -497,7 +501,7 @@ class InputComponent {
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
 		const keypressRegex = (name: string) => getInputCeValue("keypress-regex") ?? props.keypressRegex;
 		const defaultValue = (name: string) => application.state.inputs[name] as string ?? props.value;
-		const noCalc = (name: string) => props.isNoCalc?.(base) ?? base.noCalc;
+		const noCalc = (name: string) => typeof props.isNoCalc == "boolean" ? props.isNoCalc : props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
 			let ceFormat = getInputCeValue("display-format") ?? "";
 
@@ -540,7 +544,7 @@ class InputComponent {
 			/*
 			// Keeping code here...was going to make it possible to detect if property is reactive or not and use it, but it didn't keep
 			// state.inputs in sync with the object I was maintaining outside of state.input (i.e. item.percent for nexgen.beneficiaries)
-			// so I just used rbl-exclude for now for those inputs
+			// so I just used v-ka-rbl-exclude for now for those inputs
 			get value() {
 				// Currently not supported in inputGroup...it has a 'values' properties, but expected to just be values...would
 				// have to made introduce a function/object that somehow could be used in reactive way
@@ -556,8 +560,8 @@ class InputComponent {
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
 
-			get disabled() { return props.isDisabled?.(base) ?? base.disabled; },
-			get display() { return props.isDisplay?.(base) ?? base.display; },
+			get disabled() { return typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(base) ?? base.disabled; },
+			get display() { return typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(base) ?? base.display; },
 			get noCalc() { return noCalc(name) },
 			get label() { return getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? ""; },
 			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
@@ -595,7 +599,7 @@ class InputComponent {
 				return (v != undefined ? +v : undefined) ?? props.step ?? 1;
 			},
 
-			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input, props.clearOnUnmount),
+			inputUnmounted: (input: HTMLInputElement) => this.unmounted(application, input, props.clearOnUnmount),
 			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder, assigned below so that 'scope' can be passed to handlers */ },
 			uploadAsync: async () => {
 				if (props.uploadEndpoint == undefined) {
@@ -614,14 +618,15 @@ class InputComponent {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => InputComponent.mounted(application, scope, name, input, defaultValue, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 
 		return scope;
 	}
 }
 
-class TemplateMultipleInputComponent {
+class TemplateMultipleInputComponent extends InputComponentBase {
 	constructor(private props: IKaInputGroupModel) {
+		super();
 	}
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputGroupScope | undefined {
@@ -668,7 +673,7 @@ class TemplateMultipleInputComponent {
 
 		const noCalc = function (name: string) {
 			const index = names.indexOf(name);
-			return props.isNoCalc?.(index, base) ?? base.noCalc(index);
+			return typeof props.isNoCalc == "boolean" ? props.isNoCalc : props.isNoCalc?.(index, base) ?? base.noCalc(index);
 		}
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
@@ -707,8 +712,8 @@ class TemplateMultipleInputComponent {
 			value: (index: number) => defaultValue( names[ index ]) ?? "",
 			// v-model="value" support, but not using right now
 			// set value(val: string) { application.state.inputs[name] = val; },
-			disabled: (index: number) => props.isDisabled?.(index, base) ?? base.disabled(index),
-			display: (index: number) => props.isDisplay?.(index, base) ?? base.display(index),
+			disabled: (index: number) => typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(index, base) ?? base.disabled(index),
+			display: (index: number) => typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(index, base) ?? base.display(index),
 			noCalc: (index: number) => noCalc(names[index]),
 			label: (index: number) => getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "",
 			placeHolder: (index: number) => getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index],
@@ -740,7 +745,7 @@ class TemplateMultipleInputComponent {
 			prefix: (index: number) => getInputCeValue(index, "prefix") ?? prefixes[index],
 			suffix: (index: number) => getInputCeValue(index, "suffix") ?? suffixes[index],
 
-			inputUnmounted: (input: HTMLInputElement) => InputComponent.unmounted(application, input, props.clearOnUnmount),
+			inputUnmounted: (input: HTMLInputElement) => this.unmounted(application, input, props.clearOnUnmount),
 			inputMounted: (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => { /* placeholder */ }
 		};
 
@@ -751,7 +756,7 @@ class TemplateMultipleInputComponent {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			InputComponent.mounted(application, this, name, input, defaultValue, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, this, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;

@@ -339,6 +339,7 @@ interface IKaTableModel {
 interface IKaInputModel {
 	name: string;
 	clearOnUnmount?: boolean;
+	isExcluded?: boolean;
 
 	type?: string;
 	value?: string;
@@ -367,10 +368,9 @@ interface IKaInputModel {
 
 	template?: string;
 
-	// isError?: (base: IKaInputScopeBase) => string;
-	isNoCalc?: (base: IKaInputScopeBase) => boolean;
-	isDisabled?: (base: IKaInputScopeBase) => boolean;
-	isDisplay?: (base: IKaInputScopeBase) => boolean;
+	isNoCalc?: ((base: IKaInputScopeBase) => boolean) | boolean;
+	isDisabled?: ((base: IKaInputScopeBase) => boolean) | boolean;
+	isDisplay?: ((base: IKaInputScopeBase) => boolean) | boolean;
 
 	events?: IStringIndexer<((e: Event, application: KatApp) => void)>
 }
@@ -437,6 +437,7 @@ interface IKaInputGroupModel {
 	names: string[];
 	type: string;
 	clearOnUnmount?: boolean;
+	isExcluded?: boolean;
 
 	values?: string[];
 	labels?: string[];
@@ -459,10 +460,9 @@ interface IKaInputGroupModel {
 
 	template: string;
 
-	isNoCalc?: (index: number, base: IKaInputGroupModelBase) => boolean;
-	// isError?: (index: number, base: IKaInputGroupModelBase) => string;
-	isDisabled?: (index: number, base: IKaInputGroupModelBase) => boolean;
-	isDisplay?: (index: number, base: IKaInputGroupModelBase) => boolean;
+	isNoCalc?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
+	isDisabled?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
+	isDisplay?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
 
 	events?: IStringIndexer<((e: Event, application: KatApp) => void)>
 }

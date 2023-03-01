@@ -2508,6 +2508,24 @@ class KatApp implements IKatApp {
 				inspectElement(directive, exp);
 			});
 
+			// Turn v-ka-rbl-no-calc into ka-rbl-no-calc='true' (was .rbl-nocalc)
+			// Turn v-ka-rbl-exclude into ka-rbl-exclude='true' (was .rbl-exclude)
+			// Turn v-ka-unmount-clears-inputs into ka-unmount-clears-inputs='true' (was .rbl-clear-on-unmount)
+			container.querySelectorAll("[v-ka-rbl-no-calc],[v-ka-rbl-exclude],[v-ka-unmount-clears-inputs]").forEach(directive => {
+				if ( directive.hasAttribute("v-ka-rbl-no-calc") ) {
+					directive.removeAttribute("v-ka-rbl-no-calc");
+					directive.setAttribute("ka-rbl-no-calc", "true");
+				}
+				if ( directive.hasAttribute("v-ka-rbl-exclude") ) {
+					directive.removeAttribute("v-ka-rbl-exclude");
+					directive.setAttribute("ka-rbl-exclude", "true");
+				}
+				if ( directive.hasAttribute("v-ka-unmount-clears-inputs") ) {
+					directive.removeAttribute("v-ka-unmount-clears-inputs");
+					directive.setAttribute("ka-unmount-clears-inputs", "true");
+				}
+			});
+
 			// Turn v-ka-needs-calc into two items with toggled class and handler
 			container.querySelectorAll("button[v-ka-needs-calc], a[v-ka-needs-calc]").forEach(directive => {
 				let needsCalcText = directive.getAttribute("v-ka-needs-calc");

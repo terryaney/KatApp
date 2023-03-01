@@ -800,7 +800,7 @@ Below is an example of how to leverage the `$renderId` to allow for proper scopi
 </script>
 
 <!-- Loop each item in list and call template with non-array source -->
-<div class="rbl-nocalc" v-for="item in model.list">
+<div v-ka-rbl-no-calc v-for="item in model.list">
     <div v-ka-template="{ name: 'templateWithScript', source: { name: item } }"></div>
 </div>
 
@@ -837,7 +837,7 @@ Below is an example of how to leverage the `$renderId` to allow for proper scopi
 </template>
 
 <!-- Rendered HTML -->
-<div class="rbl-nocalc">
+<div v-ka-rbl-no-calc>
     <input name="iTemplateInputPension" 
         type="text" 
         class="template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
@@ -876,7 +876,7 @@ With the above example, you could expect the following in the console ouput (rem
 </script>
 
 <!-- Call template with array source -->
-<div class="rbl-nocalc" v-ka-template="{ name: 'templateWithScript', source: model.list.map( item => ({ name: item }) ) }"></div>
+<div v-ka-rbl-no-calc v-ka-template="{ name: 'templateWithScript', source: model.list.map( item => ({ name: item }) ) }"></div>
 
 <template id="templateWithScript">
 	<script setup type="text/javascript">
@@ -913,7 +913,7 @@ With the above example, you could expect the following in the console ouput (rem
 </template>
 
 <!-- Rendered HTML (notice how the last segment of renderId is always 1 in this case) -->
-<div class="rbl-nocalc">
+<div v-ka-rbl-no-calc>
     <input name="iTemplateInputPension" 
         type="text" 
         class="template-script-input iTemplateInputPension templateWithScript_templateWithScript_ka1e46825c_1">
@@ -958,6 +958,7 @@ Vue supports [many directives](#https://vuejs.org/api/built-in-directives.html),
 - [v-on](#v-on) - Attach an event listener to the element.
 - [v-if / v-else / v-else-if](#v-if--v-else--v-else-if) - Conditionally render an element or a template fragment based on the truthy-ness of the expression value.
 - [v-show](#v-show) - Toggle the element's visibility based on the truthy-ness of the expression value.
+- [v-pre](#v-pre) - Use the `v-pre` directive to an element that is used for [IModalOptions.contentSelector](#imodaloptionscontentselector) if the markup within the element should not be processed by the host application, but instead should be processed and become reactive when the modal application is created.
 
 **Note:** Usually, 'inside' the actual directive markup, the content is simply 'valid javascript' with the given context/scope.
 
@@ -1480,6 +1481,14 @@ When an element is toggled, the element and its contained directives are destroy
 
 `v-show` works by setting the display CSS property via inline styles, and will try to respect the initial display value when the element is visible.
 
+## v-pre
+
+> [Vue](#https://vuejs.org/api/built-in-directives.html#v-pre) Skip compilation for this element and all its children.
+
+Use the `v-pre` directive to an element that is used for [IModalOptions.contentSelector](#imodaloptionscontentselector) if the markup within the element should not be processed by the host application, but instead should be processed and become reactive when the modal application is created.
+
+When this directive is applied to an element targeted with `contentSelector`, the resulting modal application's [`state`](#iapplicationdata) is a clone from the host application, so that all `v-*` and `v-ka-*` directives have all the data they need to correctly process.  The `v-pre` is discarded when the application is created and regular Vue processing/compilation correctly occurs for the modal application.
+
 # Custom KatApp Directives
 
 Similiar to common Vue directives, the KatApp Framework provides custom directives that help rendering markup by leveraging/accessing RBLe Framework calculation results.  The majority of the KatApp Framework directives take a 'model' coming in describing how the directive should function. [`v-ka-template`](#v-ka-template), [`v-ka-input`](#v-ka-input) and [`v-ka-input-group`](#v-ka-input-group) take a model *and* return a 'scope' object that can be used by the markup contained by the template. [`v-ka-needs-calc`](#v-ka-needs-calc) and [`v-ka-inline`](#v-ka-inline) are 'marker' directives and do not take a model or return a scope.
@@ -1496,8 +1505,12 @@ Similiar to common Vue directives, the KatApp Framework provides custom directiv
 - [v-ka-table](#v-ka-table) - Render HTML tables automatically from the calculation results based on `text*` and `value*` columns.
 - [v-ka-highchart](#v-ka-highchart) - Render Highcharts chart automatically from the calculation results.
 - [v-ka-attributes](#v-ka-attributes) - Accepts a key/value space delimitted `string` of attributes and applies them to the current `HTMLElement`.
-- [v-ka-needs-calc](#v-ka-needs-calc) - Control UI state when a submission form requires a RBLe Framework calculation before user can click the 'submit' button.
+- [v-ka-needs-calc](#v-ka-needs-calc) - Flag UI submission link/button as requiring a RBLe Framework calculation to complete before user can submit the form.
 - [v-ka-inline](#v-ka-inline) - Render *raw HTML* without the need for a `HTMLElement` 'container'.
+- [v-ka-rbl-no-calc](#v-ka-rbl-no-calc) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change.
+- [v-ka-rbl-exclude](#v-ka-rbl-exclude) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change *and* are never submitted to an RBLe calculation.
+- [v-ka-unmount-clears-inputs](#v-ka-unmount-clears-inputs) - Flag an element so that when any contained `v-ka-input` elements are removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) value is also removed.
+- [v-ka-nomount](#v-ka-nomount) - Flag an element so that any contained `v-ka-input` elements allow for the KatApp framework to wire up all automatic processing.
 
 ## v-ka-value
 
@@ -1725,7 +1738,8 @@ Internally, KatApp Framework leverages the [`v-scope`](#https://github.com/vuejs
 - [v-ka-input Scope](#v-ka-input-scope) - Discusses the properties that are exposed on the `v-ka-input` scope and can be used in Kaml View markup.
 - [rbl-input Table](#rbl-input-table) - Discusses RBLe Framework `rbl-input` table layout that can be used to automatically control many of the `v-ka-input` model properties.
 - [v-ka-input Samples](#v-ka-input-samples) - Examples illustrating uses of the different features of the `v-ka-input` directive.
-- [v-ka-nomount](#v-ka-nomount) - Control whether or not the associated HTML input element allows for the KatApp framework to wire up all automatic processing.
+
+See [v-ka-nomount](#v-ka-nomount) and `rbl-input Table` to learn more about controlling whether or not the associated HTML input elements allow for the KatApp framework to wire up all automatic processing and information about the RBLe Framework `rbl-input` that can be used to automatically control many of the `v-ka-input` model properties.
 
 ### v-ka-input Model
 
@@ -1764,9 +1778,9 @@ Property | Type | Description
 `help` | `{ title?: string; content: string; width?: number; }` | Provide the help configuration when the input displays contextual help.<br/><br/>When `help` is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](#https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `{ container?: string; input?: string; }` | Provide css configuration that can be applied to the 'container' element or any 'inputs' within a template markup.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to `HTMLInputElements` based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
-`isNoCalc`<sup>3</sup> | `(base: IKaInputScopeBase) => boolean` | Provide a delegate for the input that will be called to determine if an input should *not* trigger an RBLe Framework calculation.  The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value.<br/><br/>**Note:** Additionally if any input or input ancestor has `rbl-nocalc` or `rbl-exclude` in the class list, the calculation will not occur.
-`isDisabled`<sup>3</sup> | `(base: IKaInputScopeBase) => boolean` | Provide a delegate for the input that will be called to determine if an input should be disabled.<br/><br/>The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value.
-`isDisplay`<sup>3</sup> | `(base: IKaInputScopeBase) => boolean` | Provide a delegate for the input that will be called to determine if an input should be displayed.<br/><br/>The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value.
+`isNoCalc`<sup>3</sup> | `((base: IKaInputScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate for the input that will be called to determine if an input should *not* trigger an RBLe Framework calculation.  The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value.<br/><br/>**Note:** Additionally if any input or input ancestor has [`v-ka-rbl-no-calc`](#v-ka-rbl-no-calc) or [`v-ka-rbl-exclude`](#v-ka-rbl-exclude) in the class list, the calculation will not occur.
+`isDisabled`<sup>3</sup> | `((base: IKaInputScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate for the input that will be called to determine if an input should be disabled.<br/><br/>The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value.
+`isDisplay`<sup>3</sup> | `((base: IKaInputScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate for the input that will be called to determine if an input should be displayed.<br/><br/>The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value.
 `ce` | `string` | Provide the CalcEngine key if all the values that automatically pull from RBLe Framework calculation values should use a CalcEngine *different from the default CalcEngine*.
 `tab` | `string` | Provide the CalcEngine result tab name if all the values that automatically pull from RBLe Framework calculation values should use a tab name *different from the default tab specified for the associated CalcEngine*.
 
@@ -1799,7 +1813,7 @@ Property | Type | Description
 `value` | `string` | Gets the default value to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.value` RBLe Framework calculation value<br/>2. `rbl-defaults.value` RBLe Framework calculation value<br/>3. `model.value` property<br/>4. `""` if no value provided.
 `disabled` | `boolean` | Gets a value indicating the disabled state of the current input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isDisabled` delegate property<br/>2. `rbl-input.disabled` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-disabled.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.
 `display` | `boolean` | Gets a value indicating the display state of the current input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isDisplay` delegate property<br/>2. `rbl-input.display` RBLe Framework calculation value (if value is *not* `0`)<br/>3. `rbl-display.value` RBLe Framework calculation value (if value is *not* `0`)<br/>4. `true` if no value provided.
-`noCalc` | `boolean` | Get a value indicating whether the current input should trigger a RBLe Framework calculation on 'change'.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isNoCalc` delegate property<br/>2. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.<br/><br/>**Note:** Additionally if any input or input ancestor has `rbl-nocalc` or `rbl-exclude` in the class list, the calculation will not occur.
+`noCalc` | `boolean` | Get a value indicating whether the current input should trigger a RBLe Framework calculation on 'change'.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isNoCalc` delegate property<br/>2. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.<br/><br/>**Note:** Additionally if any input or input ancestor has [`v-ka-rbl-no-calc`](#v-ka-rbl-no-calc)` or [`v-ka-rbl-exclude`](#v-ka-rbl-exclude) in the class list, the calculation will not occur.
 `label` | `string` | Gets the label to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.label` RBLe Framework calculation value<br/>2. `rbl-value[@id='l' + name].value` RBLe Framework calculation value<br/>3. `model.label` property<br/>4. `""` if no value provided.
 `hideLabel` | `boolean` | Gets a value determining whether the label should be hidden or not.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.label` RBLe Framework calculation value (return `true` if `label == "-1"`)<br/>2. `model.hideLabel` property<br/>3. `false` if no value provided.
 `placeHolder` | `string \| undefined` | Gets the placeholder to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.placeholder` RBLe Framework calculation value<br/>2. `model.placeHolder` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want to know if `""` was assigned.  For example, a Bootstrap Floating `SELECT` might be rendered with a default empty, first element if `placeHolder != ""`.
@@ -2046,87 +2060,6 @@ The following template uses most of the previous properties and additionally use
 </template>
 ```
 
-### v-ka-nomount
-
-When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#iapplicationdatainputs) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
-
-There are some situations where **inputs should not be automatically processed** (i.e. if a template has hidden inputs that are for internal use only - i.e. file upload templates).  When an input should **not** be processed, the `v-ka-nomount` attribute can be applied to the input.
-
-During the mounting of a KatApp input the following occurs:
-
-1. The input `name` attribute is set appropriately to the [`scope.name`](#ikainputscopename).
-1. The `scope.name` is added to the input's `classList`.
-1. If the input (or a container of the input) does *not* contain the `rbl-exclude` class
-    1. The input value will be assigned from the [`scope.value`](#ikainputscopevalue) (if provided), or
-    1. `state.inputs` are initialized with the current value from markup (if there is one).
-1. DOM events are attached
-    1. All Inputs
-        1. On 'change' (i.e. any modification to the input value)
-            1. Remove an [`state.errors`](#iapplicationdataerrors) associated with the input.
-            1. Set [`state.needsCalculation`](#iapplicationdataneedscalculation) to `true`.
-        1. On 'update', syncronize `state.inputs` if `rbl-exclude` class is not used.
-        1. On 'update', trigger RBLe Calculation if `rbl-skip` class is not used and [`scope.noCalc`](#ikainputscopenocalc) is `false`.
-        1. On `update`, set `state.needsCalculation` to `false`.
-        1. On `update`, trigger [`scope.noCalc`](#ikainputscopenocalc) event.
-        1. Attach any events provided in the [`model.events`](#ikainputmodelevents) property.
-    1. Specific Input Processing
-        1. Date Inputs ([`scope.type`](#ikainputscopetype) is `date`)
-            1. The `state.inputs` are only assigned a valid date or `undefined` and not each time a keypress occurs.
-            1. When `state.inputs` are set, a `value.ka` event is triggered for Kaml Views to catch as needed.
-        1. Range Inputs (`scope.type` is `range`)
-            1. Add additional events to handle displaying range value in UI for the user (see [IKaInputModel.type for range Inputs](#ikainputmodeltype-for-range-inputs) for more information).
-            1. Watches for a `rangeset.ka` event (triggered via [`application.setInputValue`](#ikatappsetinputvalue)) to update display
-        1. Text Inputs (excluding `TEXTAREA`)
-            1. When `enter` is pressed, trigger an 'update' event.
-			1. Process [`scope.keyboardRegex`](#ikainputscopekeyboardregex) if provided.
-            1. Process [`scope.mask`](#ikainputscopemask) if provided.
-
-During the unmounting of a KatApp input the following occurs:
-
-1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#iapplicationdatainputs).
-1. If the input, or a container, has a `rbl-clear-on-unmount` class, the input will be removed from the `state.inputs`.
-    1. Note, since Vue handles [`v-if`](#v-if--v-else--v-else-if) and [`v-for`](#v-for) directives with special 'cloned nodes', if the `rbl-clear-on-unmount` is applied *outside* of these elements, they will not work properly.
-    1. `rbl-clear-on-unmount` is useful to use if you can wrap a group of inputs with the class and the inputs themselves will never show and hide based on their `display` property.  For example if a modal has a 'view' mode and 'edit' mode.  The 'edit' mode gets processed and returns the 'view' mode.  If the user wants to edit/create again in the 'edit' mode, you want all the inputs to be cleared after they were hidden/processed.
-
-```html
-<!--
-    When iAge is removed from DOM because showAgeInputs is set to false, 
-    it WILL be removed from state.inputs since the element that 'triggered' the unmount
-    is the v-if element and the class is on/within that element.
--->
-<div v-if="showAgeInputs" class="rbl-clear-on-unmount">
-    <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
-</div>
-
-<!--
-    When iAge is removed from DOM because showAgeInputs is set to false, 
-    it will NOT be removed from state.inputs because the class is outside the
-    'cloned' node that has the v-if on it.
-    
-    In this situation, the clearOnUnmount property should be set specifically on the v-ka-input model.
--->
-<div class="rbl-clear-on-unmount">
-    <div v-if="showAgeInputs">
-        <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
-    </div>
-</div>
-
-<!--
-    When iAge is removed from DOM because rbl-input[@id='iAge'].display is set to 0
-    it will NOT be removed from state.inputs because the v-ka-input renders its own
-    v-if directive inside the div.v-ka-input element and rbl-clear-on-unmount will
-    be ouside the 'cloned' node.
-    
-    In this situation, the clearOnUnmount property should be set specifically on the v-ka-input model.
--->
-<div class="rbl-clear-on-unmount">
-    <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
-</div>
-```
-
-The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#iapplicationdatainputs) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
-
-
 ## v-ka-input-group
 
 The `v-ka-input-group` directive is responsible for initializing groups of HTML inputs to be used in conjunction with the RBLe Framework calculations via synchronizing [`state.inputs`](#iapplicationdatainputs) and HTML inputs. It behaves the same as a [v-ka-input directive](#v-ka-input) except that all the properties on the model and scope are essentially array based to support whatever number of inputs the specified template supports.
@@ -2168,9 +2101,9 @@ Property | Type | Description
 `keyboardRegexs` | `Array<string>` | Provide an array of regular expressions to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `ce` | `string` | Provide the CalcEngine key if all the values that automatically pull from RBLe Framework calculation values should use a CalcEngine *different from the default CalcEngine*.
 `tab` | `string` | Provide the CalcEngine result tab name if all the values that automatically pull from RBLe Framework calculation values should use a tab name *different from the default tab specified for the associated CalcEngine*.
-`isNoCalc`<sup>2</sup> | `(index: number, base: IKaInputGroupScopeBase) => boolean` | Provide a delegate to the input group scope that can be called to determine if an input should *not* trigger an RBLe Framework calculation.  The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.<br/><br/>**Note:** Additionally if any input or input ancestor has `rbl-nocalc` or `rbl-exclude` in the class list, the calculation will not occur.
-`isDisabled`<sup>2</sup> | `(index: number, base: IKaInputGroupScopeBase) => boolean` | Provide a delegate to the input group scope that can be called to determine if an input should be disabled.  The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
-`isDisplay`<sup>2</sup> | `(index: number, base: IKaInputGroupScopeBase) => boolean` | Provide a delegate to the input group scope that can be called to determine if an input should be displayed.  The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
+`isNoCalc`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should *not* trigger an RBLe Framework calculation.  The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.<br/><br/>**Note:** Additionally if any input or input ancestor has [`v-ka-rbl-no-calc`](#v-ka-rbl-no-calc) or [`v-ka-rbl-exclude`](#v-ka-rbl-exclude) in the class list, the calculation will not occur.
+`isDisabled`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be disabled.  The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
+`isDisplay`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be displayed.  The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to all the group `HTMLInputElement`s based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
 `clearOnUnmount` | `boolean` | If `true`, when the inputs of an input group are removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) values are also removed.
 
@@ -2199,7 +2132,7 @@ Property | Type | Description
 `value` | `(index: number) => string` | Given an input index, gets the default value to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.value` RBLe Framework calculation value<br/>2. `rbl-defaults.value` RBLe Framework calculation value<br/>3. `model.values[index]` property<br/>4. `""` if no value provided.
 `disabled` | `(index: number) => boolean` | Given an input index, gets a value indicating the disabled state of the current input.<br/><br/>Returns value based on following precedence:<br/>1. `model.isDisabled` delegate property<br/>2. `rbl-input.disabled` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-disabled.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.
 `display` | `(index: number) => boolean` | Given an input index, gets a value indicating the display state of the current input.<br/><br/>Returns value based on following precedence:<br/>1. `model.isDisplay` delegate property<br/>2. `rbl-input.display` RBLe Framework calculation value (if value is *not* `0`)<br/>3. `rbl-display.value` RBLe Framework calculation value (if value is *not* `0`)<br/>4. `true` if no value provided.
-`noCalc` | `(index: number) => boolean` | Given an input index, gets a value indicating whether the current input should trigger a RBLe Framework calculation on 'change'.<br/><br/>Returns value based on following precedence:<br/>1. `model.isNoCalc` delegate property<br/>2. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.<br/><br/>**Note:** Additionally if any input or input ancestor has `rbl-nocalc` or `rbl-exclude` in the class list, the calculation will not occur.
+`noCalc` | `(index: number) => boolean` | Given an input index, gets a value indicating whether the current input should trigger a RBLe Framework calculation on 'change'.<br/><br/>Returns value based on following precedence:<br/>1. `model.isNoCalc` delegate property<br/>2. `rbl-input.skip-calc` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-skip.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.<br/><br/>**Note:** Additionally if any input or input ancestor has [`v-ka-rbl-no-calc`](#v-ka-rbl-no-calc) or [`v-ka-rbl-no-calc`](#v-ka-rbl-exclude) in the class list, the calculation will not occur.
 `label` | `(index: number) => string` | Given an input index, gets the label to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.label` RBLe Framework calculation value<br/>2. `rbl-value[@id='l' + name].value` RBLe Framework calculation value<br/>3. `model.labels[index]` property<br/>4. `""` if no value provided.
 `hideLabel` | `(index: number) => boolean` | Given an input index, gets a value determining whether the label should be hidden or not.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.label` RBLe Framework calculation value (return `true` if `label == "-1"`)<br/>2. `model.hideLabels[index]` property<br/>3. `false` if no value provided.
 `placeHolder` | `(index: number) => string \| undefined` | Given an input index, gets the placeholder to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.placeholder` RBLe Framework calculation value<br/>2. `model.placeHolders[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want to know if `""` was assigned.  For example, a Bootstrap Floating `SELECT` might be rendered with a default empty, first element if `placeHolder != ""`.
@@ -3155,6 +3088,174 @@ row: {
 <!-- Renders -->
 <p>Working at Conduent is <b>awesome</b>!</p>
 ```
+
+## v-ka-rbl-no-calc
+
+The `v-ka-rbl-no-calc` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained inputs should not trigger a RBLe calculation on change.  Inputs typically trigger a calculation on the `change` event (which normally triggers when an input loses focus).  If all RBLe calculations should be supressed until an entire form is completed and a 'submit button' is clicked, then `v-ka-rbl-no-calc` can be applied.
+
+To trigger the calculation manually, the [`IKatApp.calculateAsync`](#ikatappcalculateasync) method will need to be called.
+
+The `v-ka-rbl-no-calc` directive has the same effect as the [`IKaInputModel.isNoCalc` property](#v-ka-input-model) when it returns `true`.
+
+```html
+<!-- Don't trigger a calculation when inputs change.  Wait until the 'Use Values' button is clicked and the 'closeWorksheetAsync' manually triggers 'calculateAsync' -->
+<div class="card" v-ka-rbl-no-calc>
+	<div class="card-header"><h4 class="card-title">Advanced Annual Future Pay Increase Rates</h4></div>
+	<div class="card-body">
+		<div class="row">
+			<div v-ka-input="{ name: 'iPayIncreaseYear1', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate1', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseYear2', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate2', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div class="col-12">
+				<button @click.prevent="model.worksheet = undefined" type="button" class="btn btn-primary btn-default">Cancel</button>
+				<button @click.prevent="handlers.closeWorksheetAsync" type="button" class="btn btn-primary btn-default">Use Values</button>
+			</div>
+		</div>
+	</div>
+</div>
+```
+
+## v-ka-rbl-exclude
+
+The `v-ka-rbl-no-calc` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained inputs should not trigger a RBLe calculation on change **and** should never be submitted to an RBLe calculation.  
+
+The `v-ka-rbl-exclude` directive has the same effect as the [`IKaInputModel.isExcluded` property](#v-ka-input-model) when it returns `true`.
+
+```html
+<!-- 
+	All inputs below are *not* associated with RBLe.  They do not trigger a calc nor are they passed to any RBLe calculation.  This scenario occurs
+	when Kaml Views are doing all input/UI logic via javascript/reactivity and do not need any logic/calculation provided from CE.
+ -->
+<div class="card" v-ka-rbl-exclude>
+	<div class="card-header"><h4 class="card-title">Advanced Annual Future Pay Increase Rates</h4></div>
+	<div class="card-body">
+		<div class="row">
+			<div v-ka-input="{ name: 'iPayIncreaseYear1', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate1', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseYear2', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate2', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div class="col-12">
+				<button @click.prevent="model.worksheet = undefined" type="button" class="btn btn-primary btn-default">Cancel</button>
+				<button @click.prevent="handlers.closeWorksheetAsync" type="button" class="btn btn-primary btn-default">Use Values</button>
+			</div>
+		</div>
+	</div>
+</div>
+```
+
+## v-ka-unmount-clears-inputs
+
+The `v-ka-unmount-clears-inputs` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained [`v-ka-input`](#https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#v-ka-input) elements are removed from the DOM, the associated [`state.inputs`](#https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#iapplicationdatainputs) value is also removed.
+
+The `v-ka-unmount-clears-inputs` directive has the same effect as the [`IKaInputModel.clearOnUnmount` property](#v-ka-input-model) when it returns `true`.
+
+Using `v-ka-unmount-clears-inputs` is useful if a `v-for` generates `v-ka-inputs` with dynamic names based on the `v-for` iterator properties and when new data changes the `v-for` source data which completely changes the list of inputs and their IDs, but any previous IDs that weren't replaced by new data source would cause problems for CalcEngine.
+
+```html
+<!-- 
+	When model.showPayIncreases becomes true, all iPay* inputs will be injected into application.state.inputs.  When showPayIncreases becomes
+	false, and Vue removes this element from the DOM, the `v-ka-unmount-clear-inputs` instructs KatApp to remove all the iPay* inputs from
+	state.inputs object.
+ -->
+<div class="card" v-ka-unmount-clears-inputs v-if="model.showPayIncreases">
+	<div class="card-header"><h4 class="card-title">Advanced Annual Future Pay Increase Rates</h4></div>
+	<div class="card-body">
+		<div class="row">
+			<div v-ka-input="{ name: 'iPayIncreaseYear1', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate1', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseYear2', template: 'input-textbox-nexgen', label: 'Year' }" class="col-sm-6"></div>
+			<div v-ka-input="{ name: 'iPayIncreaseRate2', template: 'input-textbox-nexgen', label: 'Rate', suffix: '%' }" class="col-sm-6"></div>
+			<div class="col-12">
+				<button @click.prevent="model.worksheet = undefined" type="button" class="btn btn-primary btn-default">Cancel</button>
+				<button @click.prevent="handlers.closeWorksheetAsync" type="button" class="btn btn-primary btn-default">Use Values</button>
+			</div>
+		</div>
+	</div>
+</div>
+```
+
+## v-ka-nomount
+
+When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#iapplicationdatainputs) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
+
+There are some situations where **inputs should not be automatically processed** (i.e. if a view/template has hidden inputs that are for internal use only - i.e. file upload templates).  When an input should **not** be processed, the `v-ka-nomount` attribute can be applied to the input.
+
+During the mounting of a KatApp input the following occurs:
+
+1. The input `name` attribute is set appropriately to the [`scope.name`](#ikainputscopename).
+1. The `scope.name` is added to the input's `classList`.
+1. If the input (or a container of the input) does *not* contain the `rbl-exclude` class
+    1. The input value will be assigned from the [`scope.value`](#ikainputscopevalue) (if provided), or
+    1. `state.inputs` are initialized with the current value from markup (if there is one).
+1. DOM events are attached
+    1. All Inputs
+        1. On 'change' (i.e. any modification to the input value)
+            1. Remove an [`state.errors`](#iapplicationdataerrors) associated with the input.
+            1. Set [`state.needsCalculation`](#iapplicationdataneedscalculation) to `true`.
+        1. On 'update', syncronize `state.inputs` if `rbl-exclude` class is not used.
+        1. On 'update', trigger RBLe Calculation if `rbl-skip` class is not used and [`scope.noCalc`](#ikainputscopenocalc) is `false`.
+        1. On `update`, set `state.needsCalculation` to `false`.
+        1. On `update`, trigger [`scope.noCalc`](#ikainputscopenocalc) event.
+        1. Attach any events provided in the [`model.events`](#ikainputmodelevents) property.
+    1. Specific Input Processing
+        1. Date Inputs ([`scope.type`](#ikainputscopetype) is `date`)
+            1. The `state.inputs` are only assigned a valid date or `undefined` and not each time a keypress occurs.
+            1. When `state.inputs` are set, a `value.ka` event is triggered for Kaml Views to catch as needed.
+        1. Range Inputs (`scope.type` is `range`)
+            1. Add additional events to handle displaying range value in UI for the user (see [IKaInputModel.type for range Inputs](#ikainputmodeltype-for-range-inputs) for more information).
+            1. Watches for a `rangeset.ka` event (triggered via [`application.setInputValue`](#ikatappsetinputvalue)) to update display
+        1. Text Inputs (excluding `TEXTAREA`)
+            1. When `enter` is pressed, trigger an 'update' event.
+			1. Process [`scope.keyboardRegex`](#ikainputscopekeyboardregex) if provided.
+            1. Process [`scope.mask`](#ikainputscopemask) if provided.
+
+During the unmounting of a KatApp input the following occurs:
+
+1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#iapplicationdatainputs).
+1. If the input, or a container, has a [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive, the input will be removed from the `state.inputs`.
+    1. Note, since Vue handles [`v-if`](#v-if--v-else--v-else-if) and [`v-for`](#v-for) directives with special 'cloned nodes', if the [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is applied *outside* of these elements, they will not work properly.
+    1. [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is useful to use if you can wrap a group of inputs with the class and the inputs themselves will never show and hide based on their `display` property.  For example if a modal has a 'view' mode and 'edit' mode.  The 'edit' mode gets processed and returns the 'view' mode.  If the user wants to edit/create again in the 'edit' mode, you want all the inputs to be cleared after they were hidden/processed.
+
+```html
+<!--
+    When iAge is removed from DOM because showAgeInputs is set to false, 
+    it WILL be removed from state.inputs since the element that 'triggered' the unmount
+    is the v-if element and the class is on/within that element.
+-->
+<div v-if="showAgeInputs" v-ka-unmount-clears-inputs>
+    <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
+</div>
+
+<!--
+    When iAge is removed from DOM because showAgeInputs is set to false, 
+    it will NOT be removed from state.inputs because the class is outside the
+    'cloned' node that has the v-if on it.
+    
+    In this situation, the clearOnUnmount property should be set specifically on the v-ka-input model.
+-->
+<div v-ka-unmount-clears-inputs>
+    <div v-if="showAgeInputs">
+        <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
+    </div>
+</div>
+
+<!--
+    When iAge is removed from DOM because rbl-input[@id='iAge'].display is set to 0
+    it will NOT be removed from state.inputs because the v-ka-input renders its own
+    v-if directive inside the div.v-ka-input element and v-ka-unmount-clears-inputs will
+    be ouside the 'cloned' node.
+    
+    In this situation, the clearOnUnmount property should be set specifically on the v-ka-input model.
+-->
+<div v-ka-unmount-clears-inputs>
+    <div v-ka-input="{ name: 'iAge', template: 'age-input' }"></div>
+</div>
+```
+
+The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#iapplicationdatainputs) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
+
+
 
 # KatApp API
 
