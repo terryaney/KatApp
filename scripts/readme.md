@@ -3763,7 +3763,7 @@ Name | Description
 [`apiStart`](#ikatappapistart) | Triggered at the start of an API submission (via [`apiAsync`](#ikatappapiasync)).
 [`apiComplete`](#ikatappapicomplete) | Triggered at the *successful* completion of an API submission that is *not* an file download endpoint.
 [`apiFailed`](#ikatappapifailed) | Triggered when an exception is thrown during an API submission.
-[`notification`](#ikatappnotification) | Triggered whenever a KatApp input has been updated.
+[`notification`](#ikatappnotification) | Triggered after another KatApp notifies the current KatApp via the [`notifyAsync`](#ikatappnotifyasync) method.
 [`input`](#ikatappinput) | Triggered whenever a KatApp input has been updated.
 
 #### IKatApp.initialized
