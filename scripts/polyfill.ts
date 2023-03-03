@@ -53,7 +53,7 @@
 				// https://stackoverflow.com/a/6024692/166231
 				// that = that.replace(re, function() { return json[propertyName]; });
 
-				return jsonValue || `{{${token}}}`;
+				return jsonValue || `{${token}}`;
 			});
 
 		};
