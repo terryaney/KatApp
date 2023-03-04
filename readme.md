@@ -1509,7 +1509,7 @@ Similiar to common Vue directives, the KatApp Framework provides custom directiv
 - [v-ka-inline](#v-ka-inline) - Render *raw HTML* without the need for a `HTMLElement` 'container'.
 - [v-ka-rbl-no-calc](#v-ka-rbl-no-calc) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change.
 - [v-ka-rbl-exclude](#v-ka-rbl-exclude) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change *and* are never submitted to an RBLe calculation.
-- [v-ka-unmount-clears-inputs](#v-ka-unmount-clears-inputs) - Flag an element so that when any contained `v-ka-input` elements are removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) value is also removed.
+- [v-ka-unmount-clears-inputs](#v-ka-unmount-clears-inputs) - Flag an element so that when any contained `v-ka-input` elements are removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) value is also removed.
 - [v-ka-nomount](#v-ka-nomount) - Flag an element so that any contained `v-ka-input` elements allow for the KatApp framework to wire up all automatic processing.
 
 ## v-ka-value
@@ -1774,7 +1774,7 @@ Property | Type | Description
 `mask` | `string` | Provide an input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value.<br/><br/>The supported masks are:<br/>1. (###) ###-####<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.mask` RBLe Framework calculation value<br/>2. `model.mask` property<br/>3. `undefined` if no value provided.
 `keyboardRegex` | `string` | Provide an regular expression to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `uploadEndpoint` | `string` | Provide an `uploadEndpoint` value for the input that could be used if `type="file"` or if the template will render a 'file upload' UI component.
-`clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) value is also removed.
+`clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) value is also removed.
 `help` | `{ title?: string; content: string; width?: number; }` | Provide the help configuration when the input displays contextual help.<br/><br/>When `help` is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `{ container?: string; input?: string; }` | Provide css configuration that can be applied to the 'container' element or any 'inputs' within a template markup.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to `HTMLInputElements` based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
@@ -2062,7 +2062,7 @@ The following template uses most of the previous properties and additionally use
 
 ## v-ka-input-group
 
-The `v-ka-input-group` directive is responsible for initializing groups of HTML inputs to be used in conjunction with the RBLe Framework calculations via synchronizing [`state.inputs`](#iapplicationdatainputs) and HTML inputs. It behaves the same as a [v-ka-input directive](#v-ka-input) except that all the properties on the model and scope are essentially array based to support whatever number of inputs the specified template supports.
+The `v-ka-input-group` directive is responsible for initializing groups of HTML inputs to be used in conjunction with the RBLe Framework calculations via synchronizing [`state.inputs`](#iapplicationdata-properties) and HTML inputs. It behaves the same as a [v-ka-input directive](#v-ka-input) except that all the properties on the model and scope are essentially array based to support whatever number of inputs the specified template supports.
 
 **The `v-ka-input-group` directive can only be used when a `template` is assigned.**
 
@@ -2105,7 +2105,7 @@ Property | Type | Description
 `isDisabled`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be disabled.  The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `isDisplay`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be displayed.  The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to all the group `HTMLInputElement`s based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
-`clearOnUnmount` | `boolean` | If `true`, when the inputs of an input group are removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) values are also removed.
+`clearOnUnmount` | `boolean` | If `true`, when the inputs of an input group are removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) values are also removed.
 
 <sup>1</sup> The format should be valid a C# format string in the format of `{0:format}` where `format` is a format string described in one of the links below.
 
@@ -3177,7 +3177,7 @@ Using `v-ka-unmount-clears-inputs` is useful if a `v-for` generates `v-ka-inputs
 
 ## v-ka-nomount
 
-When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#iapplicationdatainputs) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
+When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#iapplicationdata-properties) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
 
 There are some situations where **inputs should not be automatically processed** (i.e. if a view/template has hidden inputs that are for internal use only - i.e. file upload templates).  When an input should **not** be processed, the `v-ka-nomount` attribute can be applied to the input.
 
@@ -3212,7 +3212,7 @@ During the mounting of a KatApp input the following occurs:
 
 During the unmounting of a KatApp input the following occurs:
 
-1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#iapplicationdatainputs).
+1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#iapplicationdata-properties).
 1. If the input, or a container, has a [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive, the input will be removed from the `state.inputs`.
     1. Note, since Vue handles [`v-if`](#v-if--v-else--v-else-if) and [`v-for`](#v-for) directives with special 'cloned nodes', if the [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is applied *outside* of these elements, they will not work properly.
     1. [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is useful to use if you can wrap a group of inputs with the class and the inputs themselves will never show and hide based on their `display` property.  For example if a modal has a 'view' mode and 'edit' mode.  The 'edit' mode gets processed and returns the 'view' mode.  If the user wants to edit/create again in the 'edit' mode, you want all the inputs to be cleared after they were hidden/processed.
@@ -3253,7 +3253,7 @@ During the unmounting of a KatApp input the following occurs:
 </div>
 ```
 
-The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#iapplicationdatainputs) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
+The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#iapplicationdata-properties) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
 
 
 
@@ -3599,7 +3599,7 @@ Return a [`ICalculationInputs`](#icalculationinputs) object that represent the u
 
 **`getInputValue(input: string, allowDisabled?: boolean): string | undefined;`**
 
-Get the current input value of the input name passed in by inspecting the raw HTML markup/elements versus the [`state.inputs`](#iapplicationdatainputs) object.
+Get the current input value of the input name passed in by inspecting the raw HTML markup/elements versus the [`state.inputs`](#iapplicationdata-properties) object.
 
 By default, `allowDisabled` is `false`, but if `true` is passed in, and the input element is disabled, the method returns `undefined`.
 
@@ -3607,7 +3607,7 @@ By default, `allowDisabled` is `false`, but if `true` is passed in, and the inpu
 
 **`setInputValue(name: string, value: string | undefined, calculate?: boolean): JQuery | undefined;`**
 
-Given and input `name` and `value`, set the value of the HTML element and the value in the [`state.inputs`](#iapplicationdatainputs). If `value` is undefined, the input name and property will be removed from `state.inputs`.
+Given and input `name` and `value`, set the value of the HTML element and the value in the [`state.inputs`](#iapplicationdata-properties). If `value` is undefined, the input name and property will be removed from `state.inputs`.
 
 By default, `calculate` is `false` so that setting input values does not trigger a calculation and Kaml Views can safely set multiple input values without a calculation. If `true` is passed in, then a RBLe Framework calculation will occur after the input value is applied.
 
