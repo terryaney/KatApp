@@ -587,7 +587,7 @@ since 'undefined' will be treated as 'false' in rbl.boolean() because valueWhenM
 
 ## RBLe Framework Result Processing in KatApp State
 
-Since Vue directives and template syntax is driven by a [reactivity mental model](#https://vuejs.org/guide/essentials/reactivity-fundamentals.html), it is important to process RBLe Framework calculations properly to subscribe into this reactivity correctly.
+Since Vue directives and template syntax is driven by a [reactivity mental model](https://vuejs.org/guide/essentials/reactivity-fundamentals.html), it is important to process RBLe Framework calculations properly to subscribe into this reactivity correctly.
 
 There are three ways calculations tables are processed:
 
@@ -665,7 +665,7 @@ tabDef["table-output-control"].forEach(r => {
 
 # HTML Content Template Elements
 
-Vue is a template based javascript framework. Often all markup can be generated without the use of the [HTML Content Template element](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template), however there are times when reusable pieces of markup are required or simply developer preference to segregate html content into a template that will be rendered only when needed.
+Vue is a template based javascript framework. Often all markup can be generated without the use of the [HTML Content Template element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template), however there are times when reusable pieces of markup are required or simply developer preference to segregate html content into a template that will be rendered only when needed.
 
 - [HTML Template Element](#html-template-element) - Describes important role the `<template>` element plays in Vue / KatApps.
 - [Template Precedence](#template-precedence) - Describes the process used in locating the proper KatApp template based on name.
@@ -950,7 +950,7 @@ There are some scenarios when an input template renders multiple inputs and some
 
 # Common Vue Directives
 
-Vue supports [many directives](#https://vuejs.org/api/built-in-directives.html), however, there are only a handful that commonly used in Kaml View files.  Below are the most common directives used and some examples of how to use them with the [IApplicationData scope object](#iapplicationdata).
+Vue supports [many directives](https://vuejs.org/api/built-in-directives.html), however, there are only a handful that commonly used in Kaml View files.  Below are the most common directives used and some examples of how to use them with the [IApplicationData scope object](#iapplicationdata).
 
 - [v-html / v-text](#v-html--v-text) - Update the element's `innerHTML` or text content.
 - [v-bind](#v-bind) - Dynamically bind one or more attributes to an expression.
@@ -966,11 +966,11 @@ Vue supports [many directives](#https://vuejs.org/api/built-in-directives.html),
 
 Use the `v-text` directive to:
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-text): Update the element's text content.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-text): Update the element's text content.
 
 Or, use the `v-html` directive to:
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-html): Update the element's [innerHTML](#https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML).
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-html): Update the element's [innerHTML](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML).
 
 The `v-html`, and less common `v-text`, directive is most commonly used inside the processing of a [`v-for`](#v-for) directive.  It can also be used in conjunction with the [`rbl.value()`](#iapplicationdatarblvalue) method as well.
 
@@ -1020,9 +1020,9 @@ Note: Given that `v-html` used with `rbl.value` renders the 'undefined' in the m
 
 ## v-bind
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-bind): Dynamically bind one or more attributes, or a component prop to an expression.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-bind): Dynamically bind one or more attributes, or a component prop to an expression.
 
-> [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-bind:style` auto-prefixing
+> [petite-vue](https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-bind:style` auto-prefixing
 
 The `v-bind` directive *does* have a `:` shorthand syntax that allows for more terse markup.
 
@@ -1033,7 +1033,7 @@ Also note, features from Vue documentation that petite-vue does not support:
 1. `.prop` - force a binding to be set as a DOM property.
 1. `.attr` - force a binding to be set as a DOM attribute.
 1. `<button :[key]="value"></button>` - dynamic attribute name.
-1. `style` auto-prefixing - when a CSS property that requires [vendor prefix](#https://developer.mozilla.org/en-US/docs/Glossary/Vendor_Prefix) (i.e. `transform`)
+1. `style` auto-prefixing - when a CSS property that requires [vendor prefix](https://developer.mozilla.org/en-US/docs/Glossary/Vendor_Prefix) (i.e. `transform`)
 
 ### v-bind Examples
 
@@ -1082,7 +1082,7 @@ The `class` and `style` attributes have special processing that occurs.
 
 1. The `class` 'expression' can return `string` | `IStringIndexer<boolean>` | `Array<string | IStringIndexer<boolean>>`
 1. The `style` 'expression' can return `string` | `IStringIndexer<string | Array<string>>` | `Array<string | IStringIndexer<string>>`
-1. The `style` 'expression' can return `Array<IStringIndexer<Array<string>>` to support [Vendor Prefixing](#https://developer.mozilla.org/en-US/docs/Glossary/Vendor_Prefix) where only the last supported style is rendered.
+1. The `style` 'expression' can return `Array<IStringIndexer<Array<string>>` to support [Vendor Prefixing](https://developer.mozilla.org/en-US/docs/Glossary/Vendor_Prefix) where only the last supported style is rendered.
 1. The `:class` and `:style` directives can co-exist with the standard `class` and `style` attributes and the directive will 'extend' the values.
 
 **Note:** Both `class` and `style` have special processing when the expression returns an `Array<string>` enabling Vue to properly `space` delimit the class names.  However, for any other attribute binding, if an `Array<string>` is provided, Vue will `,` delimit the values.
@@ -1223,9 +1223,9 @@ model: {
 
 ## v-for
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-for): Render the element or template block multiple times based on the source data.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-for): Render the element or template block multiple times based on the source data.
 
-> [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-for` deep destructure
+> [petite-vue](https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-for` deep destructure
 
 
 There are two allowed syntaxes for `v-for`. 
@@ -1249,7 +1249,7 @@ results: {
 
 ### Using the `:key` Attribute with v-for
 
-It is advised to use the [`:key`](#https://vuejs.org/api/built-in-special-attributes.html#key) attribute any time a `v-for` directive is used. This is to give a hint to Vue about how to uniquely identify each row when rendering, otherwise unexpected behavior could result.
+It is advised to use the [`:key`](https://vuejs.org/api/built-in-special-attributes.html#key) attribute any time a `v-for` directive is used. This is to give a hint to Vue about how to uniquely identify each row when rendering, otherwise unexpected behavior could result.
 
 
 - [v-for With rbl.source](#v-for-with-rblsource) - Most common syntax of using `v-for` directive with results from a CalcEngine.
@@ -1353,9 +1353,9 @@ When an element has `v-for` directive applied, [v-bind](#v-bind) attributes can 
 
 ## v-on
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-on): Attach an event listener to the element.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-on): Attach an event listener to the element.
 
-> [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-on="{ mousedown: doThis, mouseup: doThat }"`
+> [petite-vue](https://github.com/vuejs/petite-vue#not-supported) Not Supported: `v-on="{ mousedown: doThis, mouseup: doThat }"`
 
 The `v-on` directive allows Kaml Views to bind events to elements.  The directive expects a `function` reference or an `inline statement`.
 
@@ -1447,9 +1447,9 @@ These events can be used in Kaml Views manually if needed. To use the elements y
 
 ## v-if / v-else / v-else-if
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-if) Conditionally render an element or a template fragment based on the truthy-ness of the expression value.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-if) Conditionally render an element or a template fragment based on the truthy-ness of the expression value.
 
-> [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: Transitions
+> [petite-vue](https://github.com/vuejs/petite-vue#not-supported) Not Supported: Transitions
 
 `v-if` directives toggle the presence of an element.  Can optionally be chained with `v-else-if` and `v-else` directives as well. When the `v-if`, `v-else-if` and `v-else` directives are chained together, they must be applied on elements that are immediate siblings of one another.
 
@@ -1475,15 +1475,15 @@ When an element is toggled, the element and its contained directives are destroy
 
 ## v-show
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-show) Toggle the element's visibility based on the truthy-ness of the expression value.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-show) Toggle the element's visibility based on the truthy-ness of the expression value.
 
-> [petite-vue](#https://github.com/vuejs/petite-vue#not-supported) Not Supported: Transitions
+> [petite-vue](https://github.com/vuejs/petite-vue#not-supported) Not Supported: Transitions
 
 `v-show` works by setting the display CSS property via inline styles, and will try to respect the initial display value when the element is visible.
 
 ## v-pre
 
-> [Vue](#https://vuejs.org/api/built-in-directives.html#v-pre) Skip compilation for this element and all its children.
+> [Vue](https://vuejs.org/api/built-in-directives.html#v-pre) Skip compilation for this element and all its children.
 
 Use the `v-pre` directive to an element that is used for [IModalOptions.contentSelector](#imodaloptionscontentselector) if the markup within the element should not be processed by the host application, but instead should be processed and become reactive when the modal application is created.
 
@@ -1601,7 +1601,7 @@ The `v-ka-resource` directive is responsible for assigning element HTML content 
 
 The model used to configure how a `v-ka-resource` will find the appropriate translated string has a `key` property and optional properties that can be used via the `String.formatTokens` method.  If the `key` property is not provided, the HTML element's inner HTML is assumed to be the key.
 
-**Note**: If the token format values can changed due to reactivity, a [javascript getter](#https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) must be used.
+**Note**: If the token format values can changed due to reactivity, a [javascript getter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) must be used.
 
 ```javascript
 // Simple model specifying a key
@@ -1732,7 +1732,7 @@ The `v-ka-input` directive can be used in three scenarios.
 1. Applied to a `HTMLInputElement` directly without a `template`. Same as inputs rendered with a template, this input will have events and binding set up and access to the scope.
 1. Applied to a 'container' `HTMLElement` without a `template`. Similar to when a `template` is provided, the container will be searched for any `HTMLInputElement`s and automatically added events and bindings. The container will be given access to the scope. This can be envisioned as an 'inline template' so to speak where all the markup for an input is manually provided and only available to the current input.
 
-Internally, KatApp Framework leverages the [`v-scope`](#https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by inputs or templates.
+Internally, KatApp Framework leverages the [`v-scope`](https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by inputs or templates.
 
 - [v-ka-input Model](#v-ka-input-model) - Discusses the properties that can be passed in to configure the `v-ka-input` directive.
 - [v-ka-input Scope](#v-ka-input-scope) - Discusses the properties that are exposed on the `v-ka-input` scope and can be used in Kaml View markup.
@@ -1755,17 +1755,17 @@ The `v-ka-input` directive *does* have a `string` shorthand syntax that allows f
 
 Property | Type | Description
 ---|---|---
-`name` | `string` | **Required;** The name of the input.  In RBLe Framework, input names start with lower case `i` and then the remaing part(s) is/are [Pascal Case](#https://www.codingem.com/what-is-pascal-case/) (i.e. `iFirstName`).
+`name` | `string` | **Required;** The name of the input.  In RBLe Framework, input names start with lower case `i` and then the remaing part(s) is/are [Pascal Case](https://www.codingem.com/what-is-pascal-case/) (i.e. `iFirstName`).
 `template` | `string` | The template ID if a [template](#html-content-template-elements) will be used to render markup with the scope.
-`type`<sup>1</sup> | `string` | Set the [type](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) of the associated `HTMLInputElement` when the `tagName=INPUT` (vs `SELECT` or `TEXTAREA`).
+`type`<sup>1</sup> | `string` | Set the [type](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) of the associated `HTMLInputElement` when the `tagName=INPUT` (vs `SELECT` or `TEXTAREA`).
 `value` | `string` | Provide a default value for the input.  The value can also be provided via the `rbl-defaults.value` or the `rbl-input.value` RBLe Framework calculation value.
 `label` | `string` | Provide a display label for the input.  The value can also be provided via the `rbl-value[@id=='l' + name].value` or the `rbl-input.label` RBLe Framework calculation value.
-`placeHolder` | `string` | Provide a [placeholder](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#placeholder) for the input.  The value can also be provided via the `rbl-input.placeholder` RBLe Framework calculation value.
+`placeHolder` | `string` | Provide a [placeholder](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#placeholder) for the input.  The value can also be provided via the `rbl-input.placeholder` RBLe Framework calculation value.
 `hideLabel` | `boolean` | Provide a value determining whether the display label should be hidden. The value can also be provided via a RBLe Framework calculation value. If `rbl-input.label == '-1'`, the label will be hidden.
 `iconHtml` | HTML | Provide additional HTML Markup that could be rendered next to other icons that perform actions.  For example, a `range` input may have an additional icon that should open up a 'worksheet' or [v-ka-modal](#v-ka-modal).
 `list` | `Array<{ key: string; text: string; }>` | Provide a `list` for the input if it renders a list (i.e. `SELECT`, `type="radio"`, etc.) when building the control.  The value can also be provided via the `rbl-listcontrol.table` or `rbl-input.list` RBLe Framework calculation value which points to a table containing columns of `key` an `text`.
-`prefix` | `string` | Provide a `prefix` for the input that could be displayed before the actual input (i.e. with Bootstrap [input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.prefix` RBLe Framework calculation value.
-`suffix` | `string` | Provide a `suffix` for the input that could be displayed after the actual input (i.e. with Bootstrap [input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) markup). The value can also be provided via the `rbl-input.suffix` RBLe Framework calculation value.
+`prefix` | `string` | Provide a `prefix` for the input that could be displayed before the actual input (i.e. with Bootstrap [input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.prefix` RBLe Framework calculation value.
+`suffix` | `string` | Provide a `suffix` for the input that could be displayed after the actual input (i.e. with Bootstrap [input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) markup). The value can also be provided via the `rbl-input.suffix` RBLe Framework calculation value.
 `maxLength` | `number` | Provide a `maxLength` for the input that could be used to limit the length of textual inputs. The value can also be provided via the `rbl-input.max-length` RBLe Framework calculation value.
 `displayFormat`<sup>2</sup> | string | Provide a `displayFormat` for the input that could be used to format a value before displaying it. This is currently used when the input type is `range`.
 `min` | `number \| string` | Provide a `min` value for the input that could be used to limit the minimum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.min` RBLe Framework calculation value.
@@ -1775,7 +1775,7 @@ Property | Type | Description
 `keyboardRegex` | `string` | Provide an regular expression to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `uploadEndpoint` | `string` | Provide an `uploadEndpoint` value for the input that could be used if `type="file"` or if the template will render a 'file upload' UI component.
 `clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#iapplicationdatainputs) value is also removed.
-`help` | `{ title?: string; content: string; width?: number; }` | Provide the help configuration when the input displays contextual help.<br/><br/>When `help` is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](#https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
+`help` | `{ title?: string; content: string; width?: number; }` | Provide the help configuration when the input displays contextual help.<br/><br/>When `help` is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `{ container?: string; input?: string; }` | Provide css configuration that can be applied to the 'container' element or any 'inputs' within a template markup.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to `HTMLInputElements` based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
 `isNoCalc`<sup>3</sup> | `((base: IKaInputScopeBase) => boolean) | boolean` | Provide a simple boolean value or a delegate for the input that will be called to determine if an input should *not* trigger an RBLe Framework calculation.  The value can also be provided via the `rbl-skip.value` or `rbl-input.skip-calc` RBLe Framework calculation value.<br/><br/>**Note:** Additionally if any input or input ancestor has [`v-ka-rbl-no-calc`](#v-ka-rbl-no-calc) or [`v-ka-rbl-exclude`](#v-ka-rbl-exclude) in the class list, the calculation will not occur.
@@ -1784,7 +1784,7 @@ Property | Type | Description
 `ce` | `string` | Provide the CalcEngine key if all the values that automatically pull from RBLe Framework calculation values should use a CalcEngine *different from the default CalcEngine*.
 `tab` | `string` | Provide the CalcEngine result tab name if all the values that automatically pull from RBLe Framework calculation values should use a tab name *different from the default tab specified for the associated CalcEngine*.
 
-<sup>1</sup> In addition to events that trigger RBLe Framework calculations, if the `HTMLInputElement.type` is of type `range`, the KatApp Framework adds a few more events to enable displaying the `range` value for the benefit of the user.  To enable this feature, the Kaml View developers have to take advantage of the [Template Refs](#https://vuejs.org/guide/essentials/template-refs.html#template-refs) feature of Vue and provide the following `ref` assignments, all of which are optional if the Kaml View does not desire the functionality.
+<sup>1</sup> In addition to events that trigger RBLe Framework calculations, if the `HTMLInputElement.type` is of type `range`, the KatApp Framework adds a few more events to enable displaying the `range` value for the benefit of the user.  To enable this feature, the Kaml View developers have to take advantage of the [Template Refs](https://vuejs.org/guide/essentials/template-refs.html#template-refs) feature of Vue and provide the following `ref` assignments, all of which are optional if the Kaml View does not desire the functionality.
 
 * `ref="display"` - This is an `HTMLElement` whose `innerHTML` will be set to the value of the `range` every time the value changes.
 * `ref="bubble"` - This is an `HTMLElement` that will have a CSS class of `active` toggled on and off.  It will be on while the user is moving the slider or hovering over the slider, and turned off when the user's mouse no longer is over the `range` input.
@@ -1792,10 +1792,10 @@ Property | Type | Description
 
 <sup>2</sup> The format should be valid a C# format string in the format of `{0:format}` where `format` is a format string described in one of the links below.
 
-[Standard number format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings)
-[Custom number format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-numeric-format-strings)
-[Standard date format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings)
-[Custom date format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
+* [Standard number format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings)
+* [Custom number format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-numeric-format-strings)
+* [Standard date format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings)
+* [Custom date format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
 
 The value can also be provided via the combination of `rbl-sliders.format` and `rbl-sliders.decimals` or the `rbl-input.display-format` RBLe Framework calculation value. When the format comes from `rbl-sliders`, it will be turned into the string of `{0:format + decimals}` (i.e. {0:p2} if `format` was `p` and `decimals` was `2`).
 
@@ -1809,7 +1809,7 @@ Property | Type | Description
 ---|---|---
 `id` | `string` | Gets the unique, generated `id` for the current input. This value *should* be used if an `id` attribute needs to be rendered on an `HTMLInputElement`.
 `name` | `string` | Gets the `name` to use for the current input.
-`type` | `string` | Gets the [`type`](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) to use if the associated `HTMLInputElement` is an `INPUT` (vs `SELECT` or `TEXTAREA`).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.type` RBLe Framework calculation value<br/>2. `model.type` property<br/>3. `text` if no value provided.
+`type` | `string` | Gets the [`type`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) to use if the associated `HTMLInputElement` is an `INPUT` (vs `SELECT` or `TEXTAREA`).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.type` RBLe Framework calculation value<br/>2. `model.type` property<br/>3. `text` if no value provided.
 `value` | `string` | Gets the default value to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.value` RBLe Framework calculation value<br/>2. `rbl-defaults.value` RBLe Framework calculation value<br/>3. `model.value` property<br/>4. `""` if no value provided.
 `disabled` | `boolean` | Gets a value indicating the disabled state of the current input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isDisabled` delegate property<br/>2. `rbl-input.disabled` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-disabled.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.
 `display` | `boolean` | Gets a value indicating the display state of the current input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `model.isDisplay` delegate property<br/>2. `rbl-input.display` RBLe Framework calculation value (if value is *not* `0`)<br/>3. `rbl-display.value` RBLe Framework calculation value (if value is *not* `0`)<br/>4. `true` if no value provided.
@@ -1817,27 +1817,27 @@ Property | Type | Description
 `label` | `string` | Gets the label to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.label` RBLe Framework calculation value<br/>2. `rbl-value[@id='l' + name].value` RBLe Framework calculation value<br/>3. `model.label` property<br/>4. `""` if no value provided.
 `hideLabel` | `boolean` | Gets a value determining whether the label should be hidden or not.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.label` RBLe Framework calculation value (return `true` if `label == "-1"`)<br/>2. `model.hideLabel` property<br/>3. `false` if no value provided.
 `placeHolder` | `string \| undefined` | Gets the placeholder to use for the input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.placeholder` RBLe Framework calculation value<br/>2. `model.placeHolder` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want to know if `""` was assigned.  For example, a Bootstrap Floating `SELECT` might be rendered with a default empty, first element if `placeHolder != ""`.
-`help` | `{ title: string; content: string \| undefined; width: string; }` | Gets the contextual help configuration to use for the input.<br/><br/>`title` value is based on following precedence:<br/><br/>1. `rbl-input.help-title` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name + 'Title'].value` RBLe Framework calculation value<br/>3. `model.help.title` property<br/>4. `""` if no value provided.<br/><br/>`content` value is based on following precedence:<br/><br/>1. `rbl-input.help` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name].value` RBLe Framework calculation value<br/>3. `model.help.content` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want show a contextual help icon or button based on presence of 'help' or not and it was easier to allow this property to be undefined to allow for `v-if="help.content"` type syntax to be used.<br/><br/>`width` value is based on following precedence:<br/><br/>1. `rbl-input.help-width` RBLe Framework calculation value<br/>2. `model.help.width` property<br/>3. `''` if no value provided. (`width` is often used when leveraging [Bootstrap popovers](#https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
+`help` | `{ title: string; content: string \| undefined; width: string; }` | Gets the contextual help configuration to use for the input.<br/><br/>`title` value is based on following precedence:<br/><br/>1. `rbl-input.help-title` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name + 'Title'].value` RBLe Framework calculation value<br/>3. `model.help.title` property<br/>4. `""` if no value provided.<br/><br/>`content` value is based on following precedence:<br/><br/>1. `rbl-input.help` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name].value` RBLe Framework calculation value<br/>3. `model.help.content` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want show a contextual help icon or button based on presence of 'help' or not and it was easier to allow this property to be undefined to allow for `v-if="help.content"` type syntax to be used.<br/><br/>`width` value is based on following precedence:<br/><br/>1. `rbl-input.help-width` RBLe Framework calculation value<br/>2. `model.help.width` property<br/>3. `''` if no value provided. (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `{ container: string; input: string; }` | Gets the CSS configuration to apply to the rendered `HTMLElement` considered the 'container' or 'input' within a template rendered input.<br/><br/><br/><br/>`container` value is based on following precedence:<br/><br/>1. `model.css.container` property<br/>2. `""` if no value provided.<br/><br/>`input` value is based on following precedence:<br/><br/>1. `model.css.input` property<br/>2. `""` if no value provided.
 `list` | `Array<{ key: string; text: string; }>` | Gets the array of items to use when the rendered input is built from a list.<br/><br/>Returns value based on following precedence:<br/><br/>1. Get the RBLe Framework calculation table where the name is provided in `rbl-input.list`<br/>2. Get the RBLe Framework calculation table where the name is provided in `rbl-listcontrol.value`<br/>3. `model.list` property<br/>4. `[]` if no list is provided.
-`prefix` | `string \| undefined` | Gets the prefix to display *before* the rendered input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.prefix` RBLe Framework calculation value<br/>2. `model.prefix` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a prefix. This property is most often used with [Bootstrap input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
-`suffix` | `string \| undefined` | Gets the suffix to display *after* the rendered input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.suffix` RBLe Framework calculation value<br/>2. `model.suffix` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a suffix. This property is most often used with [Bootstrap input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
+`prefix` | `string \| undefined` | Gets the prefix to display *before* the rendered input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.prefix` RBLe Framework calculation value<br/>2. `model.prefix` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a prefix. This property is most often used with [Bootstrap input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
+`suffix` | `string \| undefined` | Gets the suffix to display *after* the rendered input.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.suffix` RBLe Framework calculation value<br/>2. `model.suffix` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a suffix. This property is most often used with [Bootstrap input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
 `maxLength` | `number` | Gets the max length a textual input value can be; often used with `TEXTAREA` inputs.<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.max-length` RBLe Framework calculation value<br/>2. `model.maxLength` property<br/>3. `250` if no value provided.
 `min` | `string` | Gets the min value allowed if the rendered input supports the concept of minimum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.min` RBLe Framework calculation value<br/>2. `model.min` property<br/>3. `""` if no value provided.
 `max` | `string` | Gets the max value allowed if the rendered input supports the concept of maximum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.max` RBLe Framework calculation value<br/>2. `model.max` property<br/>3. `""` if no value provided.
 `step` | `number` | Gets the step increment value to use if the rendered input supports the concept of incremental steps (i.e. `range` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.step` RBLe Framework calculation value<br/>2. `model.step` property<br/>3. `1` if no value provided.
 `error` | `string \| undefined` | Gets the error message associated with the current input from the [state.errors property](#iapplicationdataerrors). A value of `undefined` indicates no error.  The value can only by provided the [state.errors property](#iapplicationdataerrors).
 `warning` | `string \| undefined` | Gets the warning message associated with the current input from the [`state.warnings` property](#iapplicationdatawarnings). A value of `undefined` indicates no warning.  The value can only by provided the `state.warnings` property.
-`uploadAsync` | `() => void \| undefined` | If an [uploadEndpoint](#ikainputmodeluploadendpoint) was provided, the KatApp Framework provides a help function that can be called to automatically submit the rendered [input.files](#https://developer.mozilla.org/en-US/docs/Web/API/File_API/Using_files_from_web_applications#getting_information_about_selected_files) list to the uploadEndpoint for processing.  Error handling is built in and 'success' is implied if no error occurs.
+`uploadAsync` | `() => void \| undefined` | If an [uploadEndpoint](#ikainputmodeluploadendpoint) was provided, the KatApp Framework provides a help function that can be called to automatically submit the rendered [input.files](https://developer.mozilla.org/en-US/docs/Web/API/File_API/Using_files_from_web_applications#getting_information_about_selected_files) list to the uploadEndpoint for processing.  Error handling is built in and 'success' is implied if no error occurs.
 
 ### rbl-input Table
 
-The `rbl-input` table is the preferred RBLe Calculation table to use to manage `v-ka-input` and `v-ka-input-group` scopes.  This table supercedes the functionality of the legacy tables of `rbl-display`, `rbl-disabled`, `rbl-skip`, `rbl-value`, `rbl-listcontrol`, `rbl-defaults` and `rbl-sliders`. The KatApp framework still supports the legacy tables if `rbl-input` isn't present (see [KatApp Provider: Push Table Processing](#https://github.com/terryaney/nexgen-documentation/blob/main/KatApps.md#push-table-processing) for more information.).
+The `rbl-input` table is the preferred RBLe Calculation table to use to manage `v-ka-input` and `v-ka-input-group` scopes.  This table supercedes the functionality of the legacy tables of `rbl-display`, `rbl-disabled`, `rbl-skip`, `rbl-value`, `rbl-listcontrol`, `rbl-defaults` and `rbl-sliders`. The KatApp framework still supports the legacy tables if `rbl-input` isn't present (see [KatApp Provider: Push Table Processing](https://github.com/terryaney/nexgen-documentation/blob/main/KatApps.md#push-table-processing) for more information.).
 
 Column | Description
 ---|---
 id | The id/name of the input (matches [`model.name`](#ikainputmodelname)).
-type | For textual inputs, a [HTML5 input type](#https://developer.mozilla.org/en-US/docs/Learn/Forms/HTML5_input_types) can be specified.  The default value is `text`.
+type | For textual inputs, a [HTML5 input type](https://developer.mozilla.org/en-US/docs/Learn/Forms/HTML5_input_types) can be specified.  The default value is `text`.
 label | Provide the associated label for the current input.
 placeholder | For textual inputs, provided the associated placeholder to display when the input is empty.  
 help | Provide help content (can be HTML). Default is blank.
@@ -1848,7 +1848,7 @@ display | Whether or not the input should be displayed.  Returning `0` will hide
 disabled | Whether or not the input should be disabled.  Returning `1` will disable the input, anything else will enable the input.
 skip&#x2011;calc | Whether or not this input should trigger a calculation when it is changed by the user.  Returning `1` will prevent the input from triggering a calculation, anything else will allow a calculation to occur.
 list | If the input is a 'list' control (dropdown, option list, checkbox list, etc.), return the name of the table that provides the list of items used to populate the control.
-prefix | If the input should have a prefix (usually a [Bootstrap `input-group`](#https://getbootstrap.com/docs/5.0/forms/input-group/)) prepended to the front, provide a value here (i.e. `$`).
+prefix | If the input should have a prefix (usually a [Bootstrap `input-group`](https://getbootstrap.com/docs/5.0/forms/input-group/)) prepended to the front, provide a value here (i.e. `$`).
 suffix | If the input should have a prefix (usually a Bootstrap `input-group`) appended to the end, provide a value here (i.e. `%`).
 max&#x2011;length | For textual inputs (i.e. TEXTAREA inputs), a maximum allowed input length can be provided.  Default is `250`.
 min | For inputs with the concept of minimum values (sliders, dates), a minimum value can be provided.
@@ -2066,7 +2066,7 @@ The `v-ka-input-group` directive is responsible for initializing groups of HTML 
 
 **The `v-ka-input-group` directive can only be used when a `template` is assigned.**
 
-Internally, KatApp Framework leverages the [`v-scope`](#https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by the template.
+Internally, KatApp Framework leverages the [`v-scope`](https://github.com/vuejs/petite-vue#petite-vue-only) directive to append 'input helper properties and methods' onto the 'global scope' object that can be used by the template.
 
 - [v-ka-input-group Model](#v-ka-input-group-model) - Discusses the properties that can be passed in to configure the `v-ka-input` directive.
 - [v-ka-input-group Scope](#v-ka-input-group-scope) - Discusses the properties that are exposed on the `v-ka-input-group` scope and can be used in Kaml View markup.
@@ -2080,18 +2080,18 @@ The `IKaInputGroupModel` represents the model type containing the properties tha
 
 Property | Type | Description
 ---|---|---
-`names` | `Array<string>` | The array of `string` names representing each input in the gruop.  In RBLe Framework, input names start with lower case `i` and then the remaing part(s) is/are [Pascal Case](#https://www.codingem.com/what-is-pascal-case/) (i.e. [`"iFirstName"`, `"iFirstName2"`]).
+`names` | `Array<string>` | The array of `string` names representing each input in the gruop.  In RBLe Framework, input names start with lower case `i` and then the remaing part(s) is/are [Pascal Case](https://www.codingem.com/what-is-pascal-case/) (i.e. [`"iFirstName"`, `"iFirstName2"`]).
 `template` | `string` | Return the [template](#html-content-template-elements) ID to be used to render group markup with the scope.  Unlike the `v-ka-input` model, here, `template` is required.
-`type` | `string` | When the associated group of `HTMLInputElement`s `tageName=INPUT` (vs `SELECT` or `TEXTAREA`), you can provide a [type](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types).
+`type` | `string` | When the associated group of `HTMLInputElement`s `tageName=INPUT` (vs `SELECT` or `TEXTAREA`), you can provide a [type](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types).
 `values` | `Array<string>` | The default values for the input group scope can be provided.  The values can also be provided via the `rbl-defaults.value` or the `rbl-input.value` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `labels` | `Array<string>` | The labels to use for the input group scope can be provided.  The values can also be provided via the `rbl-value[@id=='l' + name].value` or the `rbl-input.label` RBLe Framework calculation value where the `@id/name` is one of the values provided by `names`.
-`placeHolders` | `Array<string>` | The [placeholders](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#placeholder) for the input group scope can be provided.  The values can also be provided via the `rbl-input.placeholder` RBLe Framework calculation value where the `@id/name` is one of the values provided by `names`.
+`placeHolders` | `Array<string>` | The [placeholders](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#placeholder) for the input group scope can be provided.  The values can also be provided via the `rbl-input.placeholder` RBLe Framework calculation value where the `@id/name` is one of the values provided by `names`.
 `hideLabels` | `Array<boolean>` | An array of values for the input group scope determining whether the labels should be hidden can be provided. The values can also be provided via a RBLe Framework calculation value where the `@id` is one of the values provided by `names`. If `rbl-input.label == '-1'`, the label will be hidden.
-`helps` | `Array<{ title?: string; content: string; width?: number; }>` | Provide array of help configuration objects for contextual help.<br/><br/>For each 'help configuration' is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](#https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
+`helps` | `Array<{ title?: string; content: string; width?: number; }>` | Provide array of help configuration objects for contextual help.<br/><br/>For each 'help configuration' is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `Array<{ container?: string; input?: string; }>` | Provide array of css configuration objects that can be applied to the 'container' element or any 'inputs' for each input group item within a template markup.
 `iconHtmls` | `Array<string>` | Provide additional HTML Markups that could be rendered next to other icons that perform actions.  For example, a `range` inputs may have an additional icon that should open up a 'worksheet' or [v-ka-modal](#v-ka-modal).
-`prefixes` |  `Array<string>` | Provide an array of `prefixes` to the input group scope that could be displayed before the actual inputs (i.e. with Bootstrap [input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.prefix` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
-`suffixes` | `Array<string>` | Provide an array of `suffixes` to the input group scope that could be displayed after the actual inputs (i.e. with Bootstrap [input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.suffix` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
+`prefixes` |  `Array<string>` | Provide an array of `prefixes` to the input group scope that could be displayed before the actual inputs (i.e. with Bootstrap [input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.prefix` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
+`suffixes` | `Array<string>` | Provide an array of `suffixes` to the input group scope that could be displayed after the actual inputs (i.e. with Bootstrap [input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) markup).  The value can also be provided via the `rbl-input.suffix` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `maxLengths` | `Array<number>` | Provide an array of `maxLengths` to the input group scope that could be used to limit the length of textual inputs.  The value can also be provided via the `rbl-input.max-length` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `displayFormats`<sup>1</sup> | `Array<string>` | Provide an array of `displayFormats` to the input group scope that could be used to format a value before displaying it. This is currently used when the input types are `range`.
 `mins` | `Array<number \| string>` | Provide an array of `mins` values to the input group scope that could be used to limit the minimum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.min` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
@@ -2109,10 +2109,10 @@ Property | Type | Description
 
 <sup>1</sup> The format should be valid a C# format string in the format of `{0:format}` where `format` is a format string described in one of the links below.
 
-1. [Standard number format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings)
-1. [Custom number format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-numeric-format-strings)
-1. [Standard date format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings)
-1. [Custom date format strings](#https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
+1. [Standard number format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings)
+1. [Custom number format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-numeric-format-strings)
+1. [Standard date format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings)
+1. [Custom date format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings)
 
 The value can also be provided via the combination of `rbl-sliders.format` and `rbl-sliders.decimals` or the `rbl-input.display-format` RBLe Framework calculation value where the `@id` is one of the values provided by `names`. When the format comes from `rbl-sliders`, it will be turned into the string of `{0:format + decimals}` (i.e. {0:p2} if `format` was `p` and `decimals` was `2`).
 
@@ -2128,7 +2128,7 @@ Property | Type | Description
 ---|---|---
 `id` | `(index: number) => string` | Given an input index, gets the unique, generated `id` for the current input. This value *should* be used if an `id` attribute needs to be rendered on an `HTMLInputElement`.
 `name` | `(index: number) => string` | Given an input index, gets the `name` (from the model `names[index]` array) to use for the current input.
-`type` | `string` | Gets the [`type`](#https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) to use if the associated `HTMLInputElement`s ar an `INPUT` (vs `SELECT` or `TEXTAREA`).<br/><br/>Returns value based on following precedence:<br/>1. `model.type` property<br/>2. `text` if no value provided.
+`type` | `string` | Gets the [`type`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) to use if the associated `HTMLInputElement`s ar an `INPUT` (vs `SELECT` or `TEXTAREA`).<br/><br/>Returns value based on following precedence:<br/>1. `model.type` property<br/>2. `text` if no value provided.
 `value` | `(index: number) => string` | Given an input index, gets the default value to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.value` RBLe Framework calculation value<br/>2. `rbl-defaults.value` RBLe Framework calculation value<br/>3. `model.values[index]` property<br/>4. `""` if no value provided.
 `disabled` | `(index: number) => boolean` | Given an input index, gets a value indicating the disabled state of the current input.<br/><br/>Returns value based on following precedence:<br/>1. `model.isDisabled` delegate property<br/>2. `rbl-input.disabled` RBLe Framework calculation value (if value is `1`)<br/>3. `rbl-disabled.value` RBLe Framework calculation value (if value is `1`)<br/>4. `false` if no value provided.
 `display` | `(index: number) => boolean` | Given an input index, gets a value indicating the display state of the current input.<br/><br/>Returns value based on following precedence:<br/>1. `model.isDisplay` delegate property<br/>2. `rbl-input.display` RBLe Framework calculation value (if value is *not* `0`)<br/>3. `rbl-display.value` RBLe Framework calculation value (if value is *not* `0`)<br/>4. `true` if no value provided.
@@ -2136,11 +2136,11 @@ Property | Type | Description
 `label` | `(index: number) => string` | Given an input index, gets the label to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.label` RBLe Framework calculation value<br/>2. `rbl-value[@id='l' + name].value` RBLe Framework calculation value<br/>3. `model.labels[index]` property<br/>4. `""` if no value provided.
 `hideLabel` | `(index: number) => boolean` | Given an input index, gets a value determining whether the label should be hidden or not.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.label` RBLe Framework calculation value (return `true` if `label == "-1"`)<br/>2. `model.hideLabels[index]` property<br/>3. `false` if no value provided.
 `placeHolder` | `(index: number) => string \| undefined` | Given an input index, gets the placeholder to use for the input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.placeholder` RBLe Framework calculation value<br/>2. `model.placeHolders[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want to know if `""` was assigned.  For example, a Bootstrap Floating `SELECT` might be rendered with a default empty, first element if `placeHolder != ""`.
-`help` | `(index: number) => { title: string, content?: string; width: string; }` | Given an input index, gets the contextual help configuration to use for the input.<br/><br/>`title` value is based on following precedence:<br/><br/>1. `rbl-input.help-title` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name + 'Title'].value` RBLe Framework calculation value<br/>3. `model.help.title` property<br/>4. `""` if no value provided.<br/><br/>`content` value is based on following precedence:<br/><br/>1. `rbl-input.help` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name].value` RBLe Framework calculation value<br/>3. `model.help.content` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want show a contextual help icon or button based on presence of 'help' or not and it was easier to allow this property to be undefined to allow for `v-if="help.content"` type syntax to be used.<br/><br/>`width` value is based on following precedence:<br/><br/>1. `rbl-input.help-width` RBLe Framework calculation value<br/>2. `model.help.width` property<br/>3. `''` if no value provided. (`width` is often used when leveraging [Bootstrap popovers](#https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
+`help` | `(index: number) => { title: string, content?: string; width: string; }` | Given an input index, gets the contextual help configuration to use for the input.<br/><br/>`title` value is based on following precedence:<br/><br/>1. `rbl-input.help-title` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name + 'Title'].value` RBLe Framework calculation value<br/>3. `model.help.title` property<br/>4. `""` if no value provided.<br/><br/>`content` value is based on following precedence:<br/><br/>1. `rbl-input.help` RBLe Framework calculation value<br/>2. `rbl-value[@id='h' + name].value` RBLe Framework calculation value<br/>3. `model.help.content` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates might want show a contextual help icon or button based on presence of 'help' or not and it was easier to allow this property to be undefined to allow for `v-if="help.content"` type syntax to be used.<br/><br/>`width` value is based on following precedence:<br/><br/>1. `rbl-input.help-width` RBLe Framework calculation value<br/>2. `model.help.width` property<br/>3. `''` if no value provided. (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `(index: number) => { input: string, container: string; }` | Given an input index, gets the CSS configuration to apply to the rendered `HTMLElement` considered the 'container' or 'input' for the specified template rendered input.<br/><br/><br/><br/>`container` value is based on following precedence:<br/><br/>1. `model.css.container` property<br/>2. `""` if no value provided.<br/><br/>`input` value is based on following precedence:<br/><br/>1. `model.css.input` property<br/>2. `""` if no value provided.
 `list` | `(index: number) => Array<{ key: string; text: string; }>` | Given an input index, gets the array of items to use when the rendered input is built from a list.<br/><br/>Returns value based on following precedence:<br/>1. Get the RBLe Framework calculation table where the name is provided in `rbl-input.list`<br/>2. Get the RBLe Framework calculation table where the name is provided in `rbl-listcontrol.value`<br/>3. `[]` if no list is provided.
-`prefix` | `(index: number) => string \| undefined` | Given an input index, gets the prefix to display *before* the rendered input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.prefix` RBLe Framework calculation value<br/>2. `model.prefixes[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a prefix. This property is most often used with [Bootstrap input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
-`suffix` | `(index: number) => string \| undefined` | Given an input index, gets the suffix to display *after* the rendered input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.suffix` RBLe Framework calculation value<br/>2. `model.suffixes[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a suffix. This property is most often used with [Bootstrap input-group](#https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
+`prefix` | `(index: number) => string \| undefined` | Given an input index, gets the prefix to display *before* the rendered input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.prefix` RBLe Framework calculation value<br/>2. `model.prefixes[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a prefix. This property is most often used with [Bootstrap input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
+`suffix` | `(index: number) => string \| undefined` | Given an input index, gets the suffix to display *after* the rendered input.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.suffix` RBLe Framework calculation value<br/>2. `model.suffixes[index]` property<br/>3. `undefined` if no value provided.<br/><br/>The property returns `undefined` if nothing provided vs `""` because some templates can more easily check for the presense of a suffix. This property is most often used with [Bootstrap input-group](https://getbootstrap.com/docs/5.0/forms/input-group/) elements.
 `maxLength` | `(index: number) => number` | Given an input index, gets the max length a textual input value can be; often used with `TEXTAREA` inputs.<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.max-length` RBLe Framework calculation value<br/>2. `model.maxLengths[index]` property<br/>3. `250` if no value provided.
 `min` | `(index: number) => string` | Given an input index, gets the min value allowed if the rendered input supports the concept of minimum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.min` RBLe Framework calculation value<br/>2. `model.mins[index]` property<br/>3. `""` if no value provided.
 `max` | `(index: number) => string` | Given an input index, gets the max value allowed if the rendered input supports the concept of maximum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.max` RBLe Framework calculation value<br/>2. `model.maxes[index]` property<br/>3. `""` if no value provided.
@@ -2330,7 +2330,7 @@ Property | Type | Description
 
 #### Scopes with Properties that are Reactive
 
-If the scope could change due to reactivity (i.e. a calculation or javascript changes the array), the `model.source` property **must** be written as a [javascript getter](#https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) or the scope will not participate in reactivity.
+If the scope could change due to reactivity (i.e. a calculation or javascript changes the array), the `model.source` property **must** be written as a [javascript getter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/get) or the scope will not participate in reactivity.
 
 Note: If the `source` property of the `v-ka-template` scope is simply an `Array<>`, the KatApp framework will automatically make it reactive.
 
@@ -2482,7 +2482,7 @@ Property | Type | Description
 `calculationInputs` | [`ICalculationInputs`](#icalculationinputs) | Often when an api endpoint is submitted to in a Host Environment that leverages the RBLe Framework, an `iValidate=1` RBL calculation is the first action performed on the server.  This calculation can do UI validations or provide instructions to the Host Environment on what type of actions it should take.  All the inputs from the UI are always submit, but if additional inputs should be passed to the endpoint, an `ICalculationInputs` object can be provided.
 `apiParameters` | `IStringAnyIndexer` | Some endpoints require parameters that are processed in the server code of the Host Environment.  These parameters are technically not different from `ICalculationInputs`, but providing them as a second parameter accomplishes a few things.<br/><br/>1. The value type of each parameter can be more than just `string`, supporting `boolean`, `number` or a nested object with its own properties.<br/>2. If all the parameters are of type `string`, even though technically not different from the `calculationInputs` property, using `apiParameters` eliminates parameters from being passed to a RBL calculation.<br/>3. Finally, it simply segregates 'intent' of the parameters versus the inputs.  Parameters are intended to be used by the api endpoint server code while inputs are intended to be used by the RBL calculation.
 `isDownload` | `boolean` | If the api endpoint being posted to will return binary content representing a download, setting this flag to true tells the KatApp framework to process the results differently and save the generated content as a downloaded .
-`files` | [`FileList`](#https://developer.mozilla.org/en-US/docs/Web/API/FileList) | If the api endpoint being submitted to accepts file uploads, this property can be set (usually from a `input type="file"` element).
+`files` | [`FileList`](https://developer.mozilla.org/en-US/docs/Web/API/FileList) | If the api endpoint being submitted to accepts file uploads, this property can be set (usually from a `input type="file"` element).
 `calculateOnSuccess` | `boolean \| ICalculationInputs` | If after a successful submission to an api endpoint, the KatApp Framework should automatically trigger a RBLe Framework Calculation, `calculateOnSuccess` can be set.  Setting the value to `true` indicates that a calculation should occur.  Setting the value to a `ICalculationInputs` object also indicates that a calculation should occur and additionally pass along the inputs provided.  See [v-ka-api Model Samples](#v-ka-api-model-samples) for more information.
 `then` | `(response: IStringAnyIndexer \| undefined, application: KatApp) => void` | If the Kaml View needs to provide a delegate to run if an api submission is successful, the `then` property solves that problem.  See [v-ka-api Model Samples](#v-ka-api-model-samples) for more information.
 `catch` | `(e: any \| undefined, application: KatApp) => void` | If the Kaml View needs to provide a delegate to run if an api submission failed, the `catch` property solves that problem.  See [v-ka-api Model Samples](#v-ka-api-model-samples) for more information.<br/><br/>If no `catch` is provided and an api endpoint fails, the response will simply be logged by the KatApp framework.
@@ -2726,7 +2726,7 @@ The `v-ka-highchart` directive is responsible for creating HTML/javascript based
 
 The `IKaHighchartModel` represents the model type containing the properties that configure how a `v-ka-highchart` will render.
 
-To see all the options available for charts and series, please refer to the [Highcharts API](#https://api.highcharts.com/highcharts/)
+To see all the options available for charts and series, please refer to the [Highcharts API](https://api.highcharts.com/highcharts/)
 
 The `v-ka-highchart` directive *does* have a `string` shorthand syntax that allows for more terse markup.  If the chart to be rendered only needs to provide a data and, optionally, an options name to the directive, the following can be used.
 
@@ -2965,7 +2965,7 @@ See [series](https://api.highcharts.com/highcharts/series) documentation to lear
 
 ### v-ka-highchart Series Data Options
 
-In addition to options set directly on a series itself, there are times when options need to be set individiually on each data value in the series (i.e. color, radius, etc.).  See [`series.line.data`](#https://api.highcharts.com/highcharts/series.line.data) for an example, but each chart/series type may have its own specific set of properties that can be assigned on data values.  To assign those properties, columns are added to the 'data' table in the format of `point.seriesX.property` where `seriesX` matches the series column header and `property` is the name of the configuration property.  `point` is a hard coded string indicating that this is a 'data' configuration value.
+In addition to options set directly on a series itself, there are times when options need to be set individiually on each data value in the series (i.e. color, radius, etc.).  See [`series.line.data`](https://api.highcharts.com/highcharts/series.line.data) for an example, but each chart/series type may have its own specific set of properties that can be assigned on data values.  To assign those properties, columns are added to the 'data' table in the format of `point.seriesX.property` where `seriesX` matches the series column header and `property` is the name of the configuration property.  `point` is a hard coded string indicating that this is a 'data' configuration value.
 
 Example of settings colors for a pie chart.
 
@@ -3146,7 +3146,7 @@ The `v-ka-rbl-exclude` directive has the same effect as the [`IKaInputModel.isEx
 
 ## v-ka-unmount-clears-inputs
 
-The `v-ka-unmount-clears-inputs` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained [`v-ka-input`](#https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#v-ka-input) elements are removed from the DOM, the associated [`state.inputs`](#https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#iapplicationdatainputs) value is also removed.
+The `v-ka-unmount-clears-inputs` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained [`v-ka-input`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#v-ka-input) elements are removed from the DOM, the associated [`state.inputs`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#iapplicationdatainputs) value is also removed.
 
 The `v-ka-unmount-clears-inputs` directive has the same effect as the [`IKaInputModel.clearOnUnmount` property](#v-ka-input-model) when it returns `true`.
 
@@ -4251,7 +4251,7 @@ Property | Type | Description
 `calculateOnConfirm` | `ICalculationInputs \| boolean` | When a modal application is 'confirmed', using the `calculateOnConfirm` property can instruct the KatApp Framework to automatically run a RBLe Framework calculation.<br/><br/>Setting this property to `true` or providing a [`ICalculationInputs`](#icalculationinputs) object will trigger the automatic calculation.
 `labels` | `{ title: string?; cancel: string?; continue: string? }` | Provide custom labels to be used when the KatApp framework builds the modal container.<br/><br/>1. `title` can be provided if the modal should display a title. If not provided, no modal header/title will be displayed.<br/>2. `cancel` can provide a label to use for the 'cancel' button.  Default is `Cancel`.<br/>3. `continue` can provide a label to use for the 'continue' button.  Default is `Continue`.
 `css` | `{ cancel: string?; continue: string? }` | Provide custom css to be used when the KatApp framework builds the modal container.<br/><br/>1. `cancel` can provide css to apply to the 'cancel' button.  Default is `btn btn-outline-primary`.<br/>2. `continue` can provide css to apply to the 'continue' button.  Default is `btn btn-primary`.
-`size` | `"xl" \| "lg" \| "md" \| "sm" \| undefined` | By default, if a modal is rendering a Kaml View, the size will be `xl`, otherwise `undefined`.  The modal size is based on the value passed in.  See [Bootstrap Modal Sizes](#https://getbootstrap.com/docs/5.0/components/modal/#optional-sizes) for more information.
+`size` | `"xl" \| "lg" \| "md" \| "sm" \| undefined` | By default, if a modal is rendering a Kaml View, the size will be `xl`, otherwise `undefined`.  The modal size is based on the value passed in.  See [Bootstrap Modal Sizes](https://getbootstrap.com/docs/5.0/components/modal/#optional-sizes) for more information.
 `scrollable` | `boolean` | By default, modal content will not be scrollable; only the *entire* modal dialogis scrollable.  If a modal dialog should have its own vertical scrollbar for its body/content, pass `true`.
 `showCancel` | `boolean` | By default, a modal shows both a 'continue' *and* a 'cancel' button.  If the displayed dialog only needs a 'continue' (i.e. confirming a transactional result message), set this value to `true` to hide the 'cancel' button.
 `inputs` | [`ICalculationInputs`](#icalculationinputs) | If inputs should be passed to the modal's rendered Kaml View, provide a `ICalculationInputs` object.
@@ -4422,7 +4422,7 @@ Property | Type | Description
 `apiParameters` | `IStringAnyIndexer` | Some endpoints require parameters that are processed in the server code of the Host Environment.  These parameters are technically not different from `ICalculationInputs`, but providing them as a second parameter accomplishes a few things<br/><br/>1. The value type of each parameter can be more than just `string`, supporting `boolean`, `number` or a nested object with its own properties.<br/>2. If all the parameters are of type `string`, even though technically not different from the `calculationInputs` property, using `apiParameters` eliminates parameters from being passed to a RBL calculation.<br/>3. Finally, it simply segregates 'intent' of the parameters versus the inputs.  Parameters are intended to be used by the api endpoint server code while inputs are intended to be used by the RBL calculation.
 `isDownload` | `boolean` | If the api endpoint being posted to will return binary content representing a download, setting this flag to true tells the KatApp framework to process the results differently and save the generated content as a downloaded .
 `calculateOnSuccess` | `boolean \| ICalculationInputs` | If after a successful submission to an api endpoint, the KatApp Framework should automatically trigger a RBLe Framework Calculation, `calculateOnSuccess` can be set.  Setting the value to `true` indicates that a calculation should occur.  Setting the value to a `ICalculationInputs` object also indicates that a calculation should occur and additionally pass along the inputs provided.
-`files` | [`FileList`](#https://developer.mozilla.org/en-US/docs/Web/API/FileList) | If the api endpoint being submitted to accepts file uploads, this property can be set (usually from a `input type="file"` element).
+`files` | [`FileList`](https://developer.mozilla.org/en-US/docs/Web/API/FileList) | If the api endpoint being submitted to accepts file uploads, this property can be set (usually from a `input type="file"` element).
 
 ### ILastCalculation
 
