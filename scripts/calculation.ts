@@ -69,7 +69,6 @@
 			}
 
 			if (calculationResults.Results.filter(r => r.CacheKey != undefined && r.Result == undefined).length > 0) {
-				debugger;
 				Utils.trace(application, "Calculation", "calculateAsync", `Client side cache is invalid.`, TraceVerbosity.Detailed);
 			}
 
