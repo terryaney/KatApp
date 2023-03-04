@@ -1391,7 +1391,7 @@ Vue has the concept of event 'modifiers' (via `.modifier` after event name) that
 1. `.prevent` - call `event.preventDefault()`.
 1. `.capture` - add event listener in capture mode.
 1. `.self` - only trigger handler if event was dispatched from this element.
-1. `.{`keyAlias} - only trigger handler on certain keys.
+1. `.{keyAlias}` - only trigger handler on certain keys.
 1. `.once` - trigger handler at most once.
 1. `.left` - only trigger handler for left button mouse events.
 1. `.right` - only trigger handler for right button mouse events.
