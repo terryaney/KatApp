@@ -341,7 +341,7 @@ interface IKaInputModel {
 	clearOnUnmount?: boolean;
 	isExcluded?: boolean;
 
-	type?: string;
+	type?: "radio" | "checkbox" | "text" | "date" | "range";
 	value?: string;
 	label?: string;
 	placeHolder?: string;
@@ -435,30 +435,30 @@ interface IKaInputScopeCss {
 
 interface IKaInputGroupModel {
 	names: string[];
-	type: string;
+	type: "radio" | "checkbox" | "text" | "date" | "range";
+	template: string;
+
 	clearOnUnmount?: boolean;
 	isExcluded?: boolean;
 
-	values?: string[];
-	labels?: string[];
-	placeHolders?: string[];
-	hideLabels?: boolean[];
-	helps?: IKaInputModelHelp[]
-	css?: IKaInputScopeCss[];
-	displayFormats?: string[];
-	masks?: string[];
-	keypressRegexs?: string[];
-	maxLengths?: number[];
-	mins?: string[];
-	maxes?: string[];
-	steps?: number[];
-	prefixes?: string[];
-	suffixes?: string[];
+	values?: string[] | string;
+	labels?: string[] | string;
+	placeHolders?: string[] | string;
+	hideLabels?: boolean[] | boolean;
+	helps?: IKaInputModelHelp[] | IKaInputModelHelp
+	css?: IKaInputScopeCss[] | IKaInputScopeCss;
+	displayFormats?: string[] | string;
+	masks?: string[] | string;
+	keypressRegexs?: string[] | string;
+	maxLengths?: number[] | number;
+	mins?: string[] | string;
+	maxes?: string[] | string;
+	steps?: number[] | number;
+	prefixes?: string[] | string;
+	suffixes?: string[] | string;
 
 	ce?: string;
 	tab?: string;
-
-	template: string;
 
 	isNoCalc?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
 	isDisabled?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;

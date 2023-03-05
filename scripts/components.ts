@@ -638,21 +638,32 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 
 		const props = this.props;
 		const names = props.names;
-		const values = props.values != undefined ? props.values : names.map(n => undefined);
-		const labels = props.labels != undefined ? props.labels : names.map(n => undefined);
-		const prefixes = props.prefixes != undefined ? props.prefixes : names.map(n => undefined);
-		const suffixes = props.suffixes != undefined ? props.suffixes : names.map(n => undefined);
-		const hideLabels = props.hideLabels != undefined ? props.hideLabels : names.map(n => undefined);
-		const placeHolders = props.placeHolders != undefined ? props.placeHolders : names.map(n => '');		
-		const displayFormats = props.displayFormats != undefined ? props.displayFormats : names.map(n => undefined);
-		const masks = props.masks != undefined ? props.masks : names.map(n => undefined);
-		const keypressRegexs = props.keypressRegexs != undefined ? props.keypressRegexs : names.map(n => undefined);
-		const helps = props.helps != undefined ? props.helps : names.map(n => undefined);
-		const css = props.css != undefined ? props.css : names.map(n => undefined);
-		const maxLengths = props.maxLengths != undefined ? props.maxLengths : names.map(n => undefined);
-		const mins = props.mins != undefined ? props.mins : names.map(n => undefined);
-		const maxes = props.maxes != undefined ? props.maxes : names.map(n => undefined);
-		const steps = props.steps != undefined ? props.steps : names.map(n => undefined);
+		
+		function fillProperties<T extends string | boolean | number | IKaInputModelHelp | IKaInputScopeCss>(source: Array<T> | T | undefined, defaultValue?: T): Array<T | undefined> {
+			const defaultFill: T | undefined = source != undefined && source instanceof Array
+				? source[source.length - 1]
+				: source ?? defaultValue;
+			
+			return source instanceof Array
+				? source.concat(names.slice(0, names.length - source.length).map(n => defaultFill!))
+				: names.map(n => defaultFill);
+		}
+		
+		const values = fillProperties(props.values);
+		const labels = fillProperties(props.labels);
+		const prefixes = fillProperties(props.prefixes);
+		const suffixes = fillProperties(props.suffixes);		
+		const hideLabels = fillProperties(props.hideLabels);
+		const placeHolders = fillProperties(props.placeHolders, '');
+		const displayFormats = fillProperties(props.displayFormats);
+		const masks = fillProperties(props.masks);
+		const keypressRegexs = fillProperties(props.keypressRegexs);
+		const helps = fillProperties(props.helps);
+		const css = fillProperties(props.css);
+		const maxLengths = fillProperties(props.maxLengths);
+		const mins = fillProperties(props.mins);
+		const maxes = fillProperties(props.maxes);
+		const steps = fillProperties(props.steps);
 		
 		const calcEngine = props.ce;
 		const tab = props.tab;
