@@ -308,9 +308,10 @@ interface IKaNavigateModel {
 	model?: string;
 }
 interface IKaModalModel extends IModalOptions {
-	confirmed?: (response: unknown | undefined, application: KatApp) => void;
-	cancelled?: (response: unknown | undefined, application: KatApp) => void;
-	catch?: (e: unknown | undefined, application: KatApp) => void;
+	beforeOpenAsync?: (hostApplication: KatApp) => Promise<void>;
+	confirmedAsync?: (response: unknown | undefined, application: KatApp) => Promise<void>;
+	cancelledAsync?: (response: unknown | undefined, application: KatApp) => Promise<void>;
+	catchAsync?: (e: unknown | undefined, application: KatApp) => Promise<void>;
 	model?: string;
 }
 interface IKaAppModel {
@@ -320,8 +321,8 @@ interface IKaAppModel {
 }
 interface IKaApiModel extends IApiOptions {
 	endpoint: string;
-	then?: (response: IStringAnyIndexer | undefined, application: KatApp) => void;
-	catch?: (e: unknown | undefined, application: KatApp) => void;
+	thenAsync?: (response: IStringAnyIndexer | undefined, application: KatApp) => Promise<void>;
+	catchAsync?: (e: unknown | undefined, application: KatApp) => Promise<void>;
 	confirm?: IModalOptions;
 }
 interface IKaHighchartModel {

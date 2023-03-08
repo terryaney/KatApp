@@ -275,12 +275,12 @@ class DirectiveKaApi implements IKaDirective {
 						$(ctx.el as HTMLElement)
 					);
 
-					if (scope.then != undefined) {
-						scope.then(response, application);
+					if (scope.thenAsync != undefined) {
+						await scope.thenAsync(response, application);
 					}
 				} catch (e) {
-					if (scope.catch != undefined) {
-						scope.catch(e, application);
+					if (scope.catchAsync != undefined) {
+						await scope.catchAsync(e, application);
 					}
 					else {
 						Utils.trace(application, "DirectiveKaApi", "submitApi", `API Submit to ${endpoint} failed.`, TraceVerbosity.None, e);
@@ -394,30 +394,34 @@ class DirectiveKaModal implements IKaDirective {
 					const triggerLink = $(e.currentTarget as HTMLInputElement);
 
 					try {
+						if (scope.beforeOpenAsync != undefined) {
+							await scope.beforeOpenAsync(application);
+						}
+
 						const response = await application.showModalAsync(
-							Utils.clone(scope, (k, v) => ["confirmed", "cancelled", "catch"].indexOf(k) > -1 ? undefined : v),
+							Utils.clone(scope, (k, v) => ["beforeOpenAsync", "confirmedAsync", "cancelledAsync", "catchAsync"].indexOf(k) > -1 ? undefined : v),
 							triggerLink
 						);
 
 						if (response.confirmed) {
-							if (scope.confirmed != undefined) {
-								scope.confirmed(response.response, application);
+							if (scope.confirmedAsync != undefined) {
+								await scope.confirmedAsync(response.response, application);
 							}
 							else {
 								Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} confirmed.`, TraceVerbosity.Normal, response.response);
 							}
 						}
 						else {
-							if (scope.cancelled != undefined) {
-								scope.cancelled(response.response, application);
+							if (scope.cancelledAsync != undefined) {
+								await scope.cancelledAsync(response.response, application);
 							}
 							else {
 								Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} cancelled.`, TraceVerbosity.Normal, response.response);
 							}
 						}
 					} catch (e) {
-						if (scope.catch != undefined) {
-							scope.catch(e, application);
+						if (scope.catchAsync != undefined) {
+							await scope.catchAsync(e, application);
 						}
 						else {
 							Utils.trace(application, "DirectiveKaModal", "showModal", `Modal App ${scope.view} failed.`, TraceVerbosity.None, e);

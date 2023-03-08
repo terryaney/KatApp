@@ -2528,9 +2528,10 @@ The `IKaModalModel` represents the model type containing the properties that con
 Property | Type | Description
 ---|---|---
 `model` | `string` | If the *entire* `IKaModalModel` parameter is being provided by a CalcEngine via a valid 'JSON string', this property can be assigned in place of using all the individual properties.
-`confirmed` | `(response: any \| undefined, application: KatApp) => void` | If the Kaml View needs to provide a delegate to run if modal dialog is 'confirmed', the `confirmed` property solves that problem.  See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.
-`cancelled` | `(response: any \| undefined, application: KatApp) => void` | If the Kaml View needs to provide a delegate to run if modal dialog is 'cancelled', the `cancelled` property solves that problem. See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.
-`catch` | `(e: any \| undefined, application: KatApp) => void` | If the Kaml View needs to provide a delegate to run if generating a modal dialog fails, the `catch` property solves that problem. See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.<br/><br/>If no `catch` is provided and generating a modal dialog fails, the response will simply be logged by the KatApp framework.
+`beforeOpenAsync` | `(application: KatApp) => Promise<void>` | When a modal is displayed using the [IModalOptions.contentSelector](#imodaloptions) property, at times it is necessary to update the content dynamically before rendering the modal.  This event enables the host application to update reactive model properties before rendering the modal.  See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.
+`confirmedAsync` | `(response: any \| undefined, application: KatApp) => Promise<void>` | If the Kaml View needs to provide a delegate to run if modal dialog is 'confirmed', the `confirmedAsync` property solves that problem.  See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.
+`cancelledAsync` | `(response: any \| undefined, application: KatApp) => Promise<void>` | If the Kaml View needs to provide a delegate to run if modal dialog is 'cancelled', the `cancelledAsync` property solves that problem. See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.
+`catchAsync` | `(e: any \| undefined, application: KatApp) => Promise<void>` | If the Kaml View needs to provide a delegate to run if generating a modal dialog fails, the `catchAsync` property solves that problem. See [v-ka-modal Model Samples](#v-ka-modal-model-samples) for more information.<br/><br/>If no `catchAsync` is provided and generating a modal dialog fails, the response will simply be logged by the KatApp framework.
 
 ### v-ka-modal Model Samples
 
@@ -2538,14 +2539,14 @@ Property | Type | Description
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
     confirmed: ( response, application ) => console.log(`Dialog was confirmed with ${response}`) 
-}">Submit
+}">Submit</a>
 ```
 
 ```html
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
     cancelled: ( response, application ) => console.log(`Dialog was cancelled with ${response}`) 
-}">Submit
+}">Submit</a>
 ```
 
 ```html
@@ -2553,7 +2554,21 @@ Property | Type | Description
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
     catch: ( e, application ) => console.log(`Acknowledgement dialog unable to display: ${e}`) 
-}">Submit
+}">Submit</a>
+```
+
+```html
+<div v-for="name in ['John', 'Sally']">
+	<a v-ka-modal="{ 
+		contentSelector: '.modalContent',
+		beforeOpenAsync: () => model.name = name 
+		
+	}">Show Modal for {{name}}</a>
+</div>
+
+<div class="d-none modalContent">
+	Saying hello to {{model.name}} from the modal!
+</div>
 ```
 
 ## v-ka-app
