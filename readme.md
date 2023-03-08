@@ -2503,7 +2503,7 @@ the client side passing in iRefreshAfterEstimate = 1
 -->
 <a v-ka-api="{ 
     endpoint: 'generate/estimate', 
-    then: ( response, application ) => console.log(`Estimate was successful and responded with ${response}`) 
+    thenAsync: ( response, application ) => console.log(`Estimate was successful and responded with ${response}`) 
 }">Submit
 ```
 
@@ -2511,7 +2511,7 @@ the client side passing in iRefreshAfterEstimate = 1
 <!-- Submit to a estimate generation endpoint, and on failure log the response -->
 <a v-ka-api="{ 
     endpoint: 'generate/estimate', 
-    catch: ( e, application ) => console.log(`Estimate failed: ${e}`) 
+    catchAsync: ( e, application ) => console.log(`Estimate failed: ${e}`) 
 }">Submit
 ```
 
@@ -2538,14 +2538,14 @@ Property | Type | Description
 ```html
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
-    confirmed: ( response, application ) => console.log(`Dialog was confirmed with ${response}`) 
+    confirmedAsync: ( response, application ) => console.log(`Dialog was confirmed with ${response}`) 
 }">Submit</a>
 ```
 
 ```html
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
-    cancelled: ( response, application ) => console.log(`Dialog was cancelled with ${response}`) 
+    cancelledAsync: ( response, application ) => console.log(`Dialog was cancelled with ${response}`) 
 }">Submit</a>
 ```
 
@@ -2553,7 +2553,7 @@ Property | Type | Description
 <!-- Submit to a estimate generation endpoint, and on failure log the response -->
 <a v-ka-modal="{ 
     view: 'Common.Acknowledgement', 
-    catch: ( e, application ) => console.log(`Acknowledgement dialog unable to display: ${e}`) 
+    catchAsync: ( e, application ) => console.log(`Acknowledgement dialog unable to display: ${e}`) 
 }">Submit</a>
 ```
 
