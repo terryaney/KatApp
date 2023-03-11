@@ -492,7 +492,7 @@ class KatApp implements IKatApp {
 
 			const eventArgs = [...args, this];
 
-			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector == this.selector).map( e => e.events))) {
+			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector.split(",").indexOf(this.selector) > -1).map( e => e.events))) {
 				try {
 					// Make application.element[0] be 'this' in the event handler
 					let delegateResult = (eventConfiguration as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
