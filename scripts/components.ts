@@ -87,7 +87,8 @@ class InputComponentBase {
 			removeError();
 
 			if (!exclude) {
-				application.state.inputs.haveChanged = Date.now();
+				application.state.hasChanged = Date.now();
+				application.state.isDirty = true;
 				application.state.inputs[name] = application.getInputValue(name);
 
 				if (!skipCalc && !noCalc(name)) {
@@ -118,7 +119,7 @@ class InputComponentBase {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, input, type, mask, keypressRegex, removeError, inputEventAsync);
+			this.bindInputEvents(application, name, input, type, mask, keypressRegex, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
@@ -130,7 +131,6 @@ class InputComponentBase {
 		input: HTMLInputElement, type: string | null,
 		mask: (name: string) => string | undefined,
 		keypressRegex: (name: string) => string | undefined,
-		removeError: () => void,
 		inputEventAsync: (calculate: boolean) => Promise<void>
 	): void {
 		input.addEventListener("change", async () => await inputEventAsync(true));
@@ -145,73 +145,75 @@ class InputComponentBase {
 
 			// Textbox...
 			if (type != "radio" && input.tagName == "INPUT") {
-				input.addEventListener("input", async e => {
+
+				input.addEventListener("input", async () => {
 					await inputEventAsync(false);
 				});
-			}
-		}
 
-		const inputKeypressRegex = keypressRegex(name);
+				const inputKeypressRegex = keypressRegex(name);
 
-		if (inputKeypressRegex != null) {
-			const kpRegex = new RegExp(inputKeypressRegex);
-
-			input.addEventListener("beforeinput", (event: InputEvent) => {
-				if (event.inputType == "insertText" && event.data != null && !kpRegex.test(event.data)) {
-					event.preventDefault();
+				if (inputKeypressRegex != null) {
+					const kpRegex = new RegExp(inputKeypressRegex);
+		
+					input.addEventListener("beforeinput", (event: InputEvent) => {
+						if (event.inputType == "insertText" && event.data != null && !kpRegex.test(event.data)) {
+							event.preventDefault();
+						}
+					});
 				}
-			});
-		}
-
-		const inputMask = mask(name);
-
-		if (inputMask != undefined) {
-			const isNumericInput = (event: KeyboardEvent) => {
-				const key = event.keyCode;
-				const valid = ((key >= 48 && key <= 57) || // Allow number line
-					(key >= 96 && key <= 105) // Allow number pad
-				);
-				return valid;
-			};
-
-			const isModifierKey = (event: KeyboardEvent) => {
-				const key = event.keyCode;
-				const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
-					(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
-					(key > 36 && key < 41) || // Allow left, up, right, down
-					(
-						// Allow Ctrl/Command + A,C,V,X,Z
-						(event.ctrlKey === true || event.metaKey === true) &&
-						(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
-					)
-				return value;
-			};
-
-			// Only support phone so far...
-			if (inputMask == "(###) ###-####") {
-				// Why can't I put .RBLe event namespace here??
-				input.addEventListener("keydown", (event: KeyboardEvent) => {
-					// Input must be of a valid number format or a modifier key, and not longer than ten digits
-					if (!isNumericInput(event) && !isModifierKey(event)) {
-						event.preventDefault();
+		
+				const inputMask = mask(name);
+		
+				if (inputMask != undefined) {
+					const isNumericInput = (event: KeyboardEvent) => {
+						const key = event.keyCode;
+						const valid = ((key >= 48 && key <= 57) || // Allow number line
+							(key >= 96 && key <= 105) // Allow number pad
+						);
+						return valid;
+					};
+		
+					const isModifierKey = (event: KeyboardEvent) => {
+						const key = event.keyCode;
+						const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
+							(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
+							(key > 36 && key < 41) || // Allow left, up, right, down
+							(
+								// Allow Ctrl/Command + A,C,V,X,Z
+								(event.ctrlKey === true || event.metaKey === true) &&
+								(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
+							)
+						return value;
+					};
+		
+					// Only support phone so far...
+					if (inputMask == "(###) ###-####") {
+						// Why can't I put .RBLe event namespace here??
+						input.addEventListener("keydown", (event: KeyboardEvent) => {
+							// Input must be of a valid number format or a modifier key, and not longer than ten digits
+							if (!isNumericInput(event) && !isModifierKey(event)) {
+								event.preventDefault();
+							}
+						});
+		
+						input.addEventListener("keyup", (event: KeyboardEvent) => {
+							if (isModifierKey(event)) { return; }
+		
+							const target = event.target as HTMLInputElement;
+							const input = target.value.replace(/\D/g, '').substring(0, 10);
+		
+							// First ten digits of input only
+							const area = input.substring(0, 3);
+							const middle = input.substring(3, 6);
+							const last = input.substring(6, 10);
+		
+							if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
+							else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
+							else if (input.length > 0) { target.value = "(" + area; }
+						});
 					}
-				});
-
-				input.addEventListener("keyup", (event: KeyboardEvent) => {
-					if (isModifierKey(event)) { return; }
-
-					const target = event.target as HTMLInputElement;
-					const input = target.value.replace(/\D/g, '').substring(0, 10);
-
-					// First ten digits of input only
-					const area = input.substring(0, 3);
-					const middle = input.substring(3, 6);
-					const last = input.substring(6, 10);
-
-					if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
-					else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
-					else if (input.length > 0) { target.value = "(" + area; }
-				});
+				}
+		
 			}
 		}
 	}

@@ -29,6 +29,10 @@ class KatApp implements IKatApp {
 	private static applications: Array<KatApp> = [];
 	private static globalEventConfigurations: Array<{ selector: string, events: IKatAppEventsConfiguration }> = [];
 
+	public static getDirty(): Array<IKatApp> {
+		return this.applications.filter(a => a.state.isDirty);
+	}
+
 	public static remove(item: KatApp): void {
 		if (item.vueApp != undefined) {
 			item.vueApp.unmount();
@@ -242,19 +246,17 @@ class KatApp implements IKatApp {
 
 		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
-		const katAppInputs: ICalculationInputs = {
-			haveChanged: Date.now()
-		};
 		const state: IApplicationData = {
 			kaId: this.id,
 
 			application: this,
 
-			// options: this.options,
-
+			hasChanged: Date.now(),
+			isDirty: false,
 			uiBlocked: false,
 			needsCalculation: false,
-			inputs: Utils.extend(katAppInputs, this.options.inputs, this.getSessionStorageInputs()),
+
+			inputs: Utils.extend({}, this.options.inputs, this.getSessionStorageInputs()),
 			errors: [],
 			warnings: [],
 			onAll(...values: any[]) {

@@ -71,6 +71,7 @@ interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { };
 interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { };
 
 interface IKatAppStatic {
+	getDirty(): Array<IKatApp>;
 	createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp>;
 	get(key: string | number | Element): KatApp | undefined;
 	handleEvents(selector: string, configAction: (config: IKatAppEventsConfiguration) => void): void;
@@ -151,22 +152,39 @@ interface IConfigureOptions {
 
 interface IHandlers extends IStringAnyIndexer { };
 	
-interface ICalculationInputs extends IStringIndexer<string | number | ICalculationInputTable[] | undefined> {
+interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | undefined> {
 	iConfigureUI?: string;
 	iDataBind?: string;
 	iInputTrigger?: string;
 	iNestedApplication?: string;
 	iModalApplication?: string;
 	tables?: ICalculationInputTable[];
-	haveChanged?: number;
 }
 
 interface IApplicationData {
 	kaId: string;
 	application: IKatApp;
-	// Don't think I need this
-	// options: IKatAppOptions;
+
+	/** 
+	 * Changes every time an v-ka-input changes.  
+	 * Allows for reactive v-effect statements without hooking up an IKatAppEventsConfiguration.input event. 
+	 */
+	hasChanged: number;
+	/**
+	 * Indicates if any v-ka-input has changed since the KatApp has been rendered.  
+	 * Allows for host application to prompt about changes before navigation or actions if necessary.  
+	 * Host application must set to false after any action/api that has 'saved' inputs.
+	 */
+	isDirty: boolean;
+
+	/**
+	 * Indicates whether the KatApp framework is performing an action (calculateAsync, apiAsync, etc.) where the host application should display a UI blocking mechanism.
+	 */
 	uiBlocked: boolean;
+	/**
+	 * Is true when a v-ka-input (without v-ka-rbl-no-calc or v-ka-rbl-exclude directives) has been edited (via key press) but has not triggered a calculation yet.
+	 * Used internally by the v-ka-needs-calc directive.
+	 */
 	needsCalculation: boolean; // True when input not 'skipped' has been edited but has not triggered a calculation yet
 
 	model: IStringAnyIndexer;

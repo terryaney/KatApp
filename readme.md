@@ -141,10 +141,7 @@ The standard Kaml View file will have the following structure.
 			config.options = {
 			}
 			
-			config.directives = {
-			};
-
-			config.components = {
+			config.handlers = {
 			};
 
 			config.events.initialized = () => {
@@ -154,6 +151,12 @@ The standard Kaml View file will have the following structure.
 			    // Can use the current applications state properties via delegate parameters.
 			    console.log( rbl.value("nameFirst" ) );
 			    // 'rbl' is equivalent to 'application.state.rbl'.
+			};
+
+			config.directives = {
+			};
+
+			config.components = {
 			};
 		});
 
@@ -300,6 +303,8 @@ const nameFirst = application.state.rbl.value("name-first");
 Property | Type | Description
 ---|---|---
 `kaId` | `string` | Current id of the running KatApp.  Typically only used in Template Files when a unique id is required.
+`hasChanged` | `number` | Automatically maintained by the KatApp framework.  Every time *any* input changes (changing a dropdown, typing a character in text input, etc.), this value is updated with a new timestamp. Allows for reactive v-effect statements without hooking up an [`IKatAppEventsConfiguration.input`](#ikatappeventsconfiguration) event. 
+`isDirty` | `boolean` | Indicates if any v-ka-input has changed since the KatApp has been rendered.  Allows for host application to prompt about changes before navigation or actions if necessary.  Host application must set to `false` after any action/api that has 'saved' inputs. 
 `uiBlocked` | `boolean` | Returns `true` when a RBL Calculation or Api Endpoint is being processed.  See [`IKatApp.blockUI`](#IKatApp.blockUI) and [`IKatApp.unblockUI`](#IKatApp.unblockUI) for more information. Typically used to show a 'blocker' on the rendered HTML to prevent the user from clicking anywhere.
 `needsCalculation` | `boolean` | Returns `true` when input that will trigger a calculation has been edited but has not triggered a calculation yet.  Typically used with [`v-ka-needs-calc`](#v-ka-needs-calc) directive which toggles 'submit button' state to indicate to the user that a calculation is needed before they can submit the current form.
 `model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
@@ -3293,6 +3298,7 @@ Name | Description
 [`createAppAsync`](#katappcreateappasync) | Asyncronous method to create a new KatApp bound to an `HTMLElement` selected via `selector`.
 [`get`](#katappget) | Get access to an existing KatApp.
 [`handleEvents`](#katapphandleasync) | Similar to [`IKatApp.handleEvents`](#ikatapphandleevents) and allows for events to be attached to applications.  Used generic javascript libraries that want to attach events to an application, but is have direct access to an application or the application may not be created/available at the time the library wants to register the events.
+[`getDirty`](#katappgetdirty) | Returns all currently running KatApps where the [`isDirty`](#iapplicationdata-properties) flag is `true`.
 
 ### KatApp.createAppAsync
 
@@ -3350,6 +3356,27 @@ When using this method to bind events, *almost always*, the last parameter, `app
 
 			console.log(lastCalculation != undefined && lastCalculation.results.length > 0 ? lastCalculation.results[0] : application.options.manualResults[0]);
 		};
+	});
+)();
+```
+
+### KatApp.getDirty
+
+`getDirty(): Array<IKatApp>`
+
+Returns all currently running KatApps where the [`isDirty`](#iapplicationdata-properties) flag is `true`.  Useful for preventing navigation if anything is dirty.
+
+```javascript
+(function () {
+	window.addEventListener('beforeunload', e => {
+		const dirtyKatApps = KatApp.getDirty();
+
+		// Could walk the dirtyKatApps and look to see if hostApplication != undefined meaning it is a modal or nested as well
+
+		if (dirtyKatApps.length > 0) {
+			e.preventDefault();
+			e.returnValue = "";
+		}
 	});
 )();
 ```
@@ -3494,22 +3521,48 @@ The `rbl`, `model`, `inputs`, and `handlers` parameters are optional, but are pa
 ```javascript
 /** @type {IKatApp} */
 var application = KatApp.get('{id}');
-application.configure((config, rbl, model) => {
 
-	// In the rendered event below, we access 'model' and 'rbl' in the handler.
+// Optionally update the KatApp options and state.  The configAction delegate passes in
+// references to the rbl, model, inputs, and handlers properties from its state.
+application.configure((config, rbl, model, inputs, handlers) => { 
+
+	// In any event below, we access 'model' and 'rbl' in the handler.
 	// Even though 'configure' is called immediately at application start and 'rbl' and
 	// 'model' are empty at the time of the 'configure' call...by the time the rendered event
 	// is raised, the references for `rbl` and `model` are up to date and will have appropriate 
 	// values.
 
+	config.model = {
+	};
+
+	config.options = {
+	}
+	config.handlers = {
+	};
+
+	config.events.initialized = () => {
+		// Optionally bind Application Events
+		console.log( 'handled' );
+
+		// Can use the current applications state properties via delegate parameters.
+		console.log( rbl.value("nameFirst" ) );
+		// 'rbl' is equivalent to 'application.state.rbl'.
+	};
 	config.events.rendered = () => {
 		// using 'model' is equivalent to 'application.state.model'
 		// using 'rbl' is equivalent to 'application.state.rbl'
 		model.eventMessageHeader = rbl.value("eventMessageHeader");
 		model.eventMessage = rbl.value("eventMessage");
 	}
+	
+	config.directives = {
+	};
+
+	config.components = {
+	};
 });
 ```
+
 
 #### IKatApp.handleEvents
 
@@ -4161,14 +4214,9 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
     ]
     // The rest of the inputs present on page are added as IStringIndexer<string> properties
     "iPageInput1": "64",
-    "iPageInputN": "Conduent",
-	
-	// KatApp Framework timestamp
-	"haveChanged:" 123456789
+    "iPageInputN": "Conduent"
 }
 ```
-
-**Note**: The `haveChanged` property on the `inputs` object is automatically maintained by the KatApp framework.  Everytime *any* input changes (changing a dropdown, typing a character in text input, etc.), this value is updated with a timestamp.  The benefit of this property is if the Kaml wanted to have a 'reactive' hook based on the condition when any input has changed.
 
 ### ITabDef
 
