@@ -2533,7 +2533,7 @@ class KatApp implements IKatApp {
 				let needsCalcText = directive.getAttribute("v-ka-needs-calc");
 
 				if (needsCalcText == "") {
-					needsCalcText = "Refresh";
+					needsCalcText = "<i class='fa-solid fa-rotate-right'></i>&nbsp;Refresh";
 				}
 
 				directive.setAttribute("v-if", "!needsCalculation");
@@ -2551,8 +2551,6 @@ class KatApp implements IKatApp {
 				refresh.innerHTML = needsCalcText!;
 
 				refresh.setAttribute("v-if", "needsCalculation");
-				refresh.classList.add("ka-needs-calc");
-
 				directive.after(refresh);
 			});
 
