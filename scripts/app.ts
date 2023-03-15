@@ -2126,6 +2126,16 @@ class KatApp implements IKatApp {
 						this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[tableName] as ITabDefTable, tableName);
 					}
 				});
+
+			(t["rbl-input"] as ITabDefTable ?? []).filter(r => (r["list"] ?? "") != "").map(r => ({ input: r["@id"], list: r["list"]! })).concat(
+				(t["rbl-listcontrol"] as ITabDefTable ?? []).map(r => ({ input: r["@id"], list: r["table"]! }))
+			).forEach(r => {
+				const values = (t[r.list] as Array<IKaInputModelListRow> ?? []).map(l => l.text);
+				const inputValue: string | undefined = this.state.inputs[r.input] as string;
+				if (values.indexOf(inputValue ?? "") == -1) {
+					delete this.state.inputs[r.input];
+				}
+			});
 		});
 
 		try {
