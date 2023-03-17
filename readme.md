@@ -3768,6 +3768,7 @@ There are three main event lifecycles that occur during the life time of a KatAp
 
 When a KatApp is being created via the [`KatApp.createAppAsync`](#katappcreateappasync), the following lifecycle occurs.
 
+1. [beforeOpenAsync](#imodaloptions) - if application is a modal application *using* `contentSelector`
 1. [initialized](#ikatappinitialized)
 1. [modalAppInitialized](#ikatappmodalappinitialized) - if application is a modal application
 1. [nestedAppInitialized](#ikatappnestedappinitialized) - if application is a nested application
