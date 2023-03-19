@@ -81,8 +81,7 @@ class InputComponentBase {
 			}
 		}
 
-		const removeError = () => application.state.errors = application.state.errors.filter(r => r["@id"] != name);
-
+		const removeError = () => application.state.errors = application.state.errors.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(name) == -1);
 		const inputEventAsync = async (calculate: boolean) => {
 			removeError();
 
@@ -164,44 +163,74 @@ class InputComponentBase {
 		
 				const inputMask = mask(name);
 		
-				if (inputMask != undefined) {
-					const isNumericInput = (event: KeyboardEvent) => {
-						const key = event.keyCode;
-						const valid = ((key >= 48 && key <= 57) || // Allow number line
-							(key >= 96 && key <= 105) // Allow number pad
-						);
-						return valid;
-					};
-		
-					const isModifierKey = (event: KeyboardEvent) => {
-						const key = event.keyCode;
-						const value = (event.shiftKey === true || key === 35 || key === 36) || // Allow Shift, Home, End
-							(key === 8 || key === 9 || key === 13 || key === 46) || // Allow Backspace, Tab, Enter, Delete
-							(key > 36 && key < 41) || // Allow left, up, right, down
-							(
-								// Allow Ctrl/Command + A,C,V,X,Z
-								(event.ctrlKey === true || event.metaKey === true) &&
-								(key === 65 || key === 67 || key === 86 || key === 88 || key === 90)
-							)
-						return value;
-					};
-		
+				if (inputMask != undefined) {		
 					// Only support phone so far...
-					if (inputMask == "(###) ###-####") {
-						// Why can't I put .RBLe event namespace here??
-						input.addEventListener("keydown", (event: KeyboardEvent) => {
-							// Input must be of a valid number format or a modifier key, and not longer than ten digits
-							if (!isNumericInput(event) && !isModifierKey(event)) {
+					if (inputMask == "zip+4" || inputMask == "#####-####") {
+						input.setAttribute("maxlength", "10");
+
+						input.addEventListener("keypress", (event: KeyboardEvent) => {
+							// Number, (, ), or -
+							if (event.key.match(/[0-9\-]/) === null) {
+								event.preventDefault();
+							}
+							else if (event.key == "-" && input.value.length != 5) {
 								event.preventDefault();
 							}
 						});
-		
+
 						input.addEventListener("keyup", (event: KeyboardEvent) => {
-							if (isModifierKey(event)) { return; }
-		
 							const target = event.target as HTMLInputElement;
-							const input = target.value.replace(/\D/g, '').substring(0, 10);
+							const selectionStart = target.selectionStart;
+							
+							if (event.code == "Backspace" && selectionStart == target.value.length) {
+								return; // Do nothing
+							}
+
+							const input = target.value.replace(/\D/g, '').substring(0, 9);
+									
+							// First ten digits of input only
+							const zip = input.substring(0, 5);
+							const plus4 = input.substring(5, 9);
 		
+							if (input.length > 5) { target.value = zip + "-" + plus4; }
+
+							if (event.code == "Backspace" || event.code == "Delete") {
+								target.selectionStart = target.selectionEnd = selectionStart;
+							}
+						});
+					}
+					if (inputMask == "phone" || inputMask == "(###) ###-####") {
+						input.setAttribute("maxlength", "14");
+
+						input.addEventListener("keypress", (event: KeyboardEvent) => {
+							// Number, (, ), or -
+							if (event.key.match(/[0-9\(\)\-\s]/) === null) {
+								event.preventDefault();
+							}
+							else if (event.key == "(" && input.value != "") {
+								event.preventDefault();
+							}
+							else if (event.key == ")" && input.value.length != 4) {
+								event.preventDefault();
+							}
+							else if (event.key == "-" && input.value.length != 9) {
+								event.preventDefault();
+							}
+							else if (event.key == " " && input.value.length != 5) {
+								event.preventDefault();
+							}
+						});
+
+						input.addEventListener("keyup", (event: KeyboardEvent) => {
+							const target = event.target as HTMLInputElement;
+							const selectionStart = target.selectionStart;
+							
+							if (event.code == "Backspace" && selectionStart == target.value.length) {
+								return; // Do nothing
+							}
+
+							const input = target.value.replace(/\D/g, '').substring(0, 10);
+									
 							// First ten digits of input only
 							const area = input.substring(0, 3);
 							const middle = input.substring(3, 6);
@@ -210,6 +239,10 @@ class InputComponentBase {
 							if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
 							else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
 							else if (input.length > 0) { target.value = "(" + area; }
+
+							if (event.code == "Backspace" || event.code == "Delete") {
+								target.selectionStart = target.selectionEnd = selectionStart;
+							}
 						});
 					}
 				}
@@ -343,7 +376,7 @@ class InputComponentBase {
 
 		input.addEventListener("keypress", async e => {
 			removeError();
-			if (e.keyCode == 13) {
+			if (e.code == "Enter") {
 				await dateChangeAsync(e);
 			}
 		});
@@ -496,8 +529,8 @@ class InputComponent extends InputComponentBase {
 				// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
 				return /* application.state.uiBlocked || */ getInputCeValue( "disabled", "rbl-disabled", name) == "1";
 			},
-			get error() { return application.state.errors.find(v => v["@id"] == name)?.text; },
-			get warning() { return application.state.warnings.find(v => v["@id"] == name)?.text; }
+			get error() { return application.state.errors.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(name) > -1)?.text; },
+			get warning() { return application.state.warnings.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(name) > -1)?.text; }
 		};
 
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
@@ -680,8 +713,8 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			display: (index: number) => getInputCeValue( index, "display", "rbl-display", "v" + names[ index ] ) != "0",
 			noCalc: (index: number) => getInputCeValue(index, "skip-calc", "rbl-skip", names[index]) == "1",
 			disabled: (index: number) => getInputCeValue(index, "disabled", "rbl-disabled", names[index]) == "1",
-			error: (index: number) => application.state.errors.find(v => v["@id"] == names[index])?.text,
-			warning: (index: number) => application.state.warnings.find(v => v["@id"] == names[index])?.text
+			error: (index: number) => application.state.errors.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(names[index]) > -1)?.text,
+			warning: (index: number) => application.state.warnings.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(names[index]) > -1)?.text
 		};
 
 		const noCalc = function (name: string) {

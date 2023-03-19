@@ -254,6 +254,7 @@ class KatApp implements IKatApp {
 			hasChanged: Date.now(),
 			isDirty: false,
 			uiBlocked: false,
+			get canSubmit() { return this.isDirty && this.errors.filter( r => r['@id'].startsWith('i')).length == 0 && !this.uiBlocked; },
 			needsCalculation: false,
 
 			inputs: Utils.extend({}, this.options.inputs, this.getSessionStorageInputs()),

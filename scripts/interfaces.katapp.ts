@@ -176,7 +176,11 @@ interface IApplicationData {
 	 * Host application must set to false after any action/api that has 'saved' inputs.
 	 */
 	isDirty: boolean;
-
+	/**
+	 * Indicates if application is in the 'state' to submit to server for processing.  It returns true
+	 * when the most common scenario is valid: isDirty && !uiBlocked && errors.filter( r => r['@id'].startsWith('i')).length == 0 (no UI errors)
+	 */
+	canSubmit: boolean;
 	/**
 	 * Indicates whether the KatApp framework is performing an action (calculateAsync, apiAsync, etc.) where the host application should display a UI blocking mechanism.
 	 */
