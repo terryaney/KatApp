@@ -2131,10 +2131,12 @@ class KatApp implements IKatApp {
 			(t["rbl-input"] as ITabDefTable ?? []).filter(r => (r["list"] ?? "") != "").map(r => ({ input: r["@id"], list: r["list"]! })).concat(
 				(t["rbl-listcontrol"] as ITabDefTable ?? []).map(r => ({ input: r["@id"], list: r["table"]! }))
 			).forEach(r => {
-				const values = (t[r.list] as Array<IKaInputModelListRow> ?? []).map(l => l.key);
-				const inputValue: string | undefined = this.state.inputs[r.input] as string;
-				if (values.indexOf(inputValue ?? "") == -1) {
-					delete this.state.inputs[r.input];
+				if (t[r.list] != undefined) {
+					const values = (t[r.list] as Array<IKaInputModelListRow>).map(l => l.key);
+					const inputValue: string | undefined = this.state.inputs[r.input] as string;
+					if (values.indexOf(inputValue ?? "") == -1) {
+						delete this.state.inputs[r.input];
+					}
 				}
 			});
 		});
