@@ -76,11 +76,11 @@
 		}
 
 		const getTipTitle = function (h: JQuery<Element>) {
-			if (h.data('bs-toggle') == "tooltip") {
+			if (h.attr('data-bs-toggle') == "tooltip") {
 				return getTipContent(h);
 			}
 
-			const titleSelector = h.data('bs-content-selector');
+			const titleSelector = h.attr('data-bs-content-selector');
 			if (titleSelector != undefined) {
 				const title = select(titleSelector + "Title").html();
 				if ((title ?? "") != "") {
@@ -91,7 +91,7 @@
 		};
 
 		const getTipContent = function (h: JQuery<Element>) {
-			const dataContentSelector = h.data('bs-content-selector');
+			const dataContentSelector = h.attr('data-bs-content-selector');
 
 			if (dataContentSelector != undefined) {
 				const selectContent = select(dataContentSelector);
@@ -105,9 +105,9 @@
 			}
 
 			// See if they specified data-content directly on trigger element.
-			const content = h.attr('data-bs-content') ?? h.data('bs-content') ?? h.next().html();
+			const content = h.attr('data-bs-content') ?? h.next().html();
 			// Replace {Label} in content with the trigger provided...used in Error Messages
-			const labelFix = h.data("label-fix");
+			const labelFix = h.attr("data-label-fix");
 
 			return labelFix != undefined
 				? content.replace(/\{Label}/g, select("." + labelFix).html())
@@ -132,10 +132,10 @@
 				const options: BootstrapTooltipOptions = {
 					html: true,
 					sanitize: false,
-					trigger: tipElement.data('bs-trigger') || "hover",
+					trigger: tipElement.attr('data-bs-trigger') as any || "hover",
 					// https://github.com/twbs/bootstrap/issues/22249#issuecomment-289069771
 					// There were some <a/> in popup from a kaModal that would not function properly until I changed the container.
-					container: tipElement.data('bs-container') || ( isInsideModal ? ".kaModal" : "body" ),
+					container: tipElement.attr('data-bs-container') || ( isInsideModal ? ".kaModal" : "body" ),
 					template: isTooltip
 						? '<div class="tooltip katapp-css" role="tooltip"><div class="tooltip-arrow arrow"></div><div class="tooltip-inner"></div></div>'
 						: '<div v-scope class="popover katapp-css" role="tooltip"><div class="popover-arrow arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
@@ -145,13 +145,13 @@
 
 						// http://stackoverflow.com/a/19875813/166231
 						const t = $(trigger);
-						let dataClass = t.data('class');
+						let dataClass = t.attr('data-class');
 						if (dataClass != undefined) {
 							$(tooltip).addClass(dataClass);
 						}
 
 						// Did they specify a data-width?
-						dataClass = t.data('bs-width');
+						dataClass = t.attr('data-bs-width');
 						if (dataClass != undefined) {
 							// context is for popups, tooltip-inner is for tooltips (bootstrap css has max-width in css)
 							$(tooltip).add($(".tooltip-inner", tooltip))
@@ -160,7 +160,7 @@
 
 						}
 
-						return tipElement.data('bs-placement') || "auto";
+						return tipElement.attr('data-bs-placement') as any || "auto";
 					},
 					title: function () {
 						return getTipTitle($(this));

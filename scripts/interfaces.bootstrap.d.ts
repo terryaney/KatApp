@@ -37,6 +37,6 @@ interface BootstrapTooltipOptions {
 	container: string | false;
 	template: string;
 	placement: (tooltip: HTMLElement, trigger: HTMLElement) => "auto" | "top" | "bottom" | "left" | "right";
-	title: (this: HTMLElement) => string;
-	content: (this: HTMLElement) => string;
+	title: (this: HTMLElement) => string | JQuery<HTMLElement> | undefined;
+	content: (this: HTMLElement) => string | JQuery<HTMLElement> | undefined;
 }
