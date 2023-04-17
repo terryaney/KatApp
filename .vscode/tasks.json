@@ -29,6 +29,7 @@
             "label": "ts",
             "dependsOn":[
                 "ts - comments",
+                "uglify",
                 "ts - no comments"
             ],
             "problemMatcher": "$tsc",
@@ -48,6 +49,13 @@
             "tsconfig": "tsconfig.d.json",
             "problemMatcher": "$tsc",
             "group": "build"
+        },
+        {
+            "label": "uglify",
+            "hide": true,
+            "type": "npm",
+            "problemMatcher": [],
+            "script": "uglify"
         }
     ]
 }

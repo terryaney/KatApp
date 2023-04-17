@@ -79,6 +79,7 @@ interface IKatAppStatic {
 
 interface IKatApp {
 	el: JQuery;
+	calcEngines: ICalcEngine[];
 	options: IKatAppOptions;
 	isCalculating: boolean;
 	lastCalculation?: ILastCalculation;
@@ -215,6 +216,7 @@ interface IApplicationData {
 interface IValidation {
 	"@id": string;
 	text: string;
+	dependsOn?: string;
 }
 
 interface IRblApplicationData {
@@ -453,7 +455,8 @@ interface IKaInputScopeHelp {
 }
 interface IKaInputScopeCss {
 	readonly input: string;
-	readonly container: string | undefined;
+	readonly label?: string;
+	readonly container?: string;
 }
 
 interface IKaInputGroupModel {

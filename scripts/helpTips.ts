@@ -145,20 +145,17 @@
 
 						// http://stackoverflow.com/a/19875813/166231
 						const t = $(trigger);
-						let dataClass = t.attr('data-class');
+						let dataClass = t.attr('data-bs-class');
 						if (dataClass != undefined) {
 							$(tooltip).addClass(dataClass);
 						}
 
 						// Did they specify a data-width?
-						dataClass = t.attr('data-bs-width');
-						if (dataClass != undefined) {
-							// context is for popups, tooltip-inner is for tooltips (bootstrap css has max-width in css)
-							$(tooltip).add($(".tooltip-inner", tooltip))
-								.css("width", dataClass)
-								.css("max-width", dataClass);
-
-						}
+						dataClass = t.attr('data-bs-width') ?? "350";
+						// context is for popups, tooltip-inner is for tooltips (bootstrap css has max-width in css)
+						$(tooltip).add($(".tooltip-inner", tooltip))
+							.css("width", dataClass)
+							.css("max-width", dataClass);
 
 						return tipElement.attr('data-bs-placement') as any || "auto";
 					},

@@ -113,7 +113,7 @@ class KatApp implements IKatApp {
 	
 	private configureOptions: IConfigureOptions | undefined;
 
-	private calcEngines: ICalcEngine[] = [];
+	public calcEngines: ICalcEngine[] = [];
 	private uiBlockCount = 0;
 
 	private eventConfigurations: Array<IKatAppEventsConfiguration> = [];
@@ -620,7 +620,9 @@ class KatApp implements IKatApp {
 				});
 			};
 
-			this.calcEngines = viewElement != undefined
+			const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
+
+			this.calcEngines = !cloneHost && viewElement != undefined
 				? Array.from(viewElement.querySelectorAll("rbl-config calc-engine")).map(c => {
 					const ce: ICalcEngine = {
 						key: c.getAttribute("key") ?? "default",
@@ -634,7 +636,7 @@ class KatApp implements IKatApp {
 					};
 					return ce;
 				})
-				: [];
+				: cloneHost ? [...this.options.hostApplication!.calcEngines.filter( c => !c.manualResult)] : [];
 
 			if (this.options.resourceStringsEndpoint != undefined) {
 				const apiUrl = this.getApiUrl(this.options.resourceStringsEndpoint);
@@ -779,7 +781,7 @@ class KatApp implements IKatApp {
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
-			if (!initializedErrors && isConfigureUICalculation) {
+			if (!cloneHost && !initializedErrors && isConfigureUICalculation) {
 				this.handleEvents(events => {
 					events.calculationErrors = async (key, exception) => {
 						if (key == "SubmitCalculation.ConfigureUI") {
@@ -805,7 +807,7 @@ class KatApp implements IKatApp {
 			this.vueApp.mount(this.selector);
 			this.isMounted = true;
 
-			if (!initializedErrors) {
+			if (!initializedErrors && !cloneHost) {
 				// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
 				if (isConfigureUICalculation && this.lastCalculation) {
 					await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
@@ -1300,10 +1302,20 @@ class KatApp implements IKatApp {
 
 			const formData = this.buildFormData(submitData);
 
+			// FastEndpionts - once converted, no need to do a 'buildFormData' method
+			formData.append("inputs", JSON.stringify(submitData.Inputs));
+			if (submitData.InputTables != undefined) {
+				formData.append("inputTables", JSON.stringify(submitData.InputTables));
+			}
+			if (submitData.ApiParameters != undefined) {
+				formData.append("apiParameters", JSON.stringify(submitData.ApiParameters));
+			}
+			formData.append("configuration", JSON.stringify(submitData.Configuration));
+			
 			if (apiOptions.files != undefined) {
 				Array.from(apiOptions.files)
 					.forEach((f,i) => {
-						( formData as FormData ).append("PostedFiles[" + i + "]", f);
+						formData.append("PostedFiles[" + i + "]", f);
 					});
 			}
 
@@ -1667,7 +1679,7 @@ class KatApp implements IKatApp {
 
 		// Always get the root application
 		while (app.options.hostApplication != undefined) {
-			app = this.options.hostApplication!;
+			app = app.options.hostApplication;
 		}
 
 		const cacheValue = sessionStorage.getItem("katapp:debugNext:" + app.selector);
@@ -1684,7 +1696,7 @@ class KatApp implements IKatApp {
 
 		// Always set in the root application
 		while (app.options.hostApplication != undefined) {
-			app = this.options.hostApplication!;
+			app = app.options.hostApplication;
 		}
 
 		const cacheKey = "katapp:debugNext:" + app.selector;
@@ -1816,7 +1828,6 @@ class KatApp implements IKatApp {
 				options.inputs != undefined ? { inputs: options.inputs } : undefined
 			);
 			delete modalAppOptions.inputs!.iNestedApplication;
-
 			await KatApp.createAppAsync(".kaModal", modalAppOptions);
 
 			return d;
@@ -2720,7 +2731,7 @@ class KatApp implements IKatApp {
 						// Third parameter is 'scope', but I'm not sure that is every going to be needed, but maybe
 						// think about supporting a 'scope="{}"' attribute on script where it would be grabbing info
 						// from 'current scope' and passing it into this templates mount function, then remove scope attribute
-						addMountAttribute(templateItem, "mounted", `_templateItemMounted('${template.id}', $el)`);
+						addMountAttribute(templateItem, "mounted", `_templateItemMounted('${template.id}', $el, $data)`);
 						if (templateItem.tagName == "SCRIPT") {
 							addMountAttribute(templateItem, "unmounted", `_templateItemUnmounted('${template.id}', $el)`);
 						}

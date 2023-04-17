@@ -4,5 +4,12 @@
 	"private": true,
 	"dependencies": {
 		"@types/jquery": "^3.5.5"
+	},
+	"devDependencies": {
+		"uglify-js": "^3.17.4"
+	},
+	"scripts": {
+		"uglify": "uglifyjs wwwroot/js/katapp.js -c -m --output wwwroot/js/katapp.min.js",
+		"uglify-map": "uglifyjs wwwroot/js/katapp.js -c -m --source-map --output wwwroot/js/katapp.min.js"
 	}
 }

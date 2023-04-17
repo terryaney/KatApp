@@ -20,6 +20,17 @@ class InputComponentBase {
 		}) as T;
 	}
 
+	protected removeValidations(application: KatApp, inputName: string) {
+		application.state.errors = application.state.errors.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1 && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
+		application.state.warnings = application.state.warnings.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1 && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
+	}
+	protected errorText(application: KatApp, inputName: string) {
+		return application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text;
+	}
+	protected warningText(application: KatApp, inputName: string) {
+		return application.state.warnings.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text;
+	}
+
 	protected unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
 		// input is always 'isConnected = false' so don't need to use scoped application.closest, just use DOM input.closest event
 		if (clearOnUnmount || input.hasAttribute("ka-unmount-clears-inputs") || input.closest("[ka-unmount-clears-inputs]") != undefined) {
@@ -81,7 +92,7 @@ class InputComponentBase {
 			}
 		}
 
-		const removeError = () => application.state.errors = application.state.errors.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(name) == -1);
+		const removeError = () => this.removeValidations(application, name);
 		const inputEventAsync = async (calculate: boolean) => {
 			removeError();
 
@@ -504,6 +515,7 @@ class InputComponent extends InputComponentBase {
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IKaInputScope | undefined {
 		const props = this.props;
 
+		const that = this;
 		const name = props.name;
 		const calcEngine = props.ce;
 		const tab = props.tab;
@@ -529,8 +541,8 @@ class InputComponent extends InputComponentBase {
 				// Don't disable if uiBlocked (or maybe isCalculating) b/c changes focus of inputs...unless I store input and restore after calc?
 				return /* application.state.uiBlocked || */ getInputCeValue( "disabled", "rbl-disabled", name) == "1";
 			},
-			get error() { return application.state.errors.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(name) > -1)?.text; },
-			get warning() { return application.state.warnings.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(name) > -1)?.text; }
+			get error() { return that.errorText(application, name); },
+			get warning() { return that.warningText(application, name); }
 		};
 
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
@@ -605,13 +617,14 @@ class InputComponent extends InputComponentBase {
 				return {
 					content: getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content,
 					title: getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "",
-					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? ""
+					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? "350"
 				};
 			},
 			get iconHtml() { return props.iconHtml ?? "" },
 			get css() {
 				return {
 					input: props?.css?.input ?? "",
+					label: props?.css?.label ?? "",
 					container: props?.css?.container
 				};
 			},
@@ -671,6 +684,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			return undefined;
 		}
 
+		const that = this;
 		const props = this.props;
 		const names = props.names;
 		
@@ -713,8 +727,8 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			display: (index: number) => getInputCeValue( index, "display", "rbl-display", "v" + names[ index ] ) != "0",
 			noCalc: (index: number) => getInputCeValue(index, "skip-calc", "rbl-skip", names[index]) == "1",
 			disabled: (index: number) => getInputCeValue(index, "disabled", "rbl-disabled", names[index]) == "1",
-			error: (index: number) => application.state.errors.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(names[index]) > -1)?.text,
-			warning: (index: number) => application.state.warnings.find(v => v["@id"].replace(/ /g, "").split(",").indexOf(names[index]) > -1)?.text
+			error: (index: number) => that.errorText(application, names[index]),
+			warning: (index: number) => that.errorText(application, names[index])
 		};
 
 		const noCalc = function (name: string) {
@@ -766,9 +780,13 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			help: (index: number) => ({
 				content: getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content,
 				title: getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "",
-				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? ""
+				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? "350"
 			}),
-			css: (index: number) => ({ input: css[index]?.input ?? "", container: css[index]?.container }),
+			css: (index: number) => ({
+				input: css[index]?.input ?? "",
+				label: css[index]?.label ?? "",
+				container: css[index]?.container
+			}),
 			error: (index: number) => /* props.isError?.(index, base) ?? */ base.error(index),
 			warning: (index: number) => base.warning(index),
 			list: function (index: number) {
