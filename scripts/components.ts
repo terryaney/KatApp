@@ -174,9 +174,20 @@ class InputComponentBase {
 		
 				const inputMask = mask(name);
 		
-				if (inputMask != undefined) {		
-					// Only support phone so far...
-					if (inputMask == "zip+4" || inputMask == "#####-####") {
+				if (inputMask != undefined) {							
+					if (inputMask == "money") {
+						const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
+						const moneyRegEx = new RegExp(`[0-9\\${currencySeparator}]`, "g");
+						input.addEventListener("keypress", (event: KeyboardEvent) => {
+							if (event.key.match(moneyRegEx) === null) {
+								event.preventDefault();
+							}
+							else if (event.key == currencySeparator && (input.value.indexOf(currencySeparator) > -1 || input.value == "")) {
+								event.preventDefault();
+							}
+						});
+					}
+					else if (inputMask == "zip+4" || inputMask == "#####-####") {
 						input.setAttribute("maxlength", "10");
 
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
@@ -210,7 +221,7 @@ class InputComponentBase {
 							}
 						});
 					}
-					if (inputMask == "phone" || inputMask == "(###) ###-####") {
+					else if (inputMask == "phone" || inputMask == "(###) ###-####") {
 						input.setAttribute("maxlength", "14");
 
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
