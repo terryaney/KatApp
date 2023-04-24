@@ -257,7 +257,25 @@ class KatApp implements IKatApp {
 			get canSubmit() { return this.isDirty && this.errors.filter( r => r['@id'].startsWith('i')).length == 0 && !this.uiBlocked; },
 			needsCalculation: false,
 
-			inputs: Utils.extend({}, this.options.inputs, this.getSessionStorageInputs()),
+			inputs: Utils.extend(
+				{
+					getNumber: (inputId: string): number | undefined => {
+						// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
+						
+						const currencyString = that.state.inputs[inputId] as string;
+						if (currencyString == undefined) return undefined;
+
+						const decimalSeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
+						const moneyRegEx = new RegExp(`[^0-9${decimalSeparator}]+`, "g");
+						// Parse the cleaned string as a float, replacing the French decimal separator with a dot
+						var parsedValue = parseFloat(currencyString.replace(moneyRegEx, "").replace(decimalSeparator, "."));
+						
+						return !isNaN(parsedValue) ? parsedValue : undefined;
+					}
+				},
+				this.options.inputs,
+				this.getSessionStorageInputs()
+			),
 			errors: [],
 			warnings: [],
 			onAll(...values: any[]) {
@@ -1601,6 +1619,8 @@ class KatApp implements IKatApp {
 				this.state.inputs,
 				customInputs
 			);
+		
+		delete inputs.getNumber;
 		return inputs;
 	}
 

@@ -161,6 +161,10 @@
 				}] as Array<ICalculationResponseExceptionDetail>
 			};
 
+			if (!(e instanceof Error)) {
+				console.log("Original calculation exception (should have been instanceof Error):");
+				console.log({ e });
+			}
 			throw new CalculationError("Unable to complete calculation(s)", [{
 				calcEngine: submitConfiguration.CalcEngines.map(c => c.Name).join(", "),
 				exception: exception

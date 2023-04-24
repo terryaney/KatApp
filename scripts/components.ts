@@ -46,6 +46,7 @@ class InputComponentBase {
 		scope: IStringAnyIndexer,
 		name: string,
 		input: HTMLInputElement,
+		scopeInputType: string,
 		defaultValue: (name: string) => string | undefined,
 		isExcluded: boolean,
 		noCalc: (name: string) => boolean,
@@ -129,7 +130,7 @@ class InputComponentBase {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, input, type, mask, keypressRegex, inputEventAsync);
+			this.bindInputEvents(application, name, input, type, scopeInputType, mask, keypressRegex, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
@@ -138,7 +139,9 @@ class InputComponentBase {
 	private bindInputEvents(
 		application: KatApp,
 		name: string,
-		input: HTMLInputElement, type: string | null,
+		input: HTMLInputElement,
+		type: string | null,
+		scopeInputType: string,
 		mask: (name: string) => string | undefined,
 		keypressRegex: (name: string) => string | undefined,
 		inputEventAsync: (calculate: boolean) => Promise<void>
@@ -171,23 +174,54 @@ class InputComponentBase {
 						}
 					});
 				}
-		
+
+				// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
+				const isMoney = scopeInputType.indexOf("money") > -1;
+
+				if (isMoney) {
+					const allowNegative = scopeInputType.startsWith("-");
+					const decimalPlacesString = scopeInputType.substring(allowNegative ? 6 : 5);
+					const decimalPlaces = decimalPlacesString != "" ? +decimalPlacesString : 2;
+					const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
+
+                    const negRegEx = allowNegative ? `\\-` : "";
+                    const sepRegEx = decimalPlaces > 0 ? `\\${currencySeparator}` : "";
+					const moneyRegEx = new RegExp(`[0-9${negRegEx}${sepRegEx}]`, "g");
+
+					input.addEventListener("keypress", (event: KeyboardEvent) => {
+						const target = event.target as HTMLInputElement;
+						const selectionStart = target.selectionStart;
+						const selectionEnd = target.selectionEnd;
+						const testValue = selectionStart != null && selectionEnd != null && selectionStart != selectionEnd
+							? input.value.substring(0, selectionStart) + input.value.substring(selectionEnd)
+							: input.value;
+						
+						if (event.key.match(moneyRegEx) === null) {
+							event.preventDefault();
+						}
+						else if (event.key == currencySeparator && (testValue.indexOf(currencySeparator) > -1 || input.value == "")) {
+							event.preventDefault();
+						}
+						else if (event.key == "-" && (selectionStart != 0 || testValue.indexOf("-") > -1 )) {
+							event.preventDefault();
+						}
+						else if (decimalPlaces > 0 && event.key != currencySeparator && event.key != "-") {
+							// Don't allow number input if already enough behind the currencySeparator
+							const endValue = selectionStart != selectionEnd
+								? testValue
+								: input.value.substring(0, selectionStart!) + event.key + input.value.substring(selectionStart!);
+							const parts = endValue.split(currencySeparator);
+							if (parts.length == 2 && parts[1].length > decimalPlaces) {
+								event.preventDefault();
+							}
+						}
+					});
+				}
+			
 				const inputMask = mask(name);
 		
 				if (inputMask != undefined) {							
-					if (inputMask == "money") {
-						const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
-						const moneyRegEx = new RegExp(`[0-9\\${currencySeparator}]`, "g");
-						input.addEventListener("keypress", (event: KeyboardEvent) => {
-							if (event.key.match(moneyRegEx) === null) {
-								event.preventDefault();
-							}
-							else if (event.key == currencySeparator && (input.value.indexOf(currencySeparator) > -1 || input.value == "")) {
-								event.preventDefault();
-							}
-						});
-					}
-					else if (inputMask == "zip+4" || inputMask == "#####-####") {
+					if (inputMask == "zip+4" || inputMask == "#####-####") {
 						input.setAttribute("maxlength", "10");
 
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
@@ -203,7 +237,7 @@ class InputComponentBase {
 						input.addEventListener("keyup", (event: KeyboardEvent) => {
 							const target = event.target as HTMLInputElement;
 							const selectionStart = target.selectionStart;
-							
+
 							if (event.code == "Backspace" && selectionStart == target.value.length) {
 								return; // Do nothing
 							}
@@ -545,6 +579,8 @@ class InputComponent extends InputComponentBase {
 				( legacyTable != undefined && legacyId != undefined ? application.state.rbl.value(legacyTable, legacyId, undefined, undefined, calcEngine, tab) : undefined );
 		};
 
+		const inputType = getInputCeValue("type") ?? props.type ?? "text";
+
 		const base: IKaInputScopeBase = {
 			get display() { return getInputCeValue("display", "rbl-display", "v" + name) != "0"; },
 			get noCalc() { return getInputCeValue( "skip-calc", "rbl-skip", name) == "1"; },
@@ -579,7 +615,7 @@ class InputComponent extends InputComponentBase {
 
 			id: name + "_" + application.id,
 			name: name,
-			type: getInputCeValue("type") ?? props.type ?? "text",
+			type: inputType == "money" ? "text" : inputType,
 
 			// reactive...
 			// input binding attempts in template:
@@ -677,7 +713,7 @@ class InputComponent extends InputComponentBase {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 
 		return scope;
 	}
@@ -773,12 +809,14 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			return ceFormat != "" ? ceFormat : displayFormats[index];
 		}
 
+		const inputType = getInputCeValue(0, "type") ?? props.type ?? "text";
+
 		const scope = {
 			"$template": templateId,
 
 			id: (index: number) => names[ index ] + "_" + application.id,
 			name: (index: number) => base.name( index ),
-			type: props.type ?? "text",
+			type: inputType == "money" ? "text" : inputType,
 
 			value: (index: number) => defaultValue( names[ index ]) ?? "",
 			// v-model="value" support, but not using right now
@@ -831,7 +869,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			this.mounted(application, this, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, this, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;

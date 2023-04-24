@@ -311,7 +311,7 @@ Property | Type | Description
 `model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
 `handlers` | `IStringAnyIndexer` | Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
 `components` | `IStringIndexer<IStringAnyIndexer>` | Kaml Views can pass in petite-vue components that can used in v-scope directives (i.e. v-scope="components.inputComponent({})"). See [`IKatApp.update`](#IKatApp.update) for more information.
-`inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp
+`inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp.  See ICalculationInputs for more detail the the built in `getNumber()` method.
 `errors` | [`Array<IValidation>`](#ivalidation) | Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 `warnings` | [`Array<IValidation>`](#ivalidation) | Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 `rbl` | [`IRbl`](#irbl) | Helper object used to access RBLe Framework Calculation results.
@@ -1763,7 +1763,7 @@ Property | Type | Description
 ---|---|---
 `name` | `string` | **Required;** The name of the input.  In RBLe Framework, input names start with lower case `i` and then the remaing part(s) is/are [Pascal Case](https://www.codingem.com/what-is-pascal-case/) (i.e. `iFirstName`).
 `template` | `string` | The template ID if a [template](#html-content-template-elements) will be used to render markup with the scope.
-`type`<sup>1</sup> | `string` | Set the [type](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) of the associated `HTMLInputElement` when the `tagName=INPUT` (vs `SELECT` or `TEXTAREA`).
+`type`<sup>1</sup> | `string` | Set the [type](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) of the associated `HTMLInputElement` when the `tagName=INPUT` (vs `SELECT` or `TEXTAREA`).  Additionally, the KatApp framework supports a 'money' type which verifies the input is entered as a currency value taking into consideration the current cultures decimal place separator.  You can control decimal places and whether or not it allows negative values.  The format is `[-]money[N]` where the `-` is optional to indicate negatives are allowed and the `N` is optional to specify the number of decimal places to allow.  By default, specifying only `money` results in positive only values and 2 decimal places.
 `value` | `string` | Provide a default value for the input.  The value can also be provided via the `rbl-defaults.value` or the `rbl-input.value` RBLe Framework calculation value.
 `label` | `string` | Provide a display label for the input.  The value can also be provided via the `rbl-value[@id=='l' + name].value` or the `rbl-input.label` RBLe Framework calculation value.
 `placeHolder` | `string` | Provide a [placeholder](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#placeholder) for the input.  The value can also be provided via the `rbl-input.placeholder` RBLe Framework calculation value.
@@ -4219,6 +4219,8 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
     "iPageInputN": "Conduent"
 }
 ```
+
+**NOTE**: When creating or passing ICalculationInputs, the above javascript object represent the available features.  However, the [state.inputs](#iapplicationdata-properties) has a built in method of `getNumber( inputId: string ) => number | undefined` what will try to parse the input as a number taking the current cultures decimal place separator into account.  If the value cannot be parsed, `undefined` is returned.
 
 ### ITabDef
 

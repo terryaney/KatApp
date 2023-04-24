@@ -153,13 +153,14 @@ interface IConfigureOptions {
 
 interface IHandlers extends IStringAnyIndexer { };
 	
-interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | undefined> {
+interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | ((inputId: string) => number | undefined) | undefined> {
 	iConfigureUI?: string;
 	iDataBind?: string;
 	iInputTrigger?: string;
 	iNestedApplication?: string;
 	iModalApplication?: string;
 	tables?: ICalculationInputTable[];
+	getNumber?: (inputId: string) => number | undefined;
 }
 
 interface IApplicationData {
