@@ -957,6 +957,7 @@ class KatApp implements IKatApp {
 
 		const closeModal = function () {
 			katAppModalClosing = true;
+			HelpTips.hideVisiblePopover();
 			modalBS5.hide();
 			that.el.remove();
 			KatApp.remove(that);
