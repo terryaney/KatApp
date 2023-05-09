@@ -61,6 +61,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 
 interface IManualTabDef extends IStringIndexer<string | undefined | ITabDefTable> {
 	"@calcEngineKey": string;
+	"@calcEngine": string;
 	"@name": string | undefined;
 }
 
@@ -218,6 +219,7 @@ interface IValidation {
 	"@id": string;
 	text: string;
 	dependsOn?: string;
+	event?: string;
 }
 
 interface IRblApplicationData {
@@ -287,6 +289,7 @@ interface IModalAppOptions extends IModalOptions {
 interface IModalResponse {
 	confirmed: boolean;
 	response: unknown;
+	modalApp: IKatApp;
 }
 
 interface IApiOptions {

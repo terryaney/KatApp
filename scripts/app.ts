@@ -976,11 +976,11 @@ class KatApp implements IKatApp {
 				}
 			}
 
-			options.promise.resolve({ confirmed: true, response: response instanceof Event ? undefined : response });
+			options.promise.resolve({ confirmed: true, response: response instanceof Event ? undefined : response, modalApp: that });
 		};
 		options.cancelled = response => {
 			closeModal();
-			options.promise.resolve({ confirmed: false, response: response instanceof Event ? undefined : response });
+			options.promise.resolve({ confirmed: false, response: response instanceof Event ? undefined : response, modalApp: that });
 		};
 
 		// if any errors during initialized event or during iConfigureUI calculation, modal is probably 'dead', show a 'close' button and
@@ -1283,7 +1283,7 @@ class KatApp implements IKatApp {
 			const rbleApiConfiguration = ["Token", "TraceEnabled", "SaveCE", "RefreshCalcEngine", "AuthID", "AdminAuthID", "Client", "TestCE", "CurrentPage", "RequestIP", "CurrentUICulture", "Environment", "Framework"];
 
 			const submitData: ISubmitApiData = {
-				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" ? undefined : v?.toString()),
+				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" || k == "getNumber" ? undefined : v?.toString()),
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
 				ApiParameters: this.options.isDotNetCore ? apiOptions.apiParameters : undefined,
 				Configuration: Utils.extend(
@@ -1927,16 +1927,15 @@ class KatApp implements IKatApp {
 
 			manualResults.forEach(t => {
 				const ceKey = t["@calcEngineKey"];
-				let ceName = t["@calcEngineKey"];
 				if (ceKey == undefined) {
 					throw new Error("manualResults requires a @calcEngineKey attribute specified.");
 				}
 
+				let ceName = this.getCeName(t["@calcEngine"] ?? t["@calcEngineKey"]);
 				if (this.calcEngines.find(c => !c.manualResult && c.name.toLowerCase() == ceName!.toLowerCase()) != undefined) {
 					// Can't have same CE in manual results as we do in normal results, so prefix with Manual
 					ceName = "Manual." + ceName;
 				}
-				t["@calcEngine"] = ceName;
 
 				if (mrCalcEngineTabs[ceName] == undefined) {
 					mrCalcEngineTabs[ceName] = { ceKey: ceKey, tabs: [] };

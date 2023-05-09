@@ -1777,7 +1777,7 @@ Property | Type | Description
 `min` | `number \| string` | Provide a `min` value for the input that could be used to limit the minimum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.min` RBLe Framework calculation value.
 `max` | `number \| string` | Provide a `max` value for the input that could be used to limit the maximum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.max` RBLe Framework calculation value.
 `step` | `number` | Provide a `step` increment value for the input that could be used to control the value increments for `range` inputs.  The value can also be provided via the `rbl-input.step` RBLe Framework calculation value.
-`mask` | `string` | Provide an input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value.<br/><br/>The supported masks are:<br/>1. `phone`, `(###) ###-####`<br/>2. `zip+4`, `#####-####`<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.mask` RBLe Framework calculation value<br/>2. `model.mask` property<br/>3. `undefined` if no value provided.
+`mask` | `string` | Provide an input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value.<br/><br/>The supported masks are:<br/>1. `phone`, `(###) ###-####`<br/>2. `zip+4`, `#####-####`<br/>3. `cc-expire`, `MM/YY`<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.mask` RBLe Framework calculation value<br/>2. `model.mask` property<br/>3. `undefined` if no value provided.
 `keyboardRegex` | `string` | Provide an regular expression to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `uploadEndpoint` | `string` | Provide an `uploadEndpoint` value for the input that could be used if `type="file"` or if the template will render a 'file upload' UI component.
 `clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) value is also removed.
@@ -1860,7 +1860,7 @@ max&#x2011;length | For textual inputs (i.e. TEXTAREA inputs), a maximum allowed
 min | For inputs with the concept of minimum values (sliders, dates), a minimum value can be provided.
 max | For inputs with the concept of maximum values (sliders, dates), a minimum value can be provided.
 step | For range/slider inputs, a `step` increment can be provided. Default is `1`.
-mask | For textual inputs, if an input mask should be applied while the user is typing information, a mask pattern can be provided (i.e. `phone`, `zip+4`).
+mask | For textual inputs, if an input mask should be applied while the user is typing information, a mask pattern can be provided (i.e. `phone`, `zip+4`, `cc-expire`).
 keyboard&#x2011;regex | For textual inputs, a regular expression to test each character typed by a user to determine if valid or not (i.e. `\d` for numeric values).
 display&#x2011;format | For range/slider inputs, a display format can be provided. See [`model.displayFormat`](#ikainputmodeldisplayformat) for more details.
 error | During validation calculations (usually `iValidate=1`), if an input is invalid, an error message can be provided here.  Additionally, the `errors` table can be used as well.
@@ -2102,7 +2102,7 @@ Property | Type | Description
 `mins` | `Array<number \| string> \| number \| string` | Provide an array of `mins` values to the input group scope that could be used to limit the minimum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.min` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `maxes` | `Array<number \| string> \| number \| string` | Provide an array of `maxes` values to the input group scope that could be used to limit the maximum allowed value on `date` or `range` inputs.  The value can also be provided via the `rbl-input.max` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `steps` | `Array<number> \| number` | Provide an array of `steps` increment values to the input group scope that could be used to control the value increments for `range` inputs.  The value can also be provided via the `rbl-input.step` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
-`masks` | `Array<string> \| string` | Provide an array of input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.<br/><br/>The supported masks are:<br/>1. `phone`, `(###) ###-####`<br/>2. `zip+4`, `#####-####`
+`masks` | `Array<string> \| string` | Provide an array of input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.<br/><br/>The supported masks are:<br/>1. `phone`, `(###) ###-####`<br/>2. `zip+4`, `#####-####`<br/>3. `cc-expire`, `MM/YY`
 `keyboardRegexs` | `Array<string> \| string` | Provide an array of regular expressions to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `ce` | `string` | Provide the CalcEngine key if all the values that automatically pull from RBLe Framework calculation values should use a CalcEngine *different from the default CalcEngine*.
 `tab` | `string` | Provide the CalcEngine result tab name if all the values that automatically pull from RBLe Framework calculation values should use a tab name *different from the default tab specified for the associated CalcEngine*.
@@ -4222,6 +4222,14 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
 
 **NOTE**: When creating or passing ICalculationInputs, the above javascript object represent the available features.  However, the [state.inputs](#iapplicationdata-properties) has a built in method of `getNumber( inputId: string ) => number | undefined` what will try to parse the input as a number taking the current cultures decimal place separator into account.  If the value cannot be parsed, `undefined` is returned.
 
+#### ICalculationInputs.getNumber
+
+In addition to the storage of inputs and tables, the `ICalculationInputs` object has one built in method called `getNumber`.
+
+**`getNumber(inputId: string): number | undefined`**
+
+You can call this method to automatically convert textual input (including culture specific handling of the decimal place character) into a numeric value if conversion is possible.  If the conversion fails, it returns `undefined`.
+
 ### ITabDef
 
 `ITabDef` is the object returned from RBLe Framework calculations for each 'result tab' processed. The properties available on this object represent the result tables (`Array<ITabDefRow>`) returned from the CalcEngine tab.
@@ -4394,6 +4402,16 @@ Sample template rendering buttons:
 	</div>
 </template>
 ```
+
+### IModalResponse
+
+When a modal is dismissed (either via confirming or cancelling) a response is sent back to the caller.
+
+Property | Type | Description
+---|---|---
+`confirmed` | `boolean` | Whether or not the dialog was 'confirmed' or 'cancelled'.
+`response` | `any \| undefined` | If a modal application returns a custom response via the `IModalAppOptions.confirmedAsync` or `IModalAppOptions.cancelled` callbacks, the object will be available here.
+`modalApp` | [`IKatApp`](#ikatapp) | A reference to the modal KatApp in case the caller needs access to anything present in the KatApp's [state](#iapplicationdata).
 
 ### IModalAppOptions
 

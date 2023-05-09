@@ -21,8 +21,10 @@ class InputComponentBase {
 	}
 
 	protected removeValidations(application: KatApp, inputName: string) {
-		application.state.errors = application.state.errors.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1 && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
-		application.state.warnings = application.state.warnings.filter(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1 && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
+		// If event == "input" don't remove on 'change'.  If client validation adds error on 'input' event
+		// the 'change' event would trigger after and core code would automatically remove validation, so needed to preserve
+		application.state.errors = application.state.errors.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
+		application.state.warnings = application.state.warnings.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 	}
 	protected errorText(application: KatApp, inputName: string) {
 		return application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text;
@@ -220,89 +222,123 @@ class InputComponentBase {
 			
 				const inputMask = mask(name);
 		
-				if (inputMask != undefined) {							
-					if (inputMask == "zip+4" || inputMask == "#####-####") {
-						input.setAttribute("maxlength", "10");
+				if (inputMask == "zip+4" || inputMask == "#####-####") {
+					input.setAttribute("maxlength", "10");
 
-						input.addEventListener("keypress", (event: KeyboardEvent) => {
-							// Number, (, ), or -
-							if (event.key.match(/[0-9\-]/) === null) {
-								event.preventDefault();
-							}
-							else if (event.key == "-" && input.value.length != 5) {
-								event.preventDefault();
-							}
-						});
+					input.addEventListener("keypress", (event: KeyboardEvent) => {
+						// Number, (, ), or -
+						if (event.key.match(/[0-9\-]/) === null) {
+							event.preventDefault();
+						}
+						else if (event.key == "-" && input.value.length != 5) {
+							event.preventDefault();
+						}
+					});
 
-						input.addEventListener("keyup", (event: KeyboardEvent) => {
-							const target = event.target as HTMLInputElement;
-							const selectionStart = target.selectionStart;
+					input.addEventListener("keyup", (event: KeyboardEvent) => {
+						const target = event.target as HTMLInputElement;
+						const selectionStart = target.selectionStart;
 
-							if (event.code == "Backspace" && selectionStart == target.value.length) {
-								return; // Do nothing
-							}
+						if (event.code == "Backspace" && selectionStart == target.value.length) {
+							return; // Do nothing
+						}
 
-							const input = target.value.replace(/\D/g, '').substring(0, 9);
-									
-							// First ten digits of input only
-							const zip = input.substring(0, 5);
-							const plus4 = input.substring(5, 9);
-		
-							if (input.length > 5) { target.value = zip + "-" + plus4; }
+						const input = target.value.replace(/\D/g, '').substring(0, 9);
+								
+						// First ten digits of input only
+						const zip = input.substring(0, 5);
+						const plus4 = input.substring(5, 9);
+	
+						if (input.length > 5) { target.value = zip + "-" + plus4; }
 
-							if (event.code == "Backspace" || event.code == "Delete") {
-								target.selectionStart = target.selectionEnd = selectionStart;
-							}
-						});
-					}
-					else if (inputMask == "phone" || inputMask == "(###) ###-####") {
-						input.setAttribute("maxlength", "14");
-
-						input.addEventListener("keypress", (event: KeyboardEvent) => {
-							// Number, (, ), or -
-							if (event.key.match(/[0-9\(\)\-\s]/) === null) {
-								event.preventDefault();
-							}
-							else if (event.key == "(" && input.value != "") {
-								event.preventDefault();
-							}
-							else if (event.key == ")" && input.value.length != 4) {
-								event.preventDefault();
-							}
-							else if (event.key == "-" && input.value.length != 9) {
-								event.preventDefault();
-							}
-							else if (event.key == " " && input.value.length != 5) {
-								event.preventDefault();
-							}
-						});
-
-						input.addEventListener("keyup", (event: KeyboardEvent) => {
-							const target = event.target as HTMLInputElement;
-							const selectionStart = target.selectionStart;
-							
-							if (event.code == "Backspace" && selectionStart == target.value.length) {
-								return; // Do nothing
-							}
-
-							const input = target.value.replace(/\D/g, '').substring(0, 10);
-									
-							// First ten digits of input only
-							const area = input.substring(0, 3);
-							const middle = input.substring(3, 6);
-							const last = input.substring(6, 10);
-		
-							if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
-							else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
-							else if (input.length > 0) { target.value = "(" + area; }
-
-							if (event.code == "Backspace" || event.code == "Delete") {
-								target.selectionStart = target.selectionEnd = selectionStart;
-							}
-						});
-					}
+						if (event.code == "Backspace" || event.code == "Delete") {
+							target.selectionStart = target.selectionEnd = selectionStart;
+						}
+					});
 				}
+				else if (inputMask == "cc-expire" || inputMask == "MM/YY") {
+					input.setAttribute("maxlength", "5");
+
+					input.addEventListener("keypress", (event: KeyboardEvent) => {
+						if (event.key.match(/[0-9\/]/) === null) {
+							event.preventDefault();
+						}
+						else if (event.key != "/" && input.value.length == 2 ) {
+							event.preventDefault();
+						}
+						else if (event.key == "/" && input.value.length != 2 ) {
+							event.preventDefault();
+						}
+					});
+
+					input.addEventListener("keyup", (event: KeyboardEvent) => {
+						const target = event.target as HTMLInputElement;
+						const selectionStart = target.selectionStart;
+
+						if (event.code == "Backspace" && selectionStart == target.value.length) {
+							return; // Do nothing
+						}
+
+						const input = target.value.replace(/\D/g, '').substring(0, 4);
+						
+						if (input.length > 2) {
+							const month = input.substring(0, 2);
+							const year = input.substring(2);
 		
+							target.value = `${month}/${year}`;
+
+							if (event.code == "Backspace" || event.code == "Delete") {
+								target.selectionStart = target.selectionEnd = selectionStart;
+							}
+						}
+					});
+				}
+				else if (inputMask == "phone" || inputMask == "(###) ###-####") {
+					input.setAttribute("maxlength", "14");
+
+					input.addEventListener("keypress", (event: KeyboardEvent) => {
+						// Number, (, ), or -
+						if (event.key.match(/[0-9\(\)\-\s]/) === null) {
+							event.preventDefault();
+						}
+						else if (event.key == "(" && input.value != "") {
+							event.preventDefault();
+						}
+						else if (event.key == ")" && input.value.length != 4) {
+							event.preventDefault();
+						}
+						else if (event.key == "-" && input.value.length != 9) {
+							event.preventDefault();
+						}
+						else if (event.key == " " && input.value.length != 5) {
+							event.preventDefault();
+						}
+					});
+
+					input.addEventListener("keyup", (event: KeyboardEvent) => {
+						const target = event.target as HTMLInputElement;
+						const selectionStart = target.selectionStart;
+						
+						if (event.code == "Backspace" && selectionStart == target.value.length) {
+							return; // Do nothing
+						}
+
+						const input = target.value.replace(/\D/g, '').substring(0, 10);
+								
+						// First ten digits of input only
+						const area = input.substring(0, 3);
+						const middle = input.substring(3, 6);
+						const last = input.substring(6, 10);
+	
+						if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
+						else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
+						else if (input.length > 0) { target.value = "(" + area; }
+
+						if (event.code == "Backspace" || event.code == "Delete") {
+							target.selectionStart = target.selectionEnd = selectionStart;
+						}
+					});
+				}
 			}
 		}
 	}
