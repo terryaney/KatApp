@@ -246,15 +246,26 @@ class KatApp implements IKatApp {
 
 		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
+		let _isDirty: boolean | undefined = undefined;
+
 		const state: IApplicationData = {
 			kaId: this.id,
 
 			application: this,
 
-			hasChanged: Date.now(),
-			isDirty: false,
+			lastInputChange: Date.now(),
+			inputsChanged: false,
+			get isDirty() {
+				return _isDirty ?? this.inputsChanged;
+			},
+			set isDirty(value: boolean | undefined) {
+				_isDirty = value;
+				if (!( value ?? true )) {
+					this.inputsChanged = false;
+				}
+			},
 			uiBlocked: false,
-			get canSubmit() { return this.isDirty && this.errors.filter( r => r['@id'].startsWith('i')).length == 0 && !this.uiBlocked; },
+			canSubmit( whenInputsHaveChanged ) { return ( whenInputsHaveChanged ? this.inputsChanged : this.isDirty! ) && this.errors.filter( r => r['@id'].startsWith('i')).length == 0 && !this.uiBlocked; },
 			needsCalculation: false,
 
 			inputs: Utils.extend(
@@ -842,8 +853,10 @@ class KatApp implements IKatApp {
 			}
 			this.el.removeAttr("ka-cloak");
 			await this.processDomElementsAsync(); // process main application
-			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
 
+			this.state.inputsChanged = false; // If needed, rendered can have some logic  set to true if needed
+			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
+			
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == "1") {
 				await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
 			}

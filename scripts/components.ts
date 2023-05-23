@@ -100,8 +100,8 @@ class InputComponentBase {
 			removeError();
 
 			if (!exclude) {
-				application.state.hasChanged = Date.now();
-				application.state.isDirty = true;
+				application.state.lastInputChange = Date.now();
+				application.state.inputsChanged = true;
 				application.state.inputs[name] = application.getInputValue(name);
 
 				if (!skipCalc && !noCalc(name)) {
@@ -261,9 +261,6 @@ class InputComponentBase {
 
 					input.addEventListener("keypress", (event: KeyboardEvent) => {
 						if (event.key.match(/[0-9\/]/) === null) {
-							event.preventDefault();
-						}
-						else if (event.key != "/" && input.value.length == 2 ) {
 							event.preventDefault();
 						}
 						else if (event.key == "/" && input.value.length != 2 ) {

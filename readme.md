@@ -303,10 +303,10 @@ const nameFirst = application.state.rbl.value("name-first");
 Property | Type | Description
 ---|---|---
 `kaId` | `string` | Current id of the running KatApp.  Typically only used in Template Files when a unique id is required.
-`hasChanged` | `number` | Automatically maintained by the KatApp framework.  Every time *any* input changes (changing a dropdown, typing a character in text input, etc.), this value is updated with a new timestamp. Allows for reactive v-effect statements without hooking up an [`IKatAppEventsConfiguration.input`](#ikatappeventsconfiguration) event. 
-`isDirty` | `boolean` | Indicates if any v-ka-input has changed since the KatApp has been rendered.  Allows for host application to prompt about changes before navigation or actions if necessary.  Host application must set to `false` after any action/api that has 'saved' inputs. 
+`lastInputChange` | `number` | Automatically maintained by the KatApp framework.  Every time *any* input changes (changing a dropdown, typing a character in text input, etc.), this value is updated with a new timestamp. Allows for reactive v-effect statements without hooking up an [`IKatAppEventsConfiguration.input`](#ikatappeventsconfiguration) event. 
+`isDirty` | `boolean \| undefined` | Indicates whether the current KatApp is considered 'dirty' overall.  If the value is set to `undefined` (or never set), simply returns the state of `inputsChanged`.  If set to a `boolean` value, it will return that value as a manually set flag.  If the value is set to `false`, `inputsChanged` is automatically set to `false` as well.  Host application must set to `false` after any action/api that has 'saved' inputs. 
+`inputsChanged` | `boolean` | Indicates if any v-ka-input has changed since the KatApp has been rendered.  Allows for host application to prompt about changes before navigation or actions if necessary.  Host application must set to `false` after any action/api that has 'saved' inputs. 
 `uiBlocked` | `boolean` | Returns `true` when a RBL Calculation or Api Endpoint is being processed.  See [`IKatApp.blockUI`](#IKatApp.blockUI) and [`IKatApp.unblockUI`](#IKatApp.unblockUI) for more information. Typically used to show a 'blocker' on the rendered HTML to prevent the user from clicking anywhere.
-`canSubmit` | `boolean` | Indicates if application is in the 'state' to submit to server for processing; handling the most common situations.  Returns true if `isDirty == true && uiBlocked == false && errors.filter( r => r['@id'].startsWith('i')).length == 0`.  The `errors.filter` is ensuring that there are no `v-ka-input` validation errors that the user could correct.  This property is helpful to use in modal applications with a submit button to control the `disabled` state.
 `needsCalculation` | `boolean` | Returns `true` when input that will trigger a calculation has been edited but has not triggered a calculation yet.  Typically used with [`v-ka-needs-calc`](#v-ka-needs-calc) directive which toggles 'submit button' state to indicate to the user that a calculation is needed before they can submit the current form.
 `model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
 `handlers` | `IStringAnyIndexer` | Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
@@ -321,17 +321,27 @@ Property | Type | Description
 
 Name | Description
 ---|---
+[`canSubmit`](#iapplicationdatacansubmit) | Returns `true` if application is in the 'state' to submit to server for processing.
 [`onAll`](#iapplicationdataonall) | Returns `true` if **all** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
 [`onAny`](#iapplicationdataonany) | Returns `true` if **any** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
 [`pushTo`](#iapplicationdatapushto) | Allows Kaml Views to manually push 'additional result rows' into a calculation result table.
 
-#### IApplicationData.onAll
+#### IApplicationData.canSubmit
 
+**`canSubmit(whenInputsHaveChanged: boolean | undefined) => boolean`**
+
+Returns `true` if application is in the 'state' to submit to server for processing; handling the most common situations.  
+
+Returns `true` if `( whenInputsHaveChanged ? inputsChanged : isDirty ) && !uiBlocked && errors.filter( r => r['@id'].startsWith('i')).length == 0`.  
+
+The `errors.filter` is ensuring that there are no `v-ka-input` validation errors that the user could correct.  
+
+This property is helpful to use in modal applications with a submit button to control the `disabled` state.
+#### IApplicationData.onAll
 
 **`onAll(...values: any[]) => boolean`**
 
 Returns `true` if **all** values passed in evaluate to `true` using same conditions described in `rbl.boolean()`.
-
 #### IApplicationData.onAny
 
 **`onAny(...values: any[]) => boolean`**

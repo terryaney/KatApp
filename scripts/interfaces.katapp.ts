@@ -172,18 +172,23 @@ interface IApplicationData {
 	 * Changes every time an v-ka-input changes.  
 	 * Allows for reactive v-effect statements without hooking up an IKatAppEventsConfiguration.input event. 
 	 */
-	hasChanged: number;
+	lastInputChange: number;
 	/**
 	 * Indicates if any v-ka-input has changed since the KatApp has been rendered.  
 	 * Allows for host application to prompt about changes before navigation or actions if necessary.  
 	 * Host application must set to false after any action/api that has 'saved' inputs.
 	 */
-	isDirty: boolean;
+	inputsChanged: boolean;
+	/**
+	 * Indicates whether the current KatApp is considered 'dirty' overall.  If the value is set to `undefined` (or never set), simply returns the state of `inputsChanged`.  If set to a `boolean` value, it will return that value as a manually set flag.  If the value is set to `false`, `inputsChanged` is automatically set to `false` as well.  Host application must set to `false` after any action/api that has 'saved' inputs.
+	 */
+	isDirty: boolean | undefined;
 	/**
 	 * Indicates if application is in the 'state' to submit to server for processing.  It returns true
-	 * when the most common scenario is valid: isDirty && !uiBlocked && errors.filter( r => r['@id'].startsWith('i')).length == 0 (no UI errors)
+	 * when the following scenario is valid: isDirty && !uiBlocked && errors.filter( r => r['@id'].startsWith('i')).length == 0 (no UI errors)
 	 */
-	canSubmit: boolean;
+	canSubmit: ( whenInputsHaveChanged: boolean | undefined ) => boolean;
+
 	/**
 	 * Indicates whether the KatApp framework is performing an action (calculateAsync, apiAsync, etc.) where the host application should display a UI blocking mechanism.
 	 */
