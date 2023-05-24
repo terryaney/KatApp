@@ -152,7 +152,7 @@ class KatApp implements IKatApp {
 			// for now, I want inspector disabled
 			{ debug: { showInspector: false } },
 		);
-		this.options.isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/katapp/calculation";
+		this.options.isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/rble/calculation";
 
 		const nc = this.nextCalculation;
 		if (nc.trace) {
@@ -246,7 +246,7 @@ class KatApp implements IKatApp {
 
 		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
-		let _isDirty: boolean | undefined = undefined;
+		let _isDirty: boolean | undefined = false;
 
 		const state: IApplicationData = {
 			kaId: this.id,

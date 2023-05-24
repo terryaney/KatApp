@@ -180,7 +180,7 @@ interface IApplicationData {
 	 */
 	inputsChanged: boolean;
 	/**
-	 * Indicates whether the current KatApp is considered 'dirty' overall.  If the value is set to `undefined` (or never set), simply returns the state of `inputsChanged`.  If set to a `boolean` value, it will return that value as a manually set flag.  If the value is set to `false`, `inputsChanged` is automatically set to `false` as well.  Host application must set to `false` after any action/api that has 'saved' inputs.
+	 * Indicates whether the current KatApp is considered 'dirty' overall.  If the value is set to `undefined`, the value returned is simply the state of the `inputsChanged` property.  If set to a `boolean` value, it will return that value as a manually set flag.  By default, the value is set to `false`, so the KatApp host must set it to `undefined` if they want `inputsChanged` to indicate application dirty state.  If the value is set to `false`, `inputsChanged` is automatically set to `false` as well.  Host application must set to `false` after any action/api that has 'saved' inputs.
 	 */
 	isDirty: boolean | undefined;
 	/**
