@@ -27,10 +27,10 @@ class InputComponentBase {
 		application.state.warnings = application.state.warnings.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 	}
 	protected errorText(application: KatApp, inputName: string) {
-		return application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text;
+		return application.getLocalizedString( application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text );
 	}
 	protected warningText(application: KatApp, inputName: string) {
-		return application.state.warnings.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text;
+		return application.getLocalizedString( application.state.warnings.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text );
 	}
 
 	protected unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
@@ -690,13 +690,13 @@ class InputComponent extends InputComponentBase {
 			get disabled() { return typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(base) ?? base.disabled; },
 			get display() { return typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(base) ?? base.display; },
 			get noCalc() { return noCalc(name) },
-			get label() { return getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? ""; },
+			get label() { return application.getLocalizedString( getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? "" )!; },
 			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
-			get placeHolder() { return getInputCeValue("placeholder") ?? props.placeHolder; },
+			get placeHolder() { return application.getLocalizedString( getInputCeValue("placeholder") ?? props.placeHolder ); },
 			get help() {
 				return {
 					content: getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content,
-					title: getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "",
+					title: application.getLocalizedString( getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "" )!,
 					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? "350"
 				};
 			},
@@ -857,11 +857,11 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			disabled: (index: number) => typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(index, base) ?? base.disabled(index),
 			display: (index: number) => typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(index, base) ?? base.display(index),
 			noCalc: (index: number) => noCalc(names[index]),
-			label: (index: number) => getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "",
-			placeHolder: (index: number) => getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index],
+			label: (index: number) => application.getLocalizedString( getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "" )!,
+			placeHolder: (index: number) => application.getLocalizedString( getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index] ),
 			help: (index: number) => ({
 				content: getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content,
-				title: getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "",
+				title: application.getLocalizedString( getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "")!,
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? "350"
 			}),
 			css: (index: number) => ({

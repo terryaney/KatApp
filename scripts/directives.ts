@@ -99,7 +99,7 @@ class DirectiveKaResource implements IKaDirective {
 
 				const key = model.key ?? ctx.el.innerHTML;
 				
-				ctx.el.innerHTML = application.getLocalizedString(key, model, defaultValue);
+				ctx.el.innerHTML = application.getLocalizedString(key, model, defaultValue)!;
 			});
 		};
 	}

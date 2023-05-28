@@ -183,11 +183,8 @@
 			let calculationResults: IRblCalculationSuccessResponses = await $.ajax({
 				url: serviceUrl,
 				data: JSON.stringify(submitData),
-				dataType: "json",
 				method: "POST",
-				headers: submitData.Configuration.Token != undefined
-					? { 'x-rble-session': submitData.Configuration.Token, 'Content-Type': undefined }
-					: undefined
+				contentType: "application/json"
 			});
 
 			Utils.trace(application, "Calculation", "calculateAsync", "Received Success Response", TraceVerbosity.Detailed);

@@ -1014,11 +1014,11 @@ class KatApp implements IKatApp {
 					options.cancelled!();
 				}
 				else if (options.closeButtonTrigger != undefined) {
-					that.select(options.closeButtonTrigger).trigger("click");
+					that.select(options.closeButtonTrigger)[0].click();
 				}
 				else if (showCancel) {
 					if (that.select(".modal-footer-buttons .cancelButton").length == 1) {
-						that.select(".modal-footer-buttons .cancelButton").trigger("click");
+						that.select(".modal-footer-buttons .cancelButton")[0].click();
 					}
 					else {
 						options.cancelled!();
@@ -1026,7 +1026,7 @@ class KatApp implements IKatApp {
 				}
 				else {
 					if (that.select(".modal-footer-buttons .continueButton").length == 1) {
-						that.select(".modal-footer-buttons .continueButton").trigger("click");
+						that.select(".modal-footer-buttons .continueButton")[0].click();
 					}
 					else {
 						await options.confirmedAsync!();
@@ -1662,20 +1662,21 @@ class KatApp implements IKatApp {
 		}) as JQuery<T>;
 	}
 
-	public getLocalizedString(key: string, formatObject?: IStringAnyIndexer, defaultValue?: string): string {
+	public getLocalizedString(key: string | undefined, formatObject?: IStringAnyIndexer, defaultValue?: string): string | undefined {
 		const currentCulture = this.options.currentUICulture ?? "en-us";
 		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
 		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
 		const cultureStrings = this.options.resourceStrings?.[currentCulture];
 		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
 
-		const value =
-			cultureStrings?.[key] ??
-			baseCultureStrings?.[key] ??
-			defaultRegionStrings?.[key] ??
-			defaultLanguageStrings?.[key] ??
-			defaultValue ??
-			key;
+		const value = key == undefined
+			? defaultValue
+			: cultureStrings?.[key] ??
+				baseCultureStrings?.[key] ??
+				defaultRegionStrings?.[key] ??
+				defaultLanguageStrings?.[key] ??
+				defaultValue ??
+				key;
 
 		return String.formatTokens(value, formatObject ?? {} );
 	}

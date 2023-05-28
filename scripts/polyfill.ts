@@ -28,7 +28,7 @@
 	if (String.formatTokens === undefined) {
 		String.formatTokens = function (template, parameters): string {
 			// String.formatTokens( "{greeting} {who}!", {greeting: "Hello", who: "world"} )
-			return template.replace(/{{([^}]+)}}/g, function (match, token) {
+			return template?.replace(/{{([^}]+)}}/g, function (match, token) {
 				const valueType = typeof parameters[token];
 
 				// If class/width/other RBLe custom columns were used, their values
@@ -54,8 +54,7 @@
 				// that = that.replace(re, function() { return json[propertyName]; });
 
 				return jsonValue || `{${token}}`;
-			});
-
+			}) ?? "";
 		};
 	}
 })();
