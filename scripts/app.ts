@@ -1678,7 +1678,7 @@ class KatApp implements IKatApp {
 				defaultValue ??
 				key;
 
-		return String.formatTokens(value, formatObject ?? {} );
+		return value == undefined ? undefined : String.formatTokens(value, formatObject ?? {} );
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {

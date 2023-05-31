@@ -695,7 +695,7 @@ class InputComponent extends InputComponentBase {
 			get placeHolder() { return application.getLocalizedString( getInputCeValue("placeholder") ?? props.placeHolder ); },
 			get help() {
 				return {
-					content: getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content,
+					content: application.getLocalizedString( getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content ),
 					title: application.getLocalizedString( getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "" )!,
 					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? "350"
 				};
@@ -860,7 +860,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			label: (index: number) => application.getLocalizedString( getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "" )!,
 			placeHolder: (index: number) => application.getLocalizedString( getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index] ),
 			help: (index: number) => ({
-				content: getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content,
+				content: application.getLocalizedString( getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content ),
 				title: application.getLocalizedString( getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "")!,
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? "350"
 			}),

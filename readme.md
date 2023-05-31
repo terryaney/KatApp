@@ -2282,6 +2282,7 @@ Property | Type | Description
 `ceInputs`<sup>1</sup> | `string` | Some CalcEngines return an key/value space delimitted string of inputs in their result tables with the intention of those values being passed in as a representation of `ICalculationInputs`.
 `persistInputs` | `boolean` | Whether or not to persist the inputs in sessionStorage.  If `true` and the user navigates away from current view and comes back the inputs will automatically be injected into the KatApp.  If `false` and the user navigates away and returns the input values will not longer be present. The default value is `false`.
 `model` | `string` | If the *entire* `IKaNavigateModel` parameter is being provided by a CalcEngine via a valid 'JSON string', this property can be assigned in place of using all the above individual properties.
+`clearDirty` | `boolean` | Can control whether or not the applications `state.isDirty` property should be set to `false` before navigation.
 
 <sup>1</sup> `ceInputs` is a way to pass a string configuration of inputs from a CalcEngine result.
 

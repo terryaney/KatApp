@@ -3,7 +3,7 @@
 declare global {
 	interface StringConstructor {
 		compare: (strA: string | undefined, strB: string | undefined, ignoreCase?: boolean) => number;
-		formatTokens(template: string | undefined, parameters: IStringAnyIndexer): string;
+		formatTokens(template: string, parameters: IStringAnyIndexer): string;
 		localeFormat(format: string, ...args: any[]): string;
 	}
 	interface Number {

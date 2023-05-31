@@ -334,6 +334,10 @@ class DirectiveKaNavigate implements IKaDirective {
 			const navigate = async function (e: Event) {
 				e.preventDefault();
 
+				if (scope.clearDirty ?? false) {
+					application.state.isDirty = false;
+				}
+				
 				if (scope.confirm != undefined) {
 					const confirmResponse = await application.showModalAsync(scope.confirm, $(e.currentTarget as HTMLElement));
 

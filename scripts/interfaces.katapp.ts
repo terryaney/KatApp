@@ -339,6 +339,7 @@ interface IKaNavigateModel {
 	ceInputs?: string;
 	persistInputs?: boolean;
 	model?: string;
+	clearDirty?: boolean;
 }
 interface IKaModalModel extends IModalOptions {
 	beforeOpenAsync?: (hostApplication: KatApp) => Promise<void>;
