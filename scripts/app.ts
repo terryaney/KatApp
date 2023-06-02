@@ -915,7 +915,7 @@ class KatApp implements IKatApp {
 						</div>\
 	                    <div class="modal-body"></div>\
                         <div class="modal-footer">\
-							<div class="modal-footer-buttons d-none">\
+							<div class="modal-footer-buttons text-center d-none">\
 								<button type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\
 								<button type="button" :class="[\'${cssContinue}\', \'continueButton\', { disabled: uiBlocked}]">${labelContinue}</button>\
 	                        </div>\
