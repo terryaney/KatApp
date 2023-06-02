@@ -1652,8 +1652,8 @@ All the markup samples will assume the following [IKatAppOptions.resourceStrings
         "cultureLanguageOverride": "'en', but is overridden.",
         "cultureRegionOverride": "'es', but is overridden.",
         
-        "Good.Morning": "Good morning {name}, how are you?",
-        "Good.Night": "Good night {name}, sleep well."
+        "Good.Morning": "Good morning {{name}}, how are you?",
+        "Good.Night": "Good night {{name}}, sleep well."
     },
     "en-us": {
         "defaultRegionOnly": "'en-us' default region.",
@@ -1666,7 +1666,7 @@ All the markup samples will assume the following [IKatAppOptions.resourceStrings
         "cultureLanguageOverride": "'es' culture language override.",
         "cultureRegionOverride": "'es', but is overridden.",
 
-        "Good.Morning": "¿Buenas dias {name}, cómo estás?"
+        "Good.Morning": "¿Buenas dias {{name}}, cómo estás?"
     },    
     "es-es": {
         "cultureRegionOnly": "'es-es' culture region.",
