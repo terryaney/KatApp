@@ -31,7 +31,6 @@ interface IKatAppDefaultOptions {
 }
 
 interface IKatAppOptions extends IKatAppDefaultOptions {
-	isDotNetCore: boolean; /* customParameters - hack check for .net core project */
 	// Only missing when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	view?: string;
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view

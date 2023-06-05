@@ -62,7 +62,8 @@
 				})
 				.on("inserted.bs.popover.ka", async e => {
 					const templateId = "#" + $(e.target).attr("aria-describedby");
-					HelpTips.visiblePopoverApp = await KatApp.createAppAsync(templateId, application.cloneOptions(false));
+					document.querySelector(templateId)!.classList.add("kaPopup");
+					HelpTips.visiblePopoverApp = await KatApp.createAppAsync(".kaPopup", application.cloneOptions(false));
 				})
 				.on("shown.bs.popover.ka", e => HelpTips.visiblePopover = e.target)
 				.on("hide.bs.popover.ka", e => {

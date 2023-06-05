@@ -152,7 +152,6 @@ class KatApp implements IKatApp {
 			// for now, I want inspector disabled
 			{ debug: { showInspector: false } },
 		);
-		this.options.isDotNetCore = /* customParameters - hack check for .net core project */ this.options.calculationUrl == "api/rble/calculation";
 
 		const nc = this.nextCalculation;
 		if (nc.trace) {
@@ -1246,31 +1245,14 @@ class KatApp implements IKatApp {
 		apiOptions = apiOptions ?? {};
 
 		const isDownload = apiOptions.isDownload ?? false;
-		const that = this;
 		const xhr = new XMLHttpRequest();
 
-		if (!this.options.isDotNetCore) {
-			xhr.onreadystatechange = function (): void {
-				// https://stackoverflow.com/a/29039823/166231
-				if (xhr.readyState == 2) {
-					if (isDownload && xhr.status == 200) {
-						xhr.responseType = "blob";
-					}
-					else {
-						// We are always returning json (binary/responseBinary) from our endpoints
-						xhr.responseType = "json";
-					}
-				}
-			};
-		}
-		else {
-			xhr.onreadystatechange = function (): void {
-				// https://stackoverflow.com/a/29039823/166231
-				if (xhr.readyState == 2 && isDownload && xhr.status == 200) {
-					xhr.responseType = "blob";
-				}
-			};
-		}
+		xhr.onreadystatechange = function (): void {
+			// https://stackoverflow.com/a/29039823/166231
+			if (xhr.readyState == 2 && isDownload && xhr.status == 200) {
+				xhr.responseType = "blob";
+			}
+		};
 
 		this.blockUI();
 		this.state.errors = [];
@@ -1298,11 +1280,10 @@ class KatApp implements IKatApp {
 			const submitData: ISubmitApiData = {
 				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" || k == "getNumber" ? undefined : v?.toString()),
 				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
-				ApiParameters: this.options.isDotNetCore ? apiOptions.apiParameters : undefined,
+				ApiParameters: apiOptions.apiParameters,
 				Configuration: Utils.extend(
 					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "resourceStrings", "resourceStringsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
-					!this.options.isDotNetCore && apiOptions.apiParameters != undefined ? { customParameters: apiOptions.apiParameters } : undefined,
                     // Endpoints only ever use first calc engine...so reset calcEngines property in case kaml
                     // changed calcEngine in the onCalculationOptions.
 					calcEngine != undefined
@@ -1321,11 +1302,6 @@ class KatApp implements IKatApp {
 					Utils.clone(getSubmitApiConfigurationResults.configuration, (k, v) => rbleApiConfiguration.indexOf(k) > -1 ? undefined : v)
 				)
 			};
-
-			if (!this.options.isDotNetCore) {
-				// Couldn't figure out how to model bind JObject or Dictionary, so hacking with this
-				(submitData as IStringAnyIndexer)["inputTablesRaw"] = submitData.InputTables != undefined ? JSON.stringify(submitData.InputTables) : undefined;
-			}
 
 			const startResult = await this.triggerEventAsync("apiStart", apiUrl.endpoint, submitData, trigger, apiOptions);
 			if (typeof startResult == "boolean" && !startResult) {
@@ -1390,9 +1366,7 @@ class KatApp implements IKatApp {
 				return successResponse;
 			}
 		} catch (e) {
-			errorResponse = this.options.isDotNetCore
-				? (e as JQuery.jqXHR<any>).responseJSON as IApiErrorResponse ?? {}
-				: xhr.response as IApiErrorResponse ?? {};
+			errorResponse = (e as JQuery.jqXHR<any>).responseJSON as IApiErrorResponse ?? {};
 
 			if (errorResponse.errors != undefined) {
 				for (var id in errorResponse.errors) {
