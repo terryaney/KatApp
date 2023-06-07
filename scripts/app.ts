@@ -2109,20 +2109,22 @@ class KatApp implements IKatApp {
 										this.setInputValue(r["@id"], r["value"]);
 									}
 									if ((r["error"] ?? "") != "") {
-										const v: IValidation = { "@id": r["@id"], text: r["error"] };
+										const v: IValidation = { "@id": r["@id"], text: this.getLocalizedString(r.error)!, dependsOn: r.dependsOn };
 										this.state.errors.push(v);
 									}
 									if ((r["warning"] ?? "") != "") {
-										const v: IValidation = { "@id": r["@id"], text: r["warning"] };
+										const v: IValidation = { "@id": r["@id"], text: this.getLocalizedString(r.warning)!, dependsOn: r.dependsOn };
 										this.state.warnings.push(v);
 									}
 									break;
 
 								case "errors":
+									r.text = this.getLocalizedString(r.text)!;
 									this.state.errors.push(r as unknown as IValidation);
 									break;
 
 								case "warnings":
+									r.text = this.getLocalizedString(r.text)!;
 									this.state.warnings.push(r as unknown as IValidation);
 									break;
 
