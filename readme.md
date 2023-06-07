@@ -4176,16 +4176,15 @@ const anyValueObj: IStringAnyIndexer = {};
 
 ### IValidation
 
-`IValidation` normally maps to a result row (from `error` or `warning` table) from a calculation, but can also be manually created by the KatApp Framework or Kaml View. The row has two properties; `@id` and `text`.
+`IValidation` normally maps to a result row (from `error` or `warning` table) from a calculation, but can also be manually created by the KatApp Framework or Kaml View.
 
-```javascript
-const validation: IValidation = {
-    "@id": "System",
-    "text": "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support."
-};
-```
+Property | Type | Description
+---|---|---
+`@id` | `string` | The 'id' associated with the validation.  There are three different usage scenarios for `@id`.<br/><br/>1. The most common scenario is the name of the input that caused the validation.<br/>2. If the validation is associated with multiple inputs, `@id` can be a comma delimited list of input IDs causing the validation.<br/>3. If the validation is **not** associated with a specific input, then any `@id` can be used, but ensure that it is unique if at some point filtering to find this validation is required.<br/><br/>If the `@id` matches the `name` of an [v-ka-input](#v-ka-input) item (or the `name` is one of the comma delimitted items), the `error` or `warning` property of the [v-ka-input Scope](#v-ka-input-Scope), respectively, will be set to the `text` property.  Additionally, the `error` or `warning` will be automatically removed when the input (or one of the inputs in the comma delimitted items) is updated.
+`text` | `string` | The text to display for the validation.
+`dependsOn` | `string?` | The 'id' of another input (or comma delimitted list) that this validation depends on.  For example, a radio button list where there are different 'child' inputs displayed based on radio selection.  If the `dependsOn` input is updated, any validations that contain that input ID in the `dependsOn` property will automatically be removed.  This is different from using a comma delimitted list in the `id` property because adding an ID(s) to `dependsOn` will not set the `v-ka-input.error` or `v-ka-input.warning` properties of the associated ID(s).
 
-If the `@id` property of an `IValidation` item inside [state.errors](#errors:-Array<IValidation>) or [state.warnings](#warnings:-Array<IValidation>) matches the 'name' of an [v-ka-input](#v-ka-input) item, the `error` or `warning` property of the [v-ka-input Scope](#v-ka-input-Scope), respectively, will be set to the `IValidation.text` property.
+**Note**: All `errors` and `warnings` are automatically removed when the [application.calculateAsync](#calculateAsync) method is called or when the [application.apiAsync](#apiAsync) method is called.  This is to ensure that the user is not presented with stale errors/warnings.  They can also be manually removed by simply setting [application.state.errors](#iapplicationdata-properties) or [application.state.warnings](#iapplicationdata-properties) to an empty array.
 
 ### INavigationOptions
 
@@ -5100,6 +5099,5 @@ Configure two CalcEngines with different tabs to run in the pipeline before the 
 
 1. Document custom 'view model' and how it is passed in...sample with doc center 'showDownload'
 1. Original Docs: See [calculate With Different CalcEngine](#calculate-With-Different-CalcEngine) for information about running secondary calculations via javascript and without requiring configuration up front.
-1. Comment about how errors/warnings are cleared out everytime there is a 'normal calculation' or apiAsync call
 1. Section about how 'modals work' and different ways to call them and work with them (see cheatsheet)
 1. Section discussing the 'automatic' flows; a) when I load kaml views and b) after calculations (i.e. help tips (and .ka-ht-js class) and anything else automagic)

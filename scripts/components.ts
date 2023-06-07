@@ -712,7 +712,10 @@ class InputComponent extends InputComponentBase {
 			get warning() { return base.warning; },
 			get list() {
 				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab) : props.list ?? [];
+				const list = table != undefined
+					? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab)
+					: props.list ?? [];
+				return list.map(r => ({ key: r.key, text: application.getLocalizedString((r.text).toString())! }));
 			},
 			get prefix() { return getInputCeValue("prefix") ?? props.prefix; },
 			get suffix() { return getInputCeValue("suffix") ?? props.suffix; },
@@ -875,7 +878,12 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				const table =
 					getInputCeValue(index, "list") ??
 					application.state.rbl.value("rbl-listcontrol", names[index], "table", undefined, calcEngine, tab);
-				return table != undefined ? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab) : [];
+				
+				const list = table != undefined
+					? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab)
+					: /* lists[index] ?? */[];
+
+				return list.map(r => ({ key: r.key, text: application.getLocalizedString((r.text).toString())! }));				
 			},
 			hideLabel: (index: number) => { return getInputCeValue(index, "label") == "-1" || ( hideLabels[index] ?? false ); },
 			maxLength: (index: number) => {
