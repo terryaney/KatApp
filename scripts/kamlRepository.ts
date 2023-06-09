@@ -153,10 +153,18 @@
 
 			// If querying service and get a 'string' back...then I know error happened
 			// data.Content when request from service, just data when local files
-			return isRelativePath || tryLocalWebServer || typeof result == "object"
-				? { data: isRelativePath || tryLocalWebServer ? result : result.Resources[0].Content }
+            const downloadResult = isRelativePath || tryLocalWebServer || typeof result == "object"
+                ? { data: isRelativePath || tryLocalWebServer ? result : result.Resources[0].Content }
 				: { errorMessage: result.startsWith("<!DOCTYPE") && result.indexOf("Code: 004") ? "RBLe Web Service Failure" : result };
+			
+			if (downloadResult.errorMessage != undefined) {
+				alert("Open debugger");
+				debugger;
+			}
+
+			return downloadResult;
 		} catch (error) {
+			console.log({ error });
 			return { errorMessage: (error as XMLHttpRequest).statusText };
 		}
 	};
@@ -218,6 +226,50 @@
 
 			if (lastResult.data != undefined) {
 				let content = lastResult.data;
+
+				if (tryLocalWebServer) {
+					const resourcePath = resourceKey.split("?")[0];
+					const resourceKeyParts = resourcePath.split("/");
+					const fileName = resourceKeyParts[resourceKeyParts.length - 1];
+
+					const resourceTypesToSkip = content.match(/no-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
+
+                    if (fileName.endsWith(".kaml") && resourceTypesToSkip.indexOf("true") == -1 && content.indexOf("<script>") == -1 && content.indexOf("<style>") == -1) {
+                        const jsResult = resourceTypesToSkip.indexOf("js") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
+                        const cssResult = resourceTypesToSkip.indexOf("css") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
+                        const templateResult = resourceTypesToSkip.indexOf("templates") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
+
+						const lines = content.split("\n");
+
+						content = lines.map((line, index) => {
+							if (line.indexOf("</rbl-config>") >= 0) {
+                                if (jsResult?.data != undefined) {
+                                    line += `
+<script>
+	(function () {
+${jsResult.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
+	})();
+</script>
+`;
+                                }
+
+								if (cssResult?.data != undefined) {
+                                    line += `
+<style>
+${cssResult.data.split("\n").map(cssLine => "\t" + cssLine).join("\n")}
+</style>
+`;
+                                }
+
+								if (index == lines.length - 1 && templateResult?.data != undefined) {
+                                    line += "\n" + templateResult.data.split("\n").map(templateLine => "\t" + templateLine).join("\n");
+                                }
+							}
+
+							return line;
+						}).join("\n");						
+					}
+				}
 
 				return {
 					resourceKey: resourceKey,

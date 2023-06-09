@@ -3467,7 +3467,7 @@ Property | Type | Description
 `useTestCalcEngine` | `boolean` | Whether or not the RBLe Framework should the test version of the specified CalcEngine.  A `boolean` value can be passed in or using the querystring of `test=1` will enable the settings.  The default value is `false`.
 `useTestView` | `boolean` | Whether or not the KatApp Framework should use the test versions of any requested Kaml Views or Kaml Template Files that are hosted in the KAT CMS instead of by the Host Environment.  A `boolean` value can be passed in or using the querystring of `testview=1` will enable the settings. The default value is `false`.
 `showInspector` | `boolean` | Whether or not the KatApp Framework should show diagnostic information for all Vue directives.  When enabled, pressing `CTRL+SHIFT` together will toggle visual cues for each 'Vue enabled' element.  Then you can use the browser 'inspect tool' to view an HTML comment about the element.  A `boolean` value can be passed in or using the querystring of `showinspector=1` will enable the settings.  The default value is `false`.
-`debugResourcesDomain` | `string` | Whether or not the KatApp Framework should attempt to find requested Kaml Views or Kaml Template Files from the 'domain' passed in before checking the KAT CMS or Host Environment.  A `string` value providing a local web server address can be provided via `"debugResourcesDomain": "localhost:8887"` to enable the feature.  The default value is `undefined`.
+`debugResourcesDomain` | `string` | Whether or not the KatApp Framework should attempt to find requested Kaml Views or Kaml Template Files from the 'domain' passed in before checking the KAT CMS or Host Environment.  A `string` value providing a local web server address can be provided via `"debugResourcesDomain": "localhost:8887"` to enable the feature.  The default value is `undefined`.<br/><br/>KAT Evolution and Camelot frameworks enable this feature using a `localserver` querystring parameter.  For example, `https://hosted.site.domain/?localserver=localhost:5500` will enable the feature and attempt to find files at `http://localhost:5500/` before checking the KAT CMS or Host Environment.  Kaml files can be partitioned into view.kaml, view.kaml.js, view.kaml.css, and view.kaml.templates to promote single responsibility principle.<br/><br/>Using `debugResourcesDomain` supports this as well, however it makes individual requests for each file if the original Kaml file does not have a `<script/>` or `<style/>` section present.  If the additionally requested files do not exist, the browser will report a 404 error in the console for each one.  To avoid this, the Kaml file can add some attributes to `<rbl-config/>` element.  If the `no-kaml-package="true"` attribute is provided, no attempts for the .js, .css, or .templates files will occur (resulting in a cleaner console).  If only certain types of files should be excluded, the `no-kaml-package` attribute can have a comma delimitted list of types to ignore (`js`, `css`, or `templates`).  For example, `no-kaml-package="css,templates"` would not attempt to download the .css or .templates files.
 
 <sup>1</sup> `TraceVerbosity` is defined as the following.
 
@@ -3755,6 +3755,8 @@ Setting `expireCache` to `true` instructs the RBLe Framework to immediately chec
 
 `getLocalizedString` returns the localized 'content' of the requested requested key based on the KatApp's [`options.currentUICulture'](#ikatappoptionscurrentuiculture).  In the KatApp markup/html, a [v-ka-resource](#v-ka-resource) will be used, but if a localized string is needed inside of a KatApp's `script` section, this method can be used.
 
+**Note**: 'key' can also be a complete json string representation of the model if needed.  Usually when generate from RBLe Framework calculations.  When the `key` is the entire model, there **must** be a `key` property on the model and every property name and value **must be enclosed in double quotes**.
+
 ```javascript
 // Returns string with 'Name.First' key.
 application.getLocalizedString('Name.First');
@@ -3768,6 +3770,11 @@ application.getLocalizedString('Good morning {name}, how are you?', { 'name': 'F
 
 // Returns string with 'Default value for Name First' key when 'Name.First' key value is not found.
 application.getLocalizedString('Name.First', undefined, 'Default value for Name First');
+
+// assume rbl.value("greeting") returns { "key": "greeting", "name": "Terry" }
+// assume greeting resource is "Good morning {name}, how are you?"
+// Returns string with 'Good morning Terry, how are you?'.
+application.getLocalizedString(rbl.value('greeting'));
 ```
 
 See `v-ka-resource` for full documentation.

@@ -1637,6 +1637,11 @@ class KatApp implements IKatApp {
 	}
 
 	public getLocalizedString(key: string | undefined, formatObject?: IStringAnyIndexer, defaultValue?: string): string | undefined {
+		if (key != undefined && key.startsWith("{") && formatObject == undefined) {
+			formatObject = JSON.parse(key);
+			key = formatObject!.key;
+		}
+
 		const currentCulture = this.options.currentUICulture ?? "en-us";
 		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
 		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
