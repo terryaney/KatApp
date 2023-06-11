@@ -213,9 +213,9 @@
 
 			const localServerUrl = "https://" + currentOptions.debug.debugResourcesDomain + "/KatApp/" + localWebServerFolder + "/" + localWebServerResource;
 			resourceUrl = tryLocalWebServer
-				? localServerUrl.substring(0, 4) + localServerUrl.substring(5)
+				? localServerUrl.substring(0, 4) + localServerUrl.substring(5) + location.search
 				: !isResourceInManagementSite
-					? currentOptions.baseUrl + resourceName.substring(1)
+					? currentOptions.baseUrl + resourceName.substring(1) + location.search
 					: currentOptions.kamlRepositoryUrl;
 
 			if (!tryLocalWebServer && isResourceInManagementSite) {
