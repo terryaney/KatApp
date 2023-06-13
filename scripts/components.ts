@@ -64,7 +64,6 @@ class InputComponentBase extends TemplateBase {
 		scope: IStringAnyIndexer,
 		name: string,
 		input: HTMLInputElement,
-		scopeInputType: string,
 		defaultValue: (name: string) => string | undefined,
 		isExcluded: boolean,
 		noCalc: (name: string) => boolean,
@@ -148,7 +147,7 @@ class InputComponentBase extends TemplateBase {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, input, type, scopeInputType, mask, keypressRegex, inputEventAsync);
+			this.bindInputEvents(application, name, input, type, mask, keypressRegex, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
@@ -159,7 +158,6 @@ class InputComponentBase extends TemplateBase {
 		name: string,
 		input: HTMLInputElement,
 		type: string | null,
-		scopeInputType: string,
 		mask: (name: string) => string | undefined,
 		keypressRegex: (name: string) => string | undefined,
 		inputEventAsync: (calculate: boolean) => Promise<void>
@@ -185,175 +183,260 @@ class InputComponentBase extends TemplateBase {
 
 				if (inputKeypressRegex != null) {
 					const kpRegex = new RegExp(inputKeypressRegex);
+					const kpInputRegex = new RegExp(`[^${inputKeypressRegex}]$`, "g");
 		
+					// Note: this doesn't work in android chrome
 					input.addEventListener("beforeinput", (event: InputEvent) => {
 						if (event.inputType == "insertText" && event.data != null && !kpRegex.test(event.data)) {
 							event.preventDefault();
 						}
 					});
-				}
-
-				// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
-				const isMoney = scopeInputType.indexOf("money") > -1;
-
-				if (isMoney) {
-					const allowNegative = scopeInputType.startsWith("-");
-					const decimalPlacesString = scopeInputType.substring(allowNegative ? 6 : 5);
-					const decimalPlaces = decimalPlacesString != "" ? +decimalPlacesString : 2;
-					const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
-
-                    const negRegEx = allowNegative ? `\\-` : "";
-                    const sepRegEx = decimalPlaces > 0 ? `\\${currencySeparator}` : "";
-					const moneyRegEx = new RegExp(`[0-9${negRegEx}${sepRegEx}]`, "g");
-
-					input.addEventListener("keypress", (event: KeyboardEvent) => {
+					input.addEventListener("input", (event: Event) => {
 						const target = event.target as HTMLInputElement;
-						const selectionStart = target.selectionStart;
-						const selectionEnd = target.selectionEnd;
-						const testValue = selectionStart != null && selectionEnd != null && selectionStart != selectionEnd
-							? input.value.substring(0, selectionStart) + input.value.substring(selectionEnd)
-							: input.value;
-						
-						if (event.key.match(moneyRegEx) === null) {
-							event.preventDefault();
-						}
-						else if (event.key == currencySeparator && (testValue.indexOf(currencySeparator) > -1 || input.value == "")) {
-							event.preventDefault();
-						}
-						else if (event.key == "-" && (selectionStart != 0 || testValue.indexOf("-") > -1 )) {
-							event.preventDefault();
-						}
-						else if (decimalPlaces > 0 && event.key != currencySeparator && event.key != "-") {
-							// Don't allow number input if already enough behind the currencySeparator
-							const endValue = selectionStart != selectionEnd
-								? testValue
-								: input.value.substring(0, selectionStart!) + event.key + input.value.substring(selectionStart!);
-							const parts = endValue.split(currencySeparator);
-							if (parts.length == 2 && parts[1].length > decimalPlaces) {
-								event.preventDefault();
-							}
-						}
+						target.value = target.value.replace(kpInputRegex, "");
 					});
 				}
-			
+
 				const inputMask = mask(name);
-		
-				if (inputMask == "zip+4" || inputMask == "#####-####") {
-					input.setAttribute("maxlength", "10");
-
-					input.addEventListener("keypress", (event: KeyboardEvent) => {
-						// Number, (, ), or -
-						if (event.key.match(/[0-9\-]/) === null) {
-							event.preventDefault();
-						}
-						else if (event.key == "-" && input.value.length != 5) {
-							event.preventDefault();
-						}
-					});
-					
-					input.addEventListener("keyup", (event: KeyboardEvent) => {
-						const target = event.target as HTMLInputElement;
-						const selectionStart = target.selectionStart;
-						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
-
-						if (isBackspace && selectionStart == target.value.length) {
-							return; // Do nothing
-						}
-
-						const input = target.value.replace(/\D/g, '').substring(0, 9);
-								
-						// First ten digits of input only
-						const zip = input.substring(0, 5);
-						const plus4 = input.substring(5, 9);
+				let maxLength = input.getAttribute("maxlength");
 	
-						if (input.length > 5) { target.value = zip + "-" + plus4; }
+				if (inputMask != undefined || maxLength != null) {
+					if (inputMask != undefined) {
+						input.setAttribute("ka-mask", inputMask);
+					}
 
-						if (isBackspace || event.code == "Delete") {
-							target.selectionStart = target.selectionEnd = selectionStart;
-						}
-					});
-				}
-				else if (inputMask == "cc-expire" || inputMask == "MM/YY") {
-					input.setAttribute("maxlength", "5");
+					switch (inputMask) {
+						case "zip+4":
+						case "#####-####":
+							{
+								input.setAttribute("maxlength", maxLength = "10");
+								break;
+							}
 
-					input.addEventListener("keypress", (event: KeyboardEvent) => {
-						if (event.key.match(/[0-9\/]/) === null) {
-							event.preventDefault();
-						}
-						else if (event.key == "/" && input.value.length != 2 ) {
-							event.preventDefault();
-						}
-					});
+						case "cc-expire":
+						case "MM/YY":
+							{
+								input.setAttribute("maxlength", maxLength = "5");
+								break;
+							}
 
-					input.addEventListener("keyup", (event: KeyboardEvent) => {
-						const target = event.target as HTMLInputElement;
-						const selectionStart = target.selectionStart;
-						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
+						case "phone":
+						case "(###) ###-####":
+							{
+								input.setAttribute("maxlength", maxLength = "14");
+								break;
+							}
+					}
 
-						if (isBackspace && selectionStart == target.value.length) {
-							return; // Do nothing
-						}
+					if (inputMask != undefined) {						
+						// NOTE: This doesn't work for Android mobile, no keypress events are fired
+						input.addEventListener("keypress", (event: KeyboardEvent) => {
+							const target = event.target as HTMLInputElement;
+							const inputMask = target.getAttribute("ka-mask");
+	
+							// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
+							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
+										
+							switch ( isMoney ? "money" : inputMask ) {
+								case "zip+4":
+								case "#####-####":
+									{
+										// Number, (, ), or -
+										if (event.key.match(/[0-9\-]/) === null) {
+											event.preventDefault();
+										}
+										else if (event.key == "-" && input.value.length != 5) {
+											event.preventDefault();
+										}
+										break;
+									}
+	
+								case "money":
+									{
+										const allowNegative = inputMask!.startsWith("-");
+										const decimalPlacesString = inputMask!.substring(allowNegative ? 6 : 5);
+										const decimalPlaces = decimalPlacesString != "" ? +decimalPlacesString : 2;
+			
+										const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
+										const negRegEx = allowNegative ? `\\-` : "";
+										const sepRegEx = decimalPlaces > 0 ? `\\${currencySeparator}` : "";
+										const moneyRegEx = new RegExp(`[0-9${negRegEx}${sepRegEx}]`, "g");
 
-						const input = target.value.replace(/\D/g, '').substring(0, 4);
+										const selectionStart = target.selectionStart;
+										const selectionEnd = target.selectionEnd;
+										const testValue = selectionStart != null && selectionEnd != null && selectionStart != selectionEnd
+											? input.value.substring(0, selectionStart) + input.value.substring(selectionEnd)
+											: input.value;
+										
+										if (event.key.match(moneyRegEx) === null) {
+											event.preventDefault();
+										}
+										else if (event.key == currencySeparator && (testValue.indexOf(currencySeparator) > -1 || input.value == "")) {
+											event.preventDefault();
+										}
+										else if (event.key == "-" && (selectionStart != 0 || testValue.indexOf("-") > -1 )) {
+											event.preventDefault();
+										}
+										else if (decimalPlaces > 0 && event.key != currencySeparator && event.key != "-") {
+											// Don't allow number input if already enough behind the currencySeparator
+											const endValue = selectionStart != selectionEnd
+												? testValue
+												: input.value.substring(0, selectionStart!) + event.key + input.value.substring(selectionStart!);
+											const parts = endValue.split(currencySeparator);
+
+											if (parts.length == 2 && parts[1].length > decimalPlaces) {
+												event.preventDefault();
+											}
+										}
+										break;
+									}
+	
+								case "cc-expire":
+								case "MM/YY":
+									{
+										if (event.key.match(/[0-9\/]/) === null) {
+											event.preventDefault();
+										}
+										else if (event.key == "/" && input.value.length != 2 ) {
+											event.preventDefault();
+										}
+										break;
+									}
+	
+								case "phone":
+								case "(###) ###-####":
+									{
+										// Number, (, ), or -
+										if (event.key.match(/[0-9\(\)\-\s]/) === null) {
+											event.preventDefault();
+										}
+										else if (event.key == "(" && input.value != "") {
+											event.preventDefault();
+										}
+										else if (event.key == ")" && input.value.length != 4) {
+											event.preventDefault();
+										}
+										else if (event.key == "-" && input.value.length != 9) {
+											event.preventDefault();
+										}
+										else if (event.key == " " && input.value.length != 5) {
+											event.preventDefault();
+										}
+										break;
+									}
+							}
+						});
 						
-						if (input.length > 2) {
-							const month = input.substring(0, 2);
-							const year = input.substring(2);
-		
-							target.value = `${month}/${year}`;
+						input.addEventListener("keyup", (event: KeyboardEvent) => {
+							const target = event.target as HTMLInputElement;
+							const inputMask = target.getAttribute("ka-mask");
+							const selectionStart = target.selectionStart;
+							const isBackspace = event.code == "Backspace" || event.key == "Backspace";
+	
+							if (isBackspace && selectionStart == target.value.length) {
+								return; // Do nothing
+							}
+				
+							switch (inputMask) {
+								case "zip+4":
+								case "#####-####":
+									{
+										let input = target.value;
+										const hasDash = input.indexOf("-") == 5;
+										input = input.replace(/\D/g, '').substring(0, 9);
+												
+										// First ten digits of input only
+										const zip = input.substring(0, 5);
+										const plus4 = input.substring(5, 9);
+					
+										target.value = input.length > 5
+											? zip + "-" + plus4
+											: zip + ( hasDash ? "-" : "" );
+										break;
+									}
+	
+								case "money":
+									{
+										const allowNegative = inputMask!.startsWith("-");
+										const decimalPlacesString = inputMask!.substring(allowNegative ? 6 : 5);
+										const decimalPlaces = decimalPlacesString != "" ? +decimalPlacesString : 2;
+										const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
 
+										let input = target.value;
+										const isNegative = allowNegative && input.indexOf("-") == 0;
+										input = input.replace(new RegExp(`[^0-9${currencySeparator}]+`, "g"), '');
+
+										const inputParts = input.split(currencySeparator);
+
+										let newValue = isNegative ? "-" : "";
+
+										if (inputParts.length > 2) {
+											newValue += inputParts.slice(0, 2).join(currencySeparator);
+										}
+										else {
+											newValue += inputParts[0];
+
+											if (inputParts.length > 1) {
+												newValue += currencySeparator + inputParts[1].substring(0, decimalPlaces);
+											}
+										}
+										target.value = newValue;										
+										break;
+									}
+	
+								case "cc-expire":
+								case "MM/YY":
+									{
+										let input = target.value;
+										const hasSlash = input.indexOf("/") == 3;
+										input = input.replace(/\D/g, '').substring(0, 4);
+
+										const month = input.substring(0, 2);
+										const year = input.substring(2);
+									
+										target.value = input.length > 2
+											? `${month}/${year}`
+											: month + ( hasSlash ? "/" : "" );
+										break;
+									}
+	
+								case "phone":
+								case "(###) ###-####":
+									{
+										let input = target.value;
+
+										input = input.replace(/\D/g, '').substring(0, 10);
+									
+										// First ten digits of input only
+										const area = input.substring(0, 3);
+										const middle = input.substring(3, 6);
+										const last = input.substring(6, 10);
+					
+										if (input.length >= 6) { target.value = "(" + area + ") " + middle + "-" + last; }
+										else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
+										else if (input.length > 0) { target.value = "(" + area; }
+										break;
+									}
+							}
+	
 							if (isBackspace || event.code == "Delete") {
 								target.selectionStart = target.selectionEnd = selectionStart;
 							}
-						}
-					});
-				}
-				else if (inputMask == "phone" || inputMask == "(###) ###-####") {
-					input.setAttribute("maxlength", "14");
+						});
+					}
 
-					input.addEventListener("keypress", (event: KeyboardEvent) => {
-						// Number, (, ), or -
-						if (event.key.match(/[0-9\(\)\-\s]/) === null) {
-							event.preventDefault();
-						}
-						else if (event.key == "(" && input.value != "") {
-							event.preventDefault();
-						}
-						else if (event.key == ")" && input.value.length != 4) {
-							event.preventDefault();
-						}
-						else if (event.key == "-" && input.value.length != 9) {
-							event.preventDefault();
-						}
-						else if (event.key == " " && input.value.length != 5) {
-							event.preventDefault();
-						}
-					});
+					// Android mobile doesn't enforce maxlength until blur
+					if ( maxLength != undefined ) {
+						input.addEventListener("input", (event: Event) => {
+							const target = event.target as HTMLInputElement;
+							const maxLength = +(target.getAttribute("maxlength")!);
+							const value = target.value;
 
-					input.addEventListener("keyup", (event: KeyboardEvent) => {
-						const target = event.target as HTMLInputElement;
-						const selectionStart = target.selectionStart;
-						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
-
-						if (isBackspace && selectionStart == target.value.length) {
-							return; // Do nothing
-						}
-
-						const input = target.value.replace(/\D/g, '').substring(0, 10);
-								
-						// First ten digits of input only
-						const area = input.substring(0, 3);
-						const middle = input.substring(3, 6);
-						const last = input.substring(6, 10);
-	
-						if (input.length > 6) { target.value = "(" + area + ") " + middle + "-" + last; }
-						else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
-						else if (input.length > 0) { target.value = "(" + area; }
-
-						if (isBackspace || event.code == "Delete") {
-							target.selectionStart = target.selectionEnd = selectionStart;
-						}
-					});
+							if (value.length > maxLength) {
+								target.value = value.slice(0, maxLength);
+							}
+						});
+					}
 				}
 			}
 		}
@@ -667,7 +750,7 @@ class InputComponent extends InputComponentBase {
 
 			id: name + "_" + application.id,
 			name: name,
-			type: inputType == "money" ? "text" : inputType,
+			type: inputType,
 
 			// reactive...
 			// input binding attempts in template:
@@ -768,7 +851,7 @@ class InputComponent extends InputComponentBase {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 
 		return scope;
 	}
@@ -872,7 +955,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 
 			id: (index: number) => names[ index ] + "_" + application.id,
 			name: (index: number) => base.name( index ),
-			type: inputType == "money" ? "text" : inputType,
+			type: inputType,
 
 			value: (index: number) => defaultValue( names[ index ]) ?? "",
 			// v-model="value" support, but not using right now
@@ -930,7 +1013,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			this.mounted(application, scope, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;
