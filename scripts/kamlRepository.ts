@@ -235,9 +235,9 @@
 					const resourceTypesToSkip = content.match(/no-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
 
                     if (fileName.endsWith(".kaml") && resourceTypesToSkip.indexOf("true") == -1 && content.indexOf("<script>") == -1 && content.indexOf("<style>") == -1) {
-                        const jsResult = resourceTypesToSkip.indexOf("js") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
-                        const cssResult = resourceTypesToSkip.indexOf("css") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
-                        const templateResult = resourceTypesToSkip.indexOf("templates") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
+                        const jsResult = resourceTypesToSkip.indexOf("js") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
+                        const cssResult = resourceTypesToSkip.indexOf("css") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
+                        const templateResult = resourceTypesToSkip.indexOf("templates") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
 
 						const lines = content.split("\n");
 

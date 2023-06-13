@@ -9,7 +9,23 @@
 	}
 }
 
-class InputComponentBase {
+class TemplateBase {
+	static templateRenderedCount: IStringIndexer<number> = {};
+
+	public getRenderedId(templateId: string | undefined): string | undefined {
+		if (templateId == undefined) {
+			return undefined;
+		}
+
+		TemplateBase.templateRenderedCount[templateId] = TemplateBase.templateRenderedCount[templateId] == undefined
+			? 1
+			: TemplateBase.templateRenderedCount[templateId] + 1;
+		
+		return `${templateId.substring(1)}_${TemplateBase.templateRenderedCount[templateId]}`;
+	}
+}
+
+class InputComponentBase extends TemplateBase {
 	// My impl of Vue's cacheStringFunction
 	private static stringCache: Record<string, string> = Object.create(null);
 
@@ -234,12 +250,13 @@ class InputComponentBase {
 							event.preventDefault();
 						}
 					});
-
+					
 					input.addEventListener("keyup", (event: KeyboardEvent) => {
 						const target = event.target as HTMLInputElement;
 						const selectionStart = target.selectionStart;
+						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
 
-						if (event.code == "Backspace" && selectionStart == target.value.length) {
+						if (isBackspace && selectionStart == target.value.length) {
 							return; // Do nothing
 						}
 
@@ -251,7 +268,7 @@ class InputComponentBase {
 	
 						if (input.length > 5) { target.value = zip + "-" + plus4; }
 
-						if (event.code == "Backspace" || event.code == "Delete") {
+						if (isBackspace || event.code == "Delete") {
 							target.selectionStart = target.selectionEnd = selectionStart;
 						}
 					});
@@ -271,8 +288,9 @@ class InputComponentBase {
 					input.addEventListener("keyup", (event: KeyboardEvent) => {
 						const target = event.target as HTMLInputElement;
 						const selectionStart = target.selectionStart;
+						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
 
-						if (event.code == "Backspace" && selectionStart == target.value.length) {
+						if (isBackspace && selectionStart == target.value.length) {
 							return; // Do nothing
 						}
 
@@ -284,7 +302,7 @@ class InputComponentBase {
 		
 							target.value = `${month}/${year}`;
 
-							if (event.code == "Backspace" || event.code == "Delete") {
+							if (isBackspace || event.code == "Delete") {
 								target.selectionStart = target.selectionEnd = selectionStart;
 							}
 						}
@@ -315,8 +333,9 @@ class InputComponentBase {
 					input.addEventListener("keyup", (event: KeyboardEvent) => {
 						const target = event.target as HTMLInputElement;
 						const selectionStart = target.selectionStart;
-						
-						if (event.code == "Backspace" && selectionStart == target.value.length) {
+						const isBackspace = event.code == "Backspace" || event.key == "Backspace";
+
+						if (isBackspace && selectionStart == target.value.length) {
 							return; // Do nothing
 						}
 
@@ -331,7 +350,7 @@ class InputComponentBase {
 						else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
 						else if (input.length > 0) { target.value = "(" + area; }
 
-						if (event.code == "Backspace" || event.code == "Delete") {
+						if (isBackspace || event.code == "Delete") {
 							target.selectionStart = target.selectionEnd = selectionStart;
 						}
 					});
@@ -456,7 +475,7 @@ class InputComponentBase {
 
 			if (application.state.inputs[name] != v) {
 				// To give ability to hook events to it.
-				(e.currentTarget as HTMLInputElement).dispatchEvent(new Event('value.ka'));
+				(e.currentTarget as HTMLInputElement).dispatchEvent(new Event('value-ka'));
 				await inputEventAsync(true);
 			}
 		};
@@ -545,8 +564,7 @@ class InputComponentBase {
 					});
 
 					input.addEventListener(
-						// if value.ka, want namespace instead of modifier
-						arg == "value" && modifiers.ka ? "value.ka" : arg,
+						arg,
 						(e: Event) => {
 							if ('key' in e && !(hyphenate((e as KeyboardEvent).key) in modifiers)) {
 								return;
@@ -645,6 +663,7 @@ class InputComponent extends InputComponentBase {
 		
 		const scope: IKaInputScope = {
 			$template: template,
+			$renderId: this.getRenderedId(template),
 
 			id: name + "_" + application.id,
 			name: name,
@@ -848,7 +867,8 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 		const inputType = getInputCeValue(0, "type") ?? props.type ?? "text";
 
 		const scope = {
-			"$template": templateId,
+			$template: templateId,
+			$renderId: this.getRenderedId(templateId)!,
 
 			id: (index: number) => names[ index ] + "_" + application.id,
 			name: (index: number) => base.name( index ),
@@ -910,18 +930,17 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			this.mounted(application, this, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, scope, name, input, inputType, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;
 	}
 }
 
-class TemplateComponent {
+class TemplateComponent extends TemplateBase {
 	constructor(private props: { name: string, source?: IStringAnyIndexer | Array<ITabDefRow> }) {
+		super();
 	}
-
-	static templateRenderedCount: IStringIndexer<number> = {};
 
 	public getScope(application: KatApp, getTemplateId: (name: string) => string | undefined): IStringAnyIndexer | Array<ITabDefRow> {
 		if (this.props.name == undefined) {
@@ -941,19 +960,20 @@ class TemplateComponent {
 		if (this.props.source instanceof Array) {
 			const that = this;
 			return {
-				"$template": templateId,
+				$template: templateId,
+				$renderId: that.getRenderedId(templateId),
+
 				application: application,
 				modalAppOptions: application.options.modalAppOptions,
-				get rows() { return that.props.source; },
-				$renderId: `${templateId.substring(1)}_${TemplateComponent.templateRenderedCount[templateId]}`
+				get rows() { return that.props.source; }
 			};
 		}
 		else {
 			const scope = this.props.source ?? {};
-			scope["$template"] = templateId;
+			scope.$template = templateId;
+			scope.$renderId = this.getRenderedId(templateId);
 			scope.application = application;
 			scope.modalAppOptions = application.options.modalAppOptions;
-			scope.$renderId = `${templateId.substring(1)}_${TemplateComponent.templateRenderedCount[templateId]}`;
 			return scope;
 		}
 	}

@@ -311,7 +311,7 @@ Property | Type | Description
 `model` | `any` | Kaml Views can pass in 'custom models' that hold state but are not built from Calculation Results. See [`IKatApp.update`](#IKatApp.update) for more information.
 `handlers` | `IStringAnyIndexer` | Kaml Views can pass in event handlers that can be bound via @event syntax (i.e. `@click="handlers.foo"`). See [`IKatApp.update`](#IKatApp.update) for more information.
 `components` | `IStringIndexer<IStringAnyIndexer>` | Kaml Views can pass in petite-vue components that can used in v-scope directives (i.e. v-scope="components.inputComponent({})"). See [`IKatApp.update`](#IKatApp.update) for more information.
-`inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp.  See ICalculationInputs for more detail the the built in `getNumber()` method.
+`inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp.  See ICalculationInputs for more detail the the built in `getNumber()` and `getOptionText()` methods.
 `errors` | [`Array<IValidation>`](#ivalidation) | Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 `warnings` | [`Array<IValidation>`](#ivalidation) | Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 `rbl` | [`IRbl`](#irbl) | Helper object used to access RBLe Framework Calculation results.
@@ -3232,7 +3232,7 @@ During the mounting of a KatApp input the following occurs:
     1. Specific Input Processing
         1. Date Inputs ([`scope.type`](#ikainputscopetype) is `date`)
             1. The `state.inputs` are only assigned a valid date or `undefined` and not each time a keypress occurs.
-            1. When `state.inputs` are set, a `value.ka` event is triggered for Kaml Views to catch as needed.
+            1. When `state.inputs` are set, a `value-ka` event is triggered for Kaml Views to catch as needed.
         1. Range Inputs (`scope.type` is `range`)
             1. Add additional events to handle displaying range value in UI for the user (see [IKaInputModel.type for range Inputs](#ikainputmodeltype-for-range-inputs) for more information).
             1. Watches for a `rangeset.ka` event (triggered via [`application.setInputValue`](#ikatappsetinputvalue)) to update display
@@ -4241,11 +4241,19 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
 
 #### ICalculationInputs.getNumber
 
-In addition to the storage of inputs and tables, the `ICalculationInputs` object has one built in method called `getNumber`.
+In addition to the storage of inputs and tables, the `ICalculationInputs` object has a built in method called `getNumber`.
 
 **`getNumber(inputId: string): number | undefined`**
 
 You can call this method to automatically convert textual input (including culture specific handling of the decimal place character) into a numeric value if conversion is possible.  If the conversion fails, it returns `undefined`.
+
+#### ICalculationInputs.getOptionText
+
+In addition to the storage of inputs and tables, the `ICalculationInputs` object has a built in method called `getOptionText`.
+
+**`getOptionText(inputId: string): string | undefined`**
+
+You can call this method to automatically retreive the textual value of the selected options in a `<select/>` input.
 
 ### ITabDef
 

@@ -269,6 +269,9 @@ class KatApp implements IKatApp {
 
 			inputs: Utils.extend(
 				{
+					getOptionText: (inputId: string): string | undefined => {
+						return that.select(`.${inputId} option:selected`).text();
+					},
 					getNumber: (inputId: string): number | undefined => {
 						// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
 						
@@ -1370,7 +1373,7 @@ class KatApp implements IKatApp {
 
 			if (errorResponse.errors != undefined) {
 				for (var id in errorResponse.errors) {
-					this.state.errors.push({ "@id": id, text: errorResponse.errors[id][0] });
+					this.state.errors.push({ "@id": id, text: errorResponse.errors[id][0], dependsOn: errorResponse.errorsDependsOn?.[id] });
 				}
 			}
 			if (this.state.errors.length == 0) {
@@ -1379,11 +1382,11 @@ class KatApp implements IKatApp {
 
 			if (errorResponse.warnings != undefined) {
 				for (var id in errorResponse.warnings) {
-					this.state.warnings.push({ "@id": id, text: errorResponse.warnings[id][0] });
+                    this.state.warnings.push({ "@id": id, text: errorResponse.warnings[id][0], dependsOn: errorResponse.warningsDependsOn?.[id] });
 				}
 			}
 
-			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, errorResponse!.errors != undefined ? [errorResponse, this.state.errors.map(e => ({ "@id": e[ "@id" ], "text": e.text }) )] : errorResponse );
+			Utils.trace(this, "KatApp", "apiAsync", "Unable to process " + endpoint, TraceVerbosity.None, errorResponse!.errors != undefined ? [errorResponse, this.state.errors] : errorResponse );
 
 			await this.triggerEventAsync("apiFailed", apiUrl.endpoint, errorResponse, trigger, apiOptions);
 
@@ -1609,6 +1612,7 @@ class KatApp implements IKatApp {
 			);
 		
 		delete inputs.getNumber;
+		delete inputs.getOptionText;
 		return inputs;
 	}
 
@@ -1786,7 +1790,7 @@ class KatApp implements IKatApp {
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
 
-			const selectContent = this.select(options.contentSelector);
+			const selectContent = this.select(options.contentSelector); // .not("template " + options.contentSelector);
 
 			if (selectContent.length == 0) {
 				throw new Error(`The content selector (${options.contentSelector}) did not return any content.`);
@@ -2743,12 +2747,9 @@ class KatApp implements IKatApp {
 					}
 
 					template.content.querySelectorAll("style, script").forEach(templateItem => {
-						// Third parameter is 'scope', but I'm not sure that is every going to be needed, but maybe
-						// think about supporting a 'scope="{}"' attribute on script where it would be grabbing info
-						// from 'current scope' and passing it into this templates mount function, then remove scope attribute
 						addMountAttribute(templateItem, "mounted", `_templateItemMounted('${template.id}', $el, $data)`);
 						if (templateItem.tagName == "SCRIPT") {
-							addMountAttribute(templateItem, "unmounted", `_templateItemUnmounted('${template.id}', $el)`);
+							addMountAttribute(templateItem, "unmounted", `_templateItemUnmounted('${template.id}', $el, $data)`);
 						}
 					});
 

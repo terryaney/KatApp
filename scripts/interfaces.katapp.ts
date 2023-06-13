@@ -153,7 +153,7 @@ interface IConfigureOptions {
 
 interface IHandlers extends IStringAnyIndexer { };
 	
-interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | ((inputId: string) => number | undefined) | undefined> {
+interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | ((inputId: string) => number | undefined) | ((inputId: string) => string | undefined) | undefined> {
 	iConfigureUI?: string;
 	iDataBind?: string;
 	iInputTrigger?: string;
@@ -161,6 +161,7 @@ interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTa
 	iModalApplication?: string;
 	tables?: ICalculationInputTable[];
 	getNumber?: (inputId: string) => number | undefined;
+	getOptionText?: (inputId: string) => string | undefined;
 }
 
 interface IApplicationData {
@@ -310,6 +311,8 @@ interface IApiErrorResponse {
 	type: string;
 	errors?: IStringIndexer<Array<string>>;
 	warnings?: IStringIndexer<Array<string>>;
+	errorsDependsOn?: IStringIndexer<string>;
+	warningsDependsOn?: IStringIndexer<string>;
 
 	// extensions
 	exceptions?: Array<IExceptionDetail>;
@@ -416,7 +419,8 @@ interface IKaInputModelHelp {
 interface IKaInputModelListRow extends ITabDefRow { key: string; text: string; }
 
 interface IKaInputScope {
-	$template: string | undefined; // from markup
+	readonly $template: string | undefined; // from markup
+	readonly $renderId: string | undefined; // generated
 
 	readonly id: string; // generated
 	readonly name: string; // from markup
@@ -503,6 +507,8 @@ interface IKaInputGroupModel {
 }
 interface IKaInputGroupScope {
 	readonly $template: string | undefined; // from markup
+	readonly $renderId: string; // generated
+
 	readonly type: string; // from markup
 
 	id: ( index: number ) => string; // generated
