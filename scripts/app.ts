@@ -1373,16 +1373,16 @@ class KatApp implements IKatApp {
 
 			if (errorResponse.errors != undefined) {
 				for (var id in errorResponse.errors) {
-					this.state.errors.push({ "@id": id, text: errorResponse.errors[id][0], dependsOn: errorResponse.errorsDependsOn?.[id] });
+					this.state.errors.push({ "@id": id, text: this.getLocalizedString(errorResponse.errors[id][0])!, dependsOn: errorResponse.errorsDependsOn?.[id] });
 				}
 			}
 			if (this.state.errors.length == 0) {
-				this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+				this.state.errors.push({ "@id": "System", text: this.getLocalizedString("An unexpected error has occurred.  Please try again and if the problem persists, contact technical support.")! });
 			}
 
 			if (errorResponse.warnings != undefined) {
 				for (var id in errorResponse.warnings) {
-                    this.state.warnings.push({ "@id": id, text: errorResponse.warnings[id][0], dependsOn: errorResponse.warningsDependsOn?.[id] });
+                    this.state.warnings.push({ "@id": id, text: this.getLocalizedString(errorResponse.warnings[id][0])!, dependsOn: errorResponse.warningsDependsOn?.[id] });
 				}
 			}
 

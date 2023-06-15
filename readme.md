@@ -106,8 +106,9 @@ When multiple CalcEngines or result tabs are used, additional information can be
 Entity | Description
 ---|---
 templates | Attribute; Comma delimitted list of Kaml Template Files required by this Kaml View.  Each template is specified in Folder:FileName syntax.
+no-kaml-package | Attribute; When `true`, indicates that the Kaml View is not part of a Kaml Package and should not attempt to download *.js, *.css, or *.templates files when working in [debugResourcesDomain](#IKatAppDebugOptions) mode. By default it will attempt to download each one, and if not found, will continue properly, but report a 404 in browser console.  You can additionally provide a comma delimitted list of types to skip: `css`, `js`, `templates`.
 calc&#x2011;engine | Element; If one or more CalcEngines are used in Kaml View, specify each one via a `calc-engine` element.
-key | Attribute; When more than one CalcEngine is provided (or if you need to access [Manual Results](#manualResults)), a CalcEngine is referenced by this key; usually via a `ce` property passed into a Vue directive.
+key | Attribute; When more than one CalcEngine is provided (or if you need to access [Manual Results](#imanualtabdef)), a CalcEngine is referenced by this key; usually via a `ce` property passed into a Vue directive.
 name | Attribute; The name of the CalcEngine.
 input&#x2011;tab | Attribute; The name of the tab where KatApp framework should inject inputs. Default is `RBLInput`.
 result&#x2011;tabs | Attribute; Comma delimitted list of result tabs to process during RBLe Calculation. When more than one result tab is provided, the tab is referenced by name; usually via a `tab` property passed into a Vue directive. Default is `RBLResult`.
