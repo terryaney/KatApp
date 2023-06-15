@@ -635,6 +635,10 @@ class KatApp implements IKatApp {
 		try {
 			Utils.trace(this, "KatApp", "mountAsync", `Start`, TraceVerbosity.Detailed);
 
+			if (this.options.view != undefined) {
+				this.el.attr("data-view-name", this.options.view);
+			}
+			
 			const viewElement = await this.getViewElementAsync();
 
 			// TODO: Should this just be 'view.kaml' instead of the 'guid' id?

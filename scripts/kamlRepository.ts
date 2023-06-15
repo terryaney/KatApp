@@ -230,44 +230,81 @@
 				if (tryLocalWebServer) {
 					const resourcePath = resourceKey.split("?")[0];
 					const resourceKeyParts = resourcePath.split("/");
-					const fileName = resourceKeyParts[resourceKeyParts.length - 1];
+					// Templates have : in name so need to skip folder if present
+					const fileNameParts = resourceKeyParts[resourceKeyParts.length - 1].split(":")
+                    const fileName = fileNameParts[fileNameParts.length - 1];
 
-					const resourceTypesToSkip = content.match(/no-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
+					const resourceTypesToProcess = content.match(/local-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
 
-                    if (fileName.endsWith(".kaml") && resourceTypesToSkip.indexOf("true") == -1 && content.indexOf("<script>") == -1 && content.indexOf("<style>") == -1) {
-                        const jsResult = resourceTypesToSkip.indexOf("js") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
-                        const cssResult = resourceTypesToSkip.indexOf("css") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
-                        const templateResult = resourceTypesToSkip.indexOf("templates") != -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
+                    if (fileName.endsWith(".kaml") && (resourceTypesToProcess.length > 0 || fileName.toLowerCase().startsWith("templates."))) {
+                        const jsResult = resourceTypesToProcess.indexOf("js") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
+                        const cssResult = resourceTypesToProcess.indexOf("css") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
+                        const templateResult = resourceTypesToProcess.indexOf("templates") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
 
 						const lines = content.split("\n");
+						const templateScriptPattern = /^<template[^>]* id="[^"]+"([^>]* script="(?<script>[^"]+)")?([^>]* script\.setup="(?<setup>[^"]+)")?[^>]*>\s*$/;
+						let templateMatch: RegExpMatchArray | null = null;
 
-						content = lines.map((line, index) => {
-							if (line.indexOf("</rbl-config>") >= 0) {
-                                if (jsResult?.data != undefined) {
-                                    line += `
+						const contentLines = await Promise.all(
+							lines.map(async (line, index) => {
+								if (line.indexOf("</rbl-config>") >= 0) {
+									if (jsResult?.data != undefined) {
+										line += `
 <script>
 	(function () {
 ${jsResult.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
 	})();
+	//# sourceURL=${fileName}
 </script>
 `;
-                                }
+									}
 
-								if (cssResult?.data != undefined) {
-                                    line += `
+									if (cssResult?.data != undefined) {
+										line += `
 <style>
 ${cssResult.data.split("\n").map(cssLine => "\t" + cssLine).join("\n")}
 </style>
 `;
-                                }
+									}
 
-								if (index == lines.length - 1 && templateResult?.data != undefined) {
-                                    line += "\n" + templateResult.data.split("\n").map(templateLine => "\t" + templateLine).join("\n");
-                                }
-							}
+									if (index == lines.length - 1 && templateResult?.data != undefined) {
+										line += "\n" + templateResult.data.split("\n").map(templateLine => "\t" + templateLine).join("\n");
+									}
+								}
+								else if ((templateMatch = line.match(templateScriptPattern)) != null) {
+									const setup = templateMatch.groups?.setup;
+									const script = templateMatch.groups?.script;
 
-							return line;
-						}).join("\n");						
+									if (setup != undefined) {
+										const scriptFileName = `${fileName}.${setup}.js`;
+										const templateScriptFile = await this.downloadResourceAsync(resourceUrl.replace(fileName, scriptFileName), true);
+										if (templateScriptFile?.data != undefined) {
+											line += `
+	<script setup>
+${templateScriptFile.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
+		//# sourceURL=${scriptFileName}
+	</script>
+`;
+										}
+									}
+									if (script != undefined) {
+										const scriptFileName = `${fileName}.${script}.js`;
+										const templateScriptFile = await this.downloadResourceAsync(resourceUrl.replace(fileName, scriptFileName), true);
+										if (templateScriptFile?.data != undefined) {
+											line += `
+	<script>
+${templateScriptFile.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
+		//# sourceURL=${scriptFileName}
+	</script>
+`;
+										}
+									}
+								}
+								return line;
+							})
+						);
+
+						content = contentLines.join("\n");
 					}
 				}
 
