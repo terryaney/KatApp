@@ -32,7 +32,7 @@ class InputComponentBase extends TemplateBase {
 	private static cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
 		return ((str: string) => {
 			const hit = this.stringCache[str]
-			return hit || (this.stringCache[str] = fn(str))
+			return hit ?? (this.stringCache[str] = fn(str))
 		}) as T;
 	}
 

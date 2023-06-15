@@ -752,7 +752,7 @@ class DirectiveKaHighchart implements IKaDirective {
 		const seriesFormats = seriesColumns
 			// Ensure the series/column is visible
 			.filter(seriesName => seriesConfigurationRows.filter(c => c.category === "config-visible" && c[seriesName] === "0").length === 0)
-			.map(seriesName => configFormat?.[seriesName] || "c0");
+			.map(seriesName => configFormat?.[seriesName] ?? "c0");
 
 		return {
 			formatter: function () {
@@ -1206,14 +1206,14 @@ class DirectiveKaTable implements IKaDirective {
 							const colGroupDef = document.createElement("colgroup");
 							tableColumns.forEach(c => {
 								const width = c.width !== undefined || c.widthPct !== undefined
-									? ` width="${c.widthPct || (c.width + "px")}"`
+									? ` width="${c.widthPct ?? (c.width + "px")}"`
 									: "";
 
 								const col = document.createElement("col");
 								col.setAttribute("class", `${scope.name}-${c.name}`);
 
 								if (c.width !== undefined || c.widthPct !== undefined) {
-									col.setAttribute("width", c.widthPct || (c.width + "px"));
+									col.setAttribute("width", c.widthPct ?? (c.width + "px"));
 								}
 
 								colGroupDef.append(col);

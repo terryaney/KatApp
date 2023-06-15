@@ -647,7 +647,7 @@ class KatApp implements IKatApp {
 				if (value == undefined) return value;
 
 				return value.replace(/{([^}]+)}/g, function (match, token) {
-					return inputs?.[token] as string || match;
+					return inputs?.[token] as string ?? match;
 				});
 			};
 
