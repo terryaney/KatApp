@@ -235,14 +235,15 @@
                     const fileName = fileNameParts[fileNameParts.length - 1];
 
 					const resourceTypesToProcess = content.match(/local-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
+					const processTemplateItems = fileName.toLowerCase().startsWith("templates.") || resourceTypesToProcess.indexOf("template.items") > -1;
 
-                    if (fileName.endsWith(".kaml") && (resourceTypesToProcess.length > 0 || fileName.toLowerCase().startsWith("templates."))) {
+                    if (fileName.endsWith(".kaml") && (resourceTypesToProcess.length > 0 || processTemplateItems)) {
                         const jsResult = resourceTypesToProcess.indexOf("js") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);
                         const cssResult = resourceTypesToProcess.indexOf("css") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".css"), true);
                         const templateResult = resourceTypesToProcess.indexOf("templates") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".templates"), true);
 
 						const lines = content.split("\n");
-						const templateScriptPattern = /^<template[^>]* id="[^"]+"([^>]* script="(?<script>[^"]+)")?([^>]* script\.setup="(?<setup>[^"]+)")?[^>]*>\s*$/;
+						const templateScriptPattern = /^<template[^>]* id="[^"]+"([^>]* script="(?<script>[^"]+)")?([^>]* script\.setup="(?<setup>[^"]+)")?([^>]* css="(?<css>[^"]+)")?[^>]*>\s*$/;
 						let templateMatch: RegExpMatchArray | null = null;
 
 						const contentLines = await Promise.all(
@@ -271,9 +272,10 @@ ${cssResult.data.split("\n").map(cssLine => "\t" + cssLine).join("\n")}
 										line += "\n" + templateResult.data.split("\n").map(templateLine => "\t" + templateLine).join("\n");
 									}
 								}
-								else if ((templateMatch = line.match(templateScriptPattern)) != null) {
+								else if (processTemplateItems && (templateMatch = line.match(templateScriptPattern)) != null) {
 									const setup = templateMatch.groups?.setup;
 									const script = templateMatch.groups?.script;
+									const css = templateMatch.groups?.css;
 
 									if (setup != undefined) {
 										const scriptFileName = `${fileName}.${setup}.js`;
@@ -296,6 +298,17 @@ ${templateScriptFile.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
 ${templateScriptFile.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
 		//# sourceURL=${scriptFileName}
 	</script>
+`;
+										}
+									}
+									if (css != undefined) {
+										const scriptFileName = `${fileName}.${css}.css`;
+										const templateScriptFile = await this.downloadResourceAsync(resourceUrl.replace(fileName, scriptFileName), true);
+										if (templateScriptFile?.data != undefined) {
+											line += `
+	<style>
+${templateScriptFile.data.split("\n").map(jsLine => "\t\t" + jsLine).join("\n")}
+	</style>
 `;
 										}
 									}
