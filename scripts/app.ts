@@ -543,6 +543,7 @@ class KatApp implements IKatApp {
 					// apiAsync already traces error, so I don't need to do again
 					if (!(error instanceof ApiError)) {
 						Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
+						this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
 					}
 				}
 			}
