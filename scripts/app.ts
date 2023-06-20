@@ -1657,7 +1657,7 @@ class KatApp implements IKatApp {
 		const cultureStrings = this.options.resourceStrings?.[currentCulture];
 		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
 
-		const value = key == undefined
+		const resource = key == undefined
 			? defaultValue
 			: cultureStrings?.[key] ??
 				baseCultureStrings?.[key] ??
@@ -1665,7 +1665,8 @@ class KatApp implements IKatApp {
 				defaultLanguageStrings?.[key] ??
 				defaultValue ??
 				key;
-
+		
+		const value = typeof resource == "object" ? resource.text : resource;
 		return value == undefined ? undefined : String.formatTokens(value, formatObject ?? {} );
 	}
 

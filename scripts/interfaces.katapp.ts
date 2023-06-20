@@ -46,7 +46,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 
 	inputs?: ICalculationInputs;
 	manualResults?: IManualTabDef[];
-	resourceStrings?: IStringIndexer<IStringIndexer<string>>;
+	resourceStrings?: IStringIndexer<IStringIndexer<string | { text: string }>>;
 	manualResultsEndpoint?: string;
 	resourceStringsEndpoint?: string;
 	relativePathTemplates?: IStringIndexer<string>;
