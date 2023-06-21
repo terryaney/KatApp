@@ -131,6 +131,17 @@
 	};
 
 	private static async downloadResourceAsync(url: string, tryLocalWebServer: boolean): Promise<{ data?: string, errorMessage?: string }> {
+		const requestHeaders: IStringAnyIndexer = {};
+		const getResponseHeaders = function( jqXHR: XMLHttpRequest): IStringIndexer<string> {
+			const headers = jqXHR.getAllResponseHeaders().split( "\r\n" ).filter( h => ( h ?? "" ).length > 0 );
+			const result: IStringIndexer<string> = {};
+			headers.forEach(h => {
+				const pos = h.indexOf(":");
+				result[h.substring(0, pos)] = h.substring(pos + 1).trim();
+			});
+			return result;
+		}
+
 		const requestConfig: IStringAnyIndexer = {
 			converters: {
 				'text script': function (text: string): string {
@@ -138,7 +149,16 @@
 				}
 			},
 			url: url,
-			cache: !tryLocalWebServer
+			cache: !tryLocalWebServer,
+			xhr: function () {
+				const xhr = new XMLHttpRequest();
+				const originalSetRequestHeader = xhr.setRequestHeader;
+				xhr.setRequestHeader = function (header, value) {
+					requestHeaders[header] = value;
+					originalSetRequestHeader.call(this, header, value);
+				};
+				return xhr;
+			}
 		};
 
 		if (!tryLocalWebServer) {
@@ -147,7 +167,7 @@
 			requestConfig["headers"] = { 'Cache-Control': 'max-age=0' };
 		}
 
-		try {
+        try {
 			const result = await $.ajax(requestConfig);
 			const isRelativePath = String.compare(url.substring(0, 4), "http", true) != 0;
 
@@ -164,8 +184,18 @@
 
 			return downloadResult;
 		} catch (error) {
-			console.log({ error });
-			return { errorMessage: (error as XMLHttpRequest).statusText };
+			const jqXHR = error as XMLHttpRequest;
+			console.log(
+				{
+					url: requestConfig.url,
+					cache: requestConfig.cache,
+					status: jqXHR.status,
+					statusText: jqXHR.statusText,
+					requestHeaders: requestHeaders,
+					responseHeaders: getResponseHeaders(jqXHR)
+				}
+			);
+			return { errorMessage: jqXHR.statusText };
 		}
 	};
 
