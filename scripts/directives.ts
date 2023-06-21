@@ -950,6 +950,7 @@ class DirectiveKaHighchart implements IKaDirective {
 		else if (!isNaN(d) && value !== "") return d;
 		else if (String.compare(value, "true", true) === 0) return true;
 		else if (String.compare(value, "false", true) === 0) return false;
+		else if (value.startsWith("resource:")) return this.application?.getLocalizedString(value.substring(9));
 		else if (value.startsWith("json:")) return JSON.parse(value.substring(5));
 		else if (value.startsWith("var ")) {
 			// Not sure this is ever used because it doesn't appear to work.

@@ -1630,16 +1630,9 @@ The model used to configure how a `v-ka-resource` will find the appropriate tran
 // Model specifying a key and reactive calculation value
 { 'key': 'Retirement.Summary', 'name': 'Fred', get savings() { return rbl.value('total-savings'); } }
 ```
+See [application.getLocalizedString](#ikatappgetlocalizedstring) for full documentation.
 
-The flow for locating a localized string is as follows:
-
-1. Use localized string for full 'languagecode-country/regioncode' if present.
-1. Used localized string for 'languagecode' if present.
-1. Use localized string for 'en-us' if present.
-1. Use localized string for 'en' if present.
-1. Use the `key` value when no localized string is found.
-
-The `v-ka-resource` directive has a couple shorthand capabilities which allows for more terse markup.
+The `v-ka-resource` directive has a couple shorthand capabilities which allows for more terse markup, see samples below for supported markup.
 
 ### v-ka-resource Samples
 
@@ -3019,6 +3012,7 @@ Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
 numeric | numeric | If the value returned can be parsed into a number, a numeric value will be assigned to the property value.
 `true` or `false` | boolean |  If a value of `true` or `false` (case insensitive) is returned, a `boolean` value will be assigned to the property value.
 `json:{ name: value }` | object | If a value starting with `json:` is returned, the json text will be parsed and the resulting object will be assigned to the property value.
+`resource:key` | string | If a value starting with `resource:` is returned, the resource information will be passed to [getLocalizedString](#ikatappgetlocalizedstring) and the resulting string will be assigned to the property value.
 `eval [1,2]` | any | If a value starting with `eval ` is returned, the text following the `eval` prefix is _parsed and evaluated_ as Javascript and the resulting value (can be any type) is assigned to the property value.  In the example shown here, an integer array of `[1,2]` would be assigned to the property.  Assigning properties of type array are most common use of this syntax.
 `function () { ... }` | function: any | For API properties that can be assigned a function, if a value starting with `function ` is returned, it will be parsed as a valid function and assigned to the property.
 
@@ -3756,6 +3750,14 @@ Setting `expireCache` to `true` instructs the RBLe Framework to immediately chec
 
 `getLocalizedString` returns the localized 'content' of the requested requested key based on the KatApp's [`options.currentUICulture'](#ikatappoptionscurrentuiculture).  In the KatApp markup/html, a [v-ka-resource](#v-ka-resource) will be used, but if a localized string is needed inside of a KatApp's `script` section, this method can be used.
 
+The flow for locating a localized string is as follows:
+
+1. Use localized string for full 'languagecode-country/regioncode' if present.
+1. Used localized string for 'languagecode' if present.
+1. Use localized string for 'en-us' if present.
+1. Use localized string for 'en' if present.
+1. Use the `key` value when no localized string is found.
+
 **Note**: 'key' can also be a complete json string representation of the model if needed.  Usually when generate from RBLe Framework calculations.  When the `key` is the entire model, there **must** be a `key` property on the model and every property name and value **must be enclosed in double quotes**.
 
 ```javascript
@@ -3777,8 +3779,6 @@ application.getLocalizedString('Name.First', undefined, 'Default value for Name 
 // Returns string with 'Good morning Terry, how are you?'.
 application.getLocalizedString(rbl.value('greeting'));
 ```
-
-See `v-ka-resource` for full documentation.
 
 ### IKatApp Lifecycles
 
