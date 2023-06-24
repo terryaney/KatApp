@@ -65,10 +65,10 @@ interface IManualTabDef extends IStringIndexer<string | undefined | ITabDefTable
 }
 
 interface ITabDef extends IStringIndexer<ITabDefTable> { }
-interface ITabDefTable extends Array<ITabDefRow> { };
-interface ITabDefRow extends IStringIndexer<string> { };
-interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { };
-interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { };
+interface ITabDefTable extends Array<ITabDefRow> { }
+interface ITabDefRow extends IStringIndexer<string> { }
+interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { }
+interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { }
 
 interface IKatAppStatic {
 	getDirty(): Array<IKatApp>;
@@ -151,7 +151,7 @@ interface IConfigureOptions {
 	events: IKatAppEventsConfiguration;
 }
 
-interface IHandlers extends IStringAnyIndexer { };
+interface IHandlers extends IStringAnyIndexer { }
 	
 interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | ((inputId: string) => number | undefined) | ((inputId: string) => string | undefined) | undefined> {
 	iConfigureUI?: string;
@@ -225,6 +225,7 @@ interface IValidation {
 	text: string;
 	dependsOn?: string;
 	event?: string;
+	initialization?: boolean;
 }
 
 interface IRblApplicationData {
@@ -326,7 +327,7 @@ interface IExceptionDetail {
 	type: string;
 	stackTrace: Array<string>;
 	innerException?: IExceptionDetail;
-};
+}
 
 interface INavigationOptions {
 	inputs?: ICalculationInputs;

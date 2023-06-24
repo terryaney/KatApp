@@ -1,0 +1,6 @@
+{
+	"explorer.fileNesting.patterns": {
+		"directives.ts": "directives.*.ts",
+		"interfaces.katapp.ts": "interfaces.katapp.*.ts"
+	}
+}

@@ -760,8 +760,7 @@ class KatApp implements IKatApp {
 					}
 
 					if (this.options.modalAppOptions?.headerTemplate != undefined) {
-						this.select(".modal-header")
-							.removeClass("d-none")
+						this.select(".modal-header.valid-content")
 							.attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.headerTemplate + "'})")
 							.children().remove();
 					}
@@ -773,8 +772,6 @@ class KatApp implements IKatApp {
 				}
 			}
 			await this.triggerEventAsync("initialized");
-
-			const initializedErrors = this.state.errors.length > 0;
 
 			if (this.options.manualResults != undefined) {
 				const hasCalcEngines = this.calcEngines.length > 0;
@@ -817,7 +814,7 @@ class KatApp implements IKatApp {
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
-			if (!cloneHost && !initializedErrors && isConfigureUICalculation) {
+			if (!cloneHost && this.state.errors.length == 0 && isConfigureUICalculation) {
 				this.handleEvents(events => {
 					events.calculationErrors = async (key, exception) => {
 						if (key == "SubmitCalculation.ConfigureUI") {
@@ -829,6 +826,9 @@ class KatApp implements IKatApp {
 				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
 				await this.calculateAsync({ _iConfigureUI: "1", iConfigureUI: "1", iDataBind: "1" });
 			}
+
+			this.state.errors.forEach(error => error.initialization = true);
+			const initializationErrors = this.state.errors.length > 0;
 
 			this.vueApp = PetiteVue.createApp(this.state);
 
@@ -843,7 +843,7 @@ class KatApp implements IKatApp {
 			this.vueApp.mount(this.selector);
 			this.isMounted = true;
 
-			if (!initializedErrors && !cloneHost) {
+			if (!initializationErrors && !cloneHost) {
 				// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
 				if (isConfigureUICalculation && this.lastCalculation) {
 					await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
@@ -862,10 +862,10 @@ class KatApp implements IKatApp {
 			await this.processDomElementsAsync(); // process main application
 
 			this.state.inputsChanged = false; // If needed, rendered can have some logic  set to true if needed
-			await this.triggerEventAsync("rendered", initializedErrors ? this.state.errors : undefined);
+			await this.triggerEventAsync("rendered", initializationErrors ? this.state.errors : undefined);
 			
 			if (this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == "1") {
-				await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppRendered", this, initializedErrors ? this.state.errors : undefined);
+				await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppRendered", this, initializationErrors ? this.state.errors : undefined);
 			}
 		} catch (ex) {
 			if (ex instanceof KamlRepositoryError) {
@@ -911,19 +911,31 @@ class KatApp implements IKatApp {
 			(this.options.modalAppOptions.contentSelector != undefined ? `selector: ${this.options.modalAppOptions.contentSelector}` : "static content");
 		
 		const modal = $(
-			`<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${viewName}">\
+			`<div v-scope class="modal fade kaModal" :data-bs-keyboard="application.options.modalAppOptions.labels.title != undefined" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${viewName}">\
                 <div class="modal-dialog">\
-                    <div class="modal-content">\
-						<div v-if="uiBlocked" class="ui-blocker"></div>
-
-						<div class="modal-header d-none">\
-							<h5 class="modal-title"></h5>\
-							<button type="button" class="btn-close" aria-label="Close"></button>\
+                    <div class="modal-content" v-scope="{\
+							get hasInitializationError() { return application.state.errors.find( r => r.initialization ) != undefined; },\
+							get title() { return application.options.modalAppOptions.labels.title },\
+							get hasHeaderTemplate() { return application.options.modalAppOptions.headerTemplate != undefined }\
+						}">\
+						<div v-if="uiBlocked" class="ui-blocker"></div>\
+						<div v-if="title != undefined || hasHeaderTemplate">\
+							<div v-if="hasInitializationError" class="modal-header invalid-content">\
+								<h5 class="modal-title" v-html="title ?? ''"></h5>\
+								<button type="button" class="btn-close" aria-label="Close"></button>\
+							</div>\
+							<div v-if="!hasInitializationError" class="modal-header valid-content">\
+								<h5 class="modal-title" v-html="title"></h5>\
+								<button type="button" class="btn-close" aria-label="Close"></button>\
+							</div>\
 						</div>\
-	                    <div class="modal-body"></div>\
+						<div class="modal-body"></div>\
                         <div class="modal-footer">\
-							<div class="modal-footer-buttons text-center d-none">\
-								<button type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\
+							<div v-if="hasInitializationError" class="modal-invalid-footer-buttons text-center d-none">\
+								<button type="button" :class="[\'${cssContinue}\', \'continueButton\']">Close</button>\
+	                        </div>\
+							<div v-if="!hasInitializationError" class="modal-footer-buttons text-center d-none">\
+								<button v-if="application.options.modalAppOptions.showCancel" type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\
 								<button type="button" :class="[\'${cssContinue}\', \'continueButton\', { disabled: uiBlocked}]">${labelContinue}</button>\
 	                        </div>\
                         </div>\
@@ -936,17 +948,6 @@ class KatApp implements IKatApp {
 		}
 		if (options.size != undefined) {
 			$(".modal-dialog", modal).addClass("modal-dialog-centered modal-" + options.size);
-		}
-
-		const title = options.labels!.title;
-
-		if (title != undefined) {
-			$(".modal-title", modal).html(title);
-			$(".modal-header", modal).removeClass("d-none");
-		}
-		else {
-			$(".btn-close", modal).remove();
-			modal.attr("data-bs-keyboard", "false");
 		}
 
 		if (this.options.modalAppOptions.view != undefined) {
@@ -1009,7 +1010,7 @@ class KatApp implements IKatApp {
 		const hasCustomHeader = options.headerTemplate != undefined;
 		const hasCustomButtons = options.buttonsTemplate != undefined;
 		// If custom buttons, framework should ignore the options (kaml can use them)
-		const showCancel = hasCustomButtons || ( options.showCancel ?? true );
+		const tryCancelClickOnClose = hasCustomButtons || ( options.showCancel ?? true );
 
 		// Could put an options about whether or not to set this
 		// this.el.attr("data-bs-keyboard", "false");
@@ -1023,7 +1024,7 @@ class KatApp implements IKatApp {
 				else if (options.closeButtonTrigger != undefined) {
 					that.select(options.closeButtonTrigger)[0].click();
 				}
-				else if (showCancel) {
+				else if (tryCancelClickOnClose) {
 					if (that.select(".modal-footer-buttons .cancelButton").length == 1) {
 						that.select(".modal-footer-buttons .cancelButton")[0].click();
 					}
@@ -1042,42 +1043,27 @@ class KatApp implements IKatApp {
 			}
 		};
 
-		if (isInvalid) {
-			const hasCloseButton = this.select(".modal-header .btn-close").length == 1;
-			this.select(".modal-footer-buttons button, .modal-footer-buttons a.btn, .modal-header .btn-close").remove();
-			this.select(".modal-footer-buttons").append($(`<button type="button" class="${options.css!.continue} continueButton">Close</button>`));
-			if (hasCloseButton) {
-				this.select(".modal-header").append($('<button type="button" class="btn-close" aria-label="Close"></button>'));
-			}
-			this.select('.modal-footer-buttons .continueButton, .modal-header .btn-close').on("click.ka", async (e) => {
-				e.preventDefault();
-				await options.cancelled!();
-			});
+		this.select('.modal-invalid-footer-buttons .continueButton, .modal-header.invalid-content .btn-close').on("click.ka", async (e) => {
+			e.preventDefault();
+			await options.cancelled!();
+		});
+		if (!hasCustomHeader) {
+			this.select(".modal-header.valid-content .btn-close").on("click.ka", async e => await closeButtonClickAsync(e) );
 		}
-		else {
-			if (!hasCustomHeader) {
-				this.select(".modal-header .btn-close").on("click.ka", async e => await closeButtonClickAsync(e) );
-			}
-
-			if (!hasCustomButtons) {
-				this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
-					e.preventDefault();
-					await options.confirmedAsync!();
-				});
-				this.select('.modal-footer-buttons .cancelButton').on("click.ka", function (e) {
-					e.preventDefault();
-					options.cancelled!();
-				});
-
-				if (!showCancel) {
-					this.select('.modal-footer-buttons .cancelButton').remove();
-				}
-			}
+		if (!hasCustomButtons) {
+			this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
+				e.preventDefault();
+				await options.confirmedAsync!();
+			});
+			this.select('.modal-footer-buttons .cancelButton').on("click.ka", function (e) {
+				e.preventDefault();
+				options.cancelled!();
+			});
 		}
 
 		this.el
 			.on("shown.bs.modal", () => {
-				that.select(".modal-footer-buttons").removeClass("d-none");
+				that.select(".modal-footer-buttons, .modal-invalid-footer-buttons").removeClass("d-none");
 				d.resolve(true);
 			})
 			// Triggered when ESC is clicked (when programmatically closed, this isn't triggered)
