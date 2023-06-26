@@ -187,7 +187,7 @@ class InputComponentBase extends TemplateBase {
 		
 					// Note: this doesn't work in android chrome
 					input.addEventListener("beforeinput", (event: InputEvent) => {
-						if (event.inputType == "insertText" && event.data != null && !kpRegex.test(event.data)) {
+						if (event.inputType == "insertText" && event.data != null && kpRegex.test(event.data)) {
 							event.preventDefault();
 						}
 					});
