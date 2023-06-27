@@ -238,6 +238,17 @@ class InputComponentBase extends TemplateBase {
 							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
 										
 							switch ( isMoney ? "money" : inputMask ) {
+								case "email":
+									{
+										if (event.key.match(/[A-Za-z0-9.@_-]/) === null) {
+											event.preventDefault();
+										}
+										else if (event.key == "@" && target.value.indexOf("@") > -1) {
+											event.preventDefault();
+										}
+										break;
+									}
+
 								case "zip+4":
 								case "#####-####":
 									{
@@ -327,17 +338,26 @@ class InputComponentBase extends TemplateBase {
 							}
 						});
 						
-						input.addEventListener("keyup", (event: KeyboardEvent) => {
+						const kuEmailRegex = new RegExp(`[^A-Za-z0-9.@_-]`, "g");
+						input.addEventListener("input", (event: Event) => {
 							const target = event.target as HTMLInputElement;
 							const inputMask = target.getAttribute("ka-mask");
 							const selectionStart = target.selectionStart;
-							const isBackspace = event.code == "Backspace" || event.key == "Backspace";
-	
-							if (isBackspace && selectionStart == target.value.length) {
-								return; // Do nothing
+							const isBackspace = (event as InputEvent).inputType == "deleteContentBackward";
+							const isDelete = (event as InputEvent).inputType == "deleteContentForward";
+							const isPaste = (event as InputEvent).inputType == "insertFromPaste";
+
+							if ( isBackspace && selectionStart == target.value.length ) {
+								return;
 							}
-				
+
 							switch (inputMask) {
+								case "email":
+									{
+										target.value = target.value.replace(kuEmailRegex, "");
+										break;
+									}
+
 								case "zip+4":
 								case "#####-####":
 									{
@@ -418,8 +438,8 @@ class InputComponentBase extends TemplateBase {
 										break;
 									}
 							}
-	
-							if (isBackspace || event.code == "Delete") {
+
+							if (isBackspace || isDelete) {
 								target.selectionStart = target.selectionEnd = selectionStart;
 							}
 						});
