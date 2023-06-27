@@ -182,15 +182,15 @@ class InputComponentBase extends TemplateBase {
 				const inputKeypressRegex = keypressRegex(name);
 
 				if (inputKeypressRegex != null) {
-					const kpRegex = new RegExp(inputKeypressRegex);
-					const kpInputRegex = new RegExp(`[^${inputKeypressRegex}]$`, "g");
-		
 					// Note: this doesn't work in android chrome
+                    const kpBeforeInputRegex = new RegExp(`[${inputKeypressRegex}]`);	
 					input.addEventListener("beforeinput", (event: InputEvent) => {
-						if (event.inputType == "insertText" && event.data != null && kpRegex.test(event.data)) {
+						if (event.inputType == "insertText" && event.data != null && kpBeforeInputRegex.test(event.data)) {
 							event.preventDefault();
 						}
 					});
+
+                    const kpInputRegex = new RegExp(`[^${inputKeypressRegex}]`, "g");
 					input.addEventListener("input", (event: Event) => {
 						const target = event.target as HTMLInputElement;
 						target.value = target.value.replace(kpInputRegex, "");
