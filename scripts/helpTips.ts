@@ -119,60 +119,63 @@
 			.not('[ka-init-tip="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);
-				const isTooltip = tipElement.attr("data-bs-toggle") == "tooltip";
 
-				// When helptip <a/> for checkboxes were moved inside <label/>, attempting to click the help icon simply toggled
-				// the radio/check.  This stops that toggle and lets the help icon simply trigger it's own click to show or hide the help.
-				if (tipElement.parent()[0].tagName == "LABEL" && tipElement.parent().parent().find("input[type=checkbox]").length > 0) {
-					tipElement.on('click', function (e) {
-						e.stopPropagation();
-						return false;
-					});
-				}
+				if (tipElement.parent("template").length == 0) {
+					const isTooltip = tipElement.attr("data-bs-toggle") == "tooltip";
 
-				const options: BootstrapTooltipOptions = {
-					html: true,
-					sanitize: false,
-					trigger: tipElement.attr('data-bs-trigger') as any ?? "hover",
-					// https://github.com/twbs/bootstrap/issues/22249#issuecomment-289069771
-					// There were some <a/> in popup from a kaModal that would not function properly until I changed the container.
-					container: tipElement.attr('data-bs-container') ?? ( isInsideModal ? ".kaModal" : "body" ),
-					template: isTooltip
-						? '<div class="tooltip katapp-css" role="tooltip"><div class="tooltip-arrow arrow"></div><div class="tooltip-inner"></div></div>'
-						: '<div v-scope class="popover katapp-css" role="tooltip"><div class="popover-arrow arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
-
-					placement: (tooltip, trigger) => {
-						// Add a class to the .popover element
-
-						// http://stackoverflow.com/a/19875813/166231
-						const t = $(trigger);
-						let dataClass = t.attr('data-bs-class');
-						if (dataClass != undefined) {
-							$(tooltip).addClass(dataClass);
-						}
-
-						// Did they specify a data-width?
-						dataClass = t.attr('data-bs-width') ?? "350";
-						// context is for popups, tooltip-inner is for tooltips (bootstrap css has max-width in css)
-						$(tooltip).add($(".tooltip-inner", tooltip))
-							.css("width", dataClass)
-							.css("max-width", dataClass);
-
-						return tipElement.attr('data-bs-placement') as any ?? "auto";
-					},
-					title: function () {
-						return getTipTitle($(this));
-					},
-					content: function () {
-						return getTipContent($(this));
+					// When helptip <a/> for checkboxes were moved inside <label/>, attempting to click the help icon simply toggled
+					// the radio/check.  This stops that toggle and lets the help icon simply trigger it's own click to show or hide the help.
+					if (tipElement.parent()[0].tagName == "LABEL" && tipElement.parent().parent().find("input[type=checkbox]").length > 0) {
+						tipElement.on('click', function (e) {
+							e.stopPropagation();
+							return false;
+						});
 					}
-				};
 
-				if (isTooltip) {
-					new bootstrap.Tooltip(tip, options);
-				}
-				else {
-					new bootstrap.Popover(tip, options);
+					const options: BootstrapTooltipOptions = {
+						html: true,
+						sanitize: false,
+						trigger: tipElement.attr('data-bs-trigger') as any ?? "hover",
+						// https://github.com/twbs/bootstrap/issues/22249#issuecomment-289069771
+						// There were some <a/> in popup from a kaModal that would not function properly until I changed the container.
+						container: tipElement.attr('data-bs-container') ?? ( isInsideModal ? ".kaModal" : "body" ),
+						template: isTooltip
+							? '<div class="tooltip katapp-css" role="tooltip"><div class="tooltip-arrow arrow"></div><div class="tooltip-inner"></div></div>'
+							: '<div v-scope class="popover katapp-css" role="tooltip"><div class="popover-arrow arrow"></div><h3 class="popover-header"></h3><div class="popover-body"></div></div>',
+
+						placement: (tooltip, trigger) => {
+							// Add a class to the .popover element
+
+							// http://stackoverflow.com/a/19875813/166231
+							const t = $(trigger);
+							let dataClass = t.attr('data-bs-class');
+							if (dataClass != undefined) {
+								$(tooltip).addClass(dataClass);
+							}
+
+							// Did they specify a data-width?
+							dataClass = t.attr('data-bs-width') ?? "350";
+							// context is for popups, tooltip-inner is for tooltips (bootstrap css has max-width in css)
+							$(tooltip).add($(".tooltip-inner", tooltip))
+								.css("width", dataClass)
+								.css("max-width", dataClass);
+
+							return tipElement.attr('data-bs-placement') as any ?? "auto";
+						},
+						title: function () {
+							return getTipTitle($(this));
+						},
+						content: function () {
+							return getTipContent($(this));
+						}
+					};
+
+					if (isTooltip) {
+						new bootstrap.Tooltip(tip, options);
+					}
+					else {
+						new bootstrap.Popover(tip, options);
+					}
 				}
 			})
 			.attr("ka-init-tip", "true");
