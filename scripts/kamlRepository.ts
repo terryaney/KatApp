@@ -235,10 +235,10 @@
 				// is usually Rel:Client/kaml or Rel:Container/Client/kaml.  So always just
 				// get the containing folder of the kaml to be used as the 'folder name'
 				// and the last part is simply the kaml file.
-				const relativeResourceConfig = resourceName.split('/').slice(-2);
+				const relativeResourceConfig = resourceName.split('/').slice(2);
 
 				localWebServerFolder = relativeResourceConfig[0];
-				localWebServerResource = relativeResourceConfig[1];
+				localWebServerResource = relativeResourceConfig.slice(1).join("/");
 			}
 
 			const localServerUrl = "https://" + currentOptions.debug.debugResourcesDomain + "/KatApp/" + localWebServerFolder + "/" + localWebServerResource;
