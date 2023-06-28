@@ -1666,7 +1666,7 @@ class KatApp implements IKatApp {
 
 		// Find template by precedence
 		for (var k in this.viewTemplates!) {
-			const tid = "#" + name + "_" + this.viewTemplates[k];
+			const tid = "#" + name + "_" + this.viewTemplates[k].replace(/\//g, "_");
 			if (document.querySelector(tid) != undefined) {
 				templateId = tid;
 				break;
@@ -2355,7 +2355,7 @@ class KatApp implements IKatApp {
 		// Put all template file <style> blocks into markup if not already added from previous app (host, modal, nested)
 		if (processingTemplates) {
 			const keyParts = resourceKey.split(":"); // In case "Rel:"
-			const containerId = keyParts[keyParts.length - 1].split("?")[0]; // Cache buster
+			const containerId = keyParts[keyParts.length - 1].split("?")[0].replace(/\//g, "_"); // Cache buster
 			const kamlTemplatesAdded = kaResources.querySelector(`style[ka=${containerId}]`) != undefined;
 
 			kaml.querySelectorAll<HTMLStyleElement>("style").forEach(s => {
@@ -2725,7 +2725,7 @@ class KatApp implements IKatApp {
 		kaml.querySelectorAll<HTMLTemplateElement>("template[id]")
 			.forEach(template => {
 				const keyParts = resourceKey.split(":"); // In case "Rel:"
-				const containerId = keyParts[keyParts.length - 1].split("?")[0]; // Cache buster
+				const containerId = keyParts[keyParts.length - 1].split("?")[0].replace(/\//g, "_"); // Cache buster
 				template.id = `${template.id}_${containerId}`;
 
 				// Only process template markup once (in case same template file is requested for multiple apps on the page)
