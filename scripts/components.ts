@@ -185,7 +185,7 @@ class InputComponentBase extends TemplateBase {
 					// Note: this doesn't work in android chrome
                     const kpBeforeInputRegex = new RegExp(`[${inputKeypressRegex}]`);	
 					input.addEventListener("beforeinput", (event: InputEvent) => {
-						if (event.inputType == "insertText" && event.data != null && kpBeforeInputRegex.test(event.data)) {
+						if (event.inputType == "insertText" && event.data != null && !kpBeforeInputRegex.test(event.data)) {
 							event.preventDefault();
 						}
 					});
@@ -193,7 +193,7 @@ class InputComponentBase extends TemplateBase {
                     const kpInputRegex = new RegExp(`[^${inputKeypressRegex}]`, "g");
 					input.addEventListener("input", (event: Event) => {
 						const target = event.target as HTMLInputElement;
-						target.value = target.value.replace(kpInputRegex, "");
+						application.setInputValue(name, target.value = target.value.replace(kpInputRegex, ""), false);
 					});
 				}
 
@@ -354,7 +354,7 @@ class InputComponentBase extends TemplateBase {
 							switch (inputMask) {
 								case "email":
 									{
-										target.value = target.value.replace(kuEmailRegex, "");
+										application.setInputValue(name, target.value = target.value.replace(kuEmailRegex, ""));
 										break;
 									}
 
@@ -369,9 +369,9 @@ class InputComponentBase extends TemplateBase {
 										const zip = input.substring(0, 5);
 										const plus4 = input.substring(5, 9);
 					
-										target.value = input.length > 5
+										application.setInputValue(name, target.value = input.length > 5
 											? zip + "-" + plus4
-											: zip + ( hasDash ? "-" : "" );
+											: zip + ( hasDash ? "-" : "" ));
 										break;
 									}
 	
@@ -400,7 +400,7 @@ class InputComponentBase extends TemplateBase {
 												newValue += currencySeparator + inputParts[1].substring(0, decimalPlaces);
 											}
 										}
-										target.value = newValue;										
+										application.setInputValue(name, target.value = newValue);
 										break;
 									}
 	
@@ -414,9 +414,9 @@ class InputComponentBase extends TemplateBase {
 										const month = input.substring(0, 2);
 										const year = input.substring(2);
 									
-										target.value = input.length > 2
+										application.setInputValue(name, target.value = input.length > 2
 											? `${month}/${year}`
-											: month + ( hasSlash ? "/" : "" );
+											: month + (hasSlash ? "/" : ""));
 										break;
 									}
 	
@@ -435,6 +435,8 @@ class InputComponentBase extends TemplateBase {
 										if (input.length >= 6) { target.value = "(" + area + ") " + middle + "-" + last; }
 										else if (input.length >= 3) { target.value = "(" + area + ") " + middle; }
 										else if (input.length > 0) { target.value = "(" + area; }
+
+										application.setInputValue(name, target.value);
 										break;
 									}
 							}
@@ -453,7 +455,7 @@ class InputComponentBase extends TemplateBase {
 							const value = target.value;
 
 							if (value.length > maxLength) {
-								target.value = value.slice(0, maxLength);
+								application.setInputValue(name, target.value = value.slice(0, maxLength));
 							}
 						});
 					}
