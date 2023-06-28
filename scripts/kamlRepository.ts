@@ -265,7 +265,7 @@
                     const fileName = fileNameParts[fileNameParts.length - 1];
 
 					const resourceTypesToProcess = content.match(/local-kaml-package=\"(.*?)\"/)?.[1].split(",").map(k => k.trim().toLowerCase() ) ?? [];
-					const processTemplateItems = fileName.toLowerCase().startsWith("templates.") || resourceTypesToProcess.indexOf("template.items") > -1;
+					const processTemplateItems = resourcePath.toLowerCase().indexOf("templates") > -1 || resourceTypesToProcess.indexOf("template.items") > -1;
 
                     if (fileName.endsWith(".kaml") && (resourceTypesToProcess.length > 0 || processTemplateItems)) {
                         const jsResult = resourceTypesToProcess.indexOf("js") == -1 ? undefined : await this.downloadResourceAsync(resourceUrl.replace(fileName, fileName + ".js"), true);

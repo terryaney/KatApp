@@ -2656,6 +2656,8 @@ class KatApp implements IKatApp {
 					directive.before(reactiveFor);
 					reactiveFor.appendChild(directive);
 					*/
+
+					// UPDATE: This line doesn't seem to have any affect on the directive, it simply remains a <div v-scope.../> element
 					directive.outerHTML = `<template v-for="_reactive_template in [${scope}]" :key="_reactive_template.name">${directive.outerHTML}<template>`;
 				}
 				else {
