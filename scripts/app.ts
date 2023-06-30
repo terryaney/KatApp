@@ -1487,8 +1487,10 @@ class KatApp implements IKatApp {
 			// event that is called from this new public method AND from calculation workflow and then
 			// KAML could put code in there...b/c this isn't really 'calculation' if they just call
 			// 'processModel'
-			this.select("a[href='#']", el).off("click.ka").on("click.ka", e => e.preventDefault());
+			this.select("a[href='#']", el.tagName == "A" ? el.parentElement! : el ).off("click.ka").on("click.ka", e => e.preventDefault());
+
 			HelpTips.processHelpTips(this, $(el));
+			
 			this.select('[data-highcharts-chart]', $(el)).each((i, c) => ($(c).highcharts() as HighchartsChartObject).reflow());
 
 			if (el.classList.contains("ui-blocker")) {
@@ -1631,10 +1633,16 @@ class KatApp implements IKatApp {
 		}) as JQuery<T>;
 	}
 
-	public getLocalizedString(key: string | undefined, formatObject?: IStringAnyIndexer, defaultValue?: string): string | undefined {
-		if (key != undefined && key.startsWith("{") && formatObject == undefined) {
-			formatObject = JSON.parse(key);
-			key = formatObject!.key;
+	public getLocalizedString(key: string | IStringIndexer<string>, formatObject?: IStringIndexer<string>, defaultValue?: string): string {
+		if (formatObject == undefined) {
+			const keyIsJson = typeof key == "string" && key.startsWith("{");
+			const keyIsObject = typeof key == "object";
+
+			formatObject =
+				keyIsJson ? JSON.parse(key as string) :
+				keyIsObject ? key : undefined;
+			
+			key = keyIsJson || keyIsObject ? formatObject!.key : key;
 		}
 
 		const currentCulture = this.options.currentUICulture ?? "en-us";
@@ -1643,17 +1651,17 @@ class KatApp implements IKatApp {
 		const cultureStrings = this.options.resourceStrings?.[currentCulture];
 		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
 
-		const resource = key == undefined
-			? defaultValue
-			: cultureStrings?.[key] ??
-				baseCultureStrings?.[key] ??
-				defaultRegionStrings?.[key] ??
-				defaultLanguageStrings?.[key] ??
-				defaultValue ??
-				key;
+		const resourceKey = key as string;
+		const resource =
+			cultureStrings?.[resourceKey] ??
+			baseCultureStrings?.[resourceKey] ??
+			defaultRegionStrings?.[resourceKey] ??
+			defaultLanguageStrings?.[resourceKey] ??
+			defaultValue ??
+			resourceKey;
 		
 		const value = typeof resource == "object" ? resource.text : resource;
-		return value == undefined ? undefined : String.formatTokens(value, formatObject ?? {} );
+		return String.formatTokens(value, formatObject ?? {} );
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {
@@ -2629,35 +2637,37 @@ class KatApp implements IKatApp {
 				directive.removeAttribute("v-ka-template");
 
 				const nameValue = needsReactiveForRE.exec(scope)?.groups!.value ?? ""
-				const needsReactiveFor = !directive.hasAttribute("v-for") && ["inputs.", "model.", "rbl."].find( n => nameValue.startsWith(n)) != undefined;
+				const needsReactiveFor = !directive.hasAttribute("v-for") && !nameValue.startsWith("'");
 
 				if (needsReactiveFor) {
 					/*
 						Need to change following:
-						<div v-ka-template="{ name: inputs.iNavigationCurrent }" class="mt-5 row"></div>
+						<div v-ka-template="{ name: model.templateName, source: model.list }" class="mt-5 row"></div>
 
 						To:	
-						<template v-for="template in [inputs.iNavigationCurrent]" :key="template">
-							<div v-ka-template="{ name: template }" class="mt-5 row"></div>
+						<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
+							<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
 						</template>
 
 						Needed loop on single item so that reactivity would kick in when it changed and render a new item
-						-->
+
+						Tried to create via dom manipulation wasn't working.  I think the 'template' element screwed it up with the 'document fragment' created
+						before dom markup was 'really' loaded by browser and then resulted in double document fragment?  No idea, but outerHTML assignment worked.
+
+						const reactiveFor: Element = document.createElement("template");
+						reactiveFor.setAttribute("v-for", `_reactive_template in [${scope}]`);
+						reactiveFor.setAttribute(":key", "_reactive_template.name");
+						directive.before(reactiveFor);
+						reactiveFor.appendChild(directive);
+
+						However, the end markup looks like this 🤪:
+						<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
+							<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
+							<template></template>
+						</template>
 					*/
 
 					directive.setAttribute("v-scope", `components.template({ name: _reactive_template.name, source: _reactive_template.source})`);
-
-					// Try to create via dom manipulation wasn't working.  I think the 'template' element screwed it up with the 'document fragment' created
-					// before dom markup was 'really' loaded by browser and then resulted in double document fragment?  No idea, but outerHTML assignment worked.
-					/*
-					const reactiveFor: Element = document.createElement("template");
-					reactiveFor.setAttribute("v-for", `_reactive_template in [${scope}]`);
-					reactiveFor.setAttribute(":key", "_reactive_template.name");
-					directive.before(reactiveFor);
-					reactiveFor.appendChild(directive);
-					*/
-
-					// UPDATE: This line doesn't seem to have any affect on the directive, it simply remains a <div v-scope.../> element
 					directive.outerHTML = `<template v-for="_reactive_template in [${scope}]" :key="_reactive_template.name">${directive.outerHTML}<template>`;
 				}
 				else {

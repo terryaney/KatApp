@@ -42,11 +42,15 @@ class InputComponentBase extends TemplateBase {
 		application.state.errors = application.state.errors.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 		application.state.warnings = application.state.warnings.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 	}
+	protected validationText(application: KatApp, validations: Array<IValidation>, inputName: string) {
+		var validation = validations.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1);
+		return validation != undefined ? application.getLocalizedString( validation.text ) : undefined;
+	}
 	protected errorText(application: KatApp, inputName: string) {
-		return application.getLocalizedString( application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text );
+		return this.validationText( application, application.state.errors, inputName );
 	}
 	protected warningText(application: KatApp, inputName: string) {
-		return application.getLocalizedString( application.state.warnings.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1)?.text );
+		return this.validationText( application, application.state.warnings, inputName );
 	}
 
 	protected unmounted(application: KatApp, input: HTMLInputElement, clearOnUnmount: boolean | undefined) {
@@ -816,10 +820,16 @@ class InputComponent extends InputComponentBase {
 			get noCalc() { return noCalc(name) },
 			get label() { return application.getLocalizedString( getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? "" )!; },
 			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
-			get placeHolder() { return application.getLocalizedString( getInputCeValue("placeholder") ?? props.placeHolder ); },
+			get placeHolder() {
+				const ph = getInputCeValue("placeholder") ?? props.placeHolder;
+				return ph != undefined ? application.getLocalizedString( ph ) : undefined;
+			},
 			get help() {
 				return {
-					content: application.getLocalizedString( getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content ),
+					get content() {
+						const help = getInputCeValue("help", "rbl-value", "h" + name) ?? props.help?.content;
+						return help != undefined ? application.getLocalizedString(help) : undefined;
+					},
 					title: application.getLocalizedString( getInputCeValue("help-title", "rbl-value", "h" + name + "Title") ?? props.help?.title ?? "" )!,
 					width: getInputCeValue("help-width") ?? props?.help?.width?.toString() ?? "350"
 				};
@@ -986,9 +996,15 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			display: (index: number) => typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(index, base) ?? base.display(index),
 			noCalc: (index: number) => noCalc(names[index]),
 			label: (index: number) => application.getLocalizedString( getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "" )!,
-			placeHolder: (index: number) => application.getLocalizedString( getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index] ),
+			placeHolder: (index: number) => {
+				const ph = getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index];
+				return ph != undefined ? application.getLocalizedString( ph ) : undefined;
+			},
 			help: (index: number) => ({
-				content: application.getLocalizedString( getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content ),
+				get content() {
+					const help = getInputCeValue(index, "help", "rbl-value", "h" + names[index]) ?? helps[index]?.content;
+					return help != undefined ? application.getLocalizedString(help) : undefined;
+				},
 				title: application.getLocalizedString( getInputCeValue(index, "help-title", "rbl-value", "h" + names[index] + "Title") ?? helps[index]?.title ?? "")!,
 				width: getInputCeValue(index, "help-width")  ?? helps[index]?.width?.toString() ?? "350"
 			}),
@@ -1083,7 +1099,6 @@ class TemplateComponent extends TemplateBase {
 		}
 	}
 }
-
 /*
 class KaScopeComponent {
 	constructor(private scope?: IStringAnyIndexer | Array<ITabDefRow>) {
