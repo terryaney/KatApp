@@ -108,7 +108,7 @@ interface IKatApp {
 	notifyAsync(from: KatApp, name: string, information?: IStringAnyIndexer): Promise<void>;
 	getTemplateContent(name: string): DocumentFragment;
 
-	getLocalizedString(key: string | IStringIndexer<string>, formatObject?: IStringIndexer<string>, defaultValue?: string): string;
+	getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined;
 
 	debugNext(saveLocations?: string | boolean, serverSideOnly?: boolean, trace?: boolean, expireCache?: boolean): void;
 }

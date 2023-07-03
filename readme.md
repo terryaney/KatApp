@@ -1630,9 +1630,11 @@ The model used to configure how a `v-ka-resource` will find the appropriate tran
 // Model specifying a key and reactive calculation value
 { 'key': 'Retirement.Summary', 'name': 'Fred', get savings() { return rbl.value('total-savings'); } }
 ```
-See [application.getLocalizedString](#ikatappgetlocalizedstring) for full documentation.
+See [application.getLocalizedString](#ikatappgetlocalizedstring) for documentation explaining language selection priority.
 
 The `v-ka-resource` directive has a couple shorthand capabilities which allows for more terse markup, see samples below for supported markup.
+
+**Note**: 'key' can also be a complete model (or json string representation of the model) if needed.  When the 'entire model' is passed into the `key` parameter, there **must** be a `key` property on the model.  This is helpful when parameter substitution is needed and it is created from a RBL . A `string` can be generated to represent the entire model and passed in.  See below for examples.
 
 ### v-ka-resource Samples
 
@@ -1647,8 +1649,11 @@ All the markup samples will assume the following [IKatAppOptions.resourceStrings
         "cultureRegionOverride": "'es', but is overridden.",
         
         "Good.Morning": "Good morning {{name}}, how are you?",
-        "Good.Night": "Good night {{name}}, sleep well."
-    },
+        "Good.Night": "Good night {{name}}, sleep well.",
+
+        "RBL.Parent": "This is Parent. {{child}}",
+        "RBL.Child": "This is Child. Hello {{name}} from CalcEngine."
+	},
     "en-us": {
         "defaultRegionOnly": "'en-us' default region.",
         "defaultRegionOverride": "'en-us' default region override.",
@@ -1730,6 +1735,33 @@ All the markup samples will assume the following [IKatAppOptions.resourceStrings
     Only 'en' has a localized string, and since 'name' token wasn't provided, it just uses the value of the token.
 -->
 <div v-ka-resource="Good.Night"></div>
+
+
+<!--
+    String key property: 
+    rbl.value("rbl-greeting") returns string value of { key: 'Good.Morning', name: 'Terry' }
+	
+    Returns: ¿Buenas dias Terry, cómo estás?
+    Ignores 'en' language value since 'es' is more specific. 
+-->
+<div v-ka-resource="{ key: rbl.value('rbl-greeting') }"></div>
+
+<!--
+	String key property with nested strings and parameters: 
+	rbl.value("rbl-nested") returns string value of
+
+	{ key: 'RBL.Parent', child: application.getLocalizedString( 'RBL.Child', { name: 'RBL User' } ) }
+
+	Formatted for readability:
+	{ 
+		key: 'RBL.Parent', 
+		child: application.getLocalizedString( 'RBL.Child', { name: 'RBL User' } ) 
+	}
+
+	Returns: This is Parent. This is Child. Hello RBL User from CalcEngine.
+-->
+<div v-ka-resource="{ key: rbl.value('rbl-nested') }"></div>
+
 ```
 
 ## v-ka-input
@@ -3746,7 +3778,7 @@ Setting `expireCache` to `true` instructs the RBLe Framework to immediately chec
 
 #### IKatApp.getLocalizedString
 
-**`getLocalizedString(key: string, formatObject?: IStringAnyIndexer, defaultValue?: string): string;`**
+**`getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined;`**
 
 `getLocalizedString` returns the localized 'content' of the requested requested key based on the KatApp's [`options.currentUICulture'](#ikatappoptionscurrentuiculture).  In the KatApp markup/html, a [v-ka-resource](#v-ka-resource) will be used, but if a localized string is needed inside of a KatApp's `script` section, this method can be used.
 
@@ -3758,7 +3790,7 @@ The flow for locating a localized string is as follows:
 1. Use localized string for 'en' if present.
 1. Use the `key` value when no localized string is found.
 
-**Note**: 'key' can also be a complete json string representation of the model if needed.  Usually when generate from RBLe Framework calculations.  When the `key` is the entire model, there **must** be a `key` property on the model and every property name and value **must be enclosed in double quotes**.
+**Note**: 'key' can also be a complete json string representation of the model if needed.  Usually when generated from RBLe Framework calculations.  When the `key` is the entire model, there **must** be a `key` property on the model.
 
 ```javascript
 // Returns string with 'Name.First' key.
@@ -3774,11 +3806,13 @@ application.getLocalizedString('Good morning {name}, how are you?', { 'name': 'F
 // Returns string with 'Default value for Name First' key when 'Name.First' key value is not found.
 application.getLocalizedString('Name.First', undefined, 'Default value for Name First');
 
-// assume rbl.value("greeting") returns { "key": "greeting", "name": "Terry" }
+// assume rbl.value("greeting") returns { key: 'greeting', name: 'Terry' }
 // assume greeting resource is "Good morning {name}, how are you?"
 // Returns string with 'Good morning Terry, how are you?'.
 application.getLocalizedString(rbl.value('greeting'));
 ```
+
+See [v-ka-resource samples](#v-ka-resource-samples) for more additional sample patterns.
 
 ### IKatApp Lifecycles
 

@@ -1633,32 +1633,27 @@ class KatApp implements IKatApp {
 		}) as JQuery<T>;
 	}
 
-	public getLocalizedString(key: string | IStringIndexer<string>, formatObject?: IStringIndexer<string>, defaultValue?: string): string {
-		if (formatObject == undefined) {
-			const keyIsJson = typeof key == "string" && key.startsWith("{");
-			const keyIsObject = typeof key == "object";
-
-			formatObject =
-				keyIsJson ? JSON.parse(key as string) :
-				keyIsObject ? key : undefined;
-			
-			key = keyIsJson || keyIsObject ? formatObject!.key : key;
+	public getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined {
+		if (key == undefined) return defaultValue;
+		
+		if (key.startsWith("{")) {
+			formatObject = new Function(`{return (${key as string})}`)();
+			key = formatObject!.key;
 		}
-
+		
 		const currentCulture = this.options.currentUICulture ?? "en-us";
 		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
 		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
 		const cultureStrings = this.options.resourceStrings?.[currentCulture];
 		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
 
-		const resourceKey = key as string;
 		const resource =
-			cultureStrings?.[resourceKey] ??
-			baseCultureStrings?.[resourceKey] ??
-			defaultRegionStrings?.[resourceKey] ??
-			defaultLanguageStrings?.[resourceKey] ??
+			cultureStrings?.[key] ??
+			baseCultureStrings?.[key] ??
+			defaultRegionStrings?.[key] ??
+			defaultLanguageStrings?.[key] ??
 			defaultValue ??
-			resourceKey;
+			key;
 		
 		const value = typeof resource == "object" ? resource.text : resource;
 		return String.formatTokens(value, formatObject ?? {} );
