@@ -237,8 +237,6 @@ class InputComponentBase extends TemplateBase {
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
 							const target = event.target as HTMLInputElement;
 							const inputMask = target.getAttribute("ka-mask");
-	
-							// `^\-?[0-9]+(\\${currencySeparator}[0-9]{1,2})?$`
 							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
 										
 							switch ( isMoney ? "money" : inputMask ) {
@@ -355,7 +353,9 @@ class InputComponentBase extends TemplateBase {
 								return;
 							}
 
-							switch (inputMask) {
+							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
+										
+							switch ( isMoney ? "money" : inputMask ) {
 								case "email":
 									{
 										application.setInputValue(name, target.value = target.value.replace(kuEmailRegex, ""));
