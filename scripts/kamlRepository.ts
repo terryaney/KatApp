@@ -169,20 +169,7 @@
 
         try {
 			const result = await $.ajax(requestConfig);
-			const isRelativePath = String.compare(url.substring(0, 4), "http", true) != 0;
-
-			// If querying service and get a 'string' back...then I know error happened
-			// data.Content when request from service, just data when local files
-            const downloadResult = isRelativePath || tryLocalWebServer || typeof result == "object"
-                ? { data: isRelativePath || tryLocalWebServer ? result : result.Resources[0].Content }
-				: { errorMessage: result.startsWith("<!DOCTYPE") && result.indexOf("Code: 004") ? "RBLe Web Service Failure" : result };
-			
-			if (downloadResult.errorMessage != undefined) {
-				alert("Open debugger");
-				debugger;
-			}
-
-			return downloadResult;
+			return { data: result };
 		} catch (error) {
 			const jqXHR = error as XMLHttpRequest;
 			console.log(
@@ -246,10 +233,11 @@
 				? localServerUrl.substring(0, 4) + localServerUrl.substring(5) + location.search
 				: !isResourceInManagementSite
 					? currentOptions.baseUrl + resourceName.substring(1) + location.search
-					: currentOptions.kamlRepositoryUrl;
+					: currentOptions.katDataStoreUrl;
 
 			if (!tryLocalWebServer && isResourceInManagementSite) {
-				resourceUrl = resourceUrl + "?" + JSON.stringify({ "Command": "KatAppResource", "Resources": [{ Resource: resourceName, Folder: resourceParts[0], Version: version }] });
+				resourceUrl = resourceUrl.replace( "{name}", resourceName ) + `?folders=${resourceParts[0].split("|").join(",")}&preferTest=${version == "Test"}`;
+				// "?" + JSON.stringify({ "Command": "KatAppResource", "Resources": [{ Resource: resourceName, Folder: resourceParts[0], Version: version }] })
 			}
 
 			lastResult = await this.downloadResourceAsync(resourceUrl, tryLocalWebServer);

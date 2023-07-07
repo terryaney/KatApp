@@ -11,7 +11,7 @@ enum TraceVerbosity {
 
 interface IKatAppDefaultOptions {
 	calculationUrl: string;
-	kamlRepositoryUrl: string;
+	katDataStoreUrl: string;
 	kamlVerifyUrl: string;
 	anchoredQueryStrings?: string;
 

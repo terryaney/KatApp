@@ -139,7 +139,7 @@ class KatApp implements IKatApp {
 				debugResourcesDomain: Utils.pageParameters["localserver"],
 			},
 			calculationUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
-			kamlRepositoryUrl: "https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx",
+			katDataStoreUrl: "https://btr.lifeatworkportal.com/services/camelot/datalocker/api/kat-apps/{name}/download",
 			kamlVerifyUrl: "api/katapp/verify-katapp",
 			encryptCache: data => typeof (data) == "string" ? data : JSON.stringify(data),
 			decryptCache: cipher => cipher.startsWith("{") ? JSON.parse(cipher) : cipher

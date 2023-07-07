@@ -3430,7 +3430,7 @@ Property | Type | Description
 ---|---|---
 `view` | `string \| undefined` | The name of the Kaml View to use in the KatApp in the format of `folder:name`.  Non-modal KatApps will always pass in a view via `"view": "Channel.Home"`.  The only time `view` is `undefined` is when [application.showModalAsync](#ikatappshowmodalasync) is called and static HTML content is passed in via the [IModalOptions.content](#imodaloptionscontent) or [IModalOptions.contentSelector](#imodaloptionscontentselector).
 `calculationUrl` | `string` | Url (usually an api endpoint in Host Environment) where RBLe Framework calculations should be posted to. A common endpoint that is used is `api/rble/sessionless-proxy`.
-`kamlRepositoryUrl` | `string \| undefined` | Url of where to download Kaml View and Template files from if they are not hosted in Host Environment.  If not provided, defaults to `https://btr.lifeatworkportal.com/services/evolution/CalculationFunction.ashx`
+`katDataStoreUrl` | `string \| undefined` | Url of where to download Kaml View and Template files from if they are not hosted in Host Environment.  If not provided, defaults to `https://btr.lifeatworkportal.com/services/camelot/datalocker/api/kat-apps/{name}/download`
 `kamlVerifyUrl` | `string` | Url (api endpoint in Host Environment) where Kaml views requested modal and nested KatApp applications are verified.  If not provided, defaults to `api/katapp/verify-katapp`.
 `anchoredQueryStrings` | `string?` | Optional query string that should be merged with every api call.  If not provided, it will use the query string (if any) that is present on the `calculationUrl`.
 `debug` | [`IKatAppDebugOptions \| undefined`](#ikatappdebugoptions) | Provide debug configuration used throughout lifetime of KatApp.
