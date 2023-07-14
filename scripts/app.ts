@@ -668,7 +668,7 @@ class KatApp implements IKatApp {
 						preCalcs: c.getAttribute("precalcs") ?? undefined, // getAttribute returned 'null' and I want undefined
 						allowConfigureUi: c.getAttribute("configure-ui") != "false",
 						manualResult: false,
-						enabled: true
+						enabled: processInputTokens( c.getAttribute("enabled") ) != "false"
 					};
 					return ce;
 				})
