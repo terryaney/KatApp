@@ -727,11 +727,14 @@ class InputComponent extends InputComponentBase {
 		let template = props.template;
 
 		if (template != undefined) {
-			template = getTemplateId(template);
+			const uniqueTemplateId = getTemplateId(template);
 
-			if (template == undefined) {
+			if (uniqueTemplateId == undefined) {
+				console.log(`Unable to find template ${uniqueTemplateId}, ${JSON.stringify(props)}`);
 				return undefined;
 			}
+
+			template = uniqueTemplateId;
 		}
 
 		const getInputCeValue = function(columnName: string, legacyTable?: string, legacyId?: string): string | undefined {
