@@ -1291,7 +1291,7 @@ class KatApp implements IKatApp {
 								}
 							]
 						}
-						: undefined,
+						: { calcEngines: [] },
 					{ nextCalculation: this.nextCalculation },
 					Utils.clone(getSubmitApiConfigurationResults.configuration, (k, v) => rbleApiConfiguration.indexOf(k) > -1 ? undefined : v)
 				)
