@@ -658,20 +658,24 @@ class KatApp implements IKatApp {
 
 			const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
+			function calcEngineFactory(c: Element, pipelineIndex?: number): ICalcEngine
+			{
+				return {
+					key: pipelineIndex == undefined
+						? c.getAttribute("key") ?? "default"
+						: `pipeline${pipelineIndex}`,
+					name: processInputTokens( c.getAttribute("name") ) ?? "UNAVAILABLE",
+					inputTab: c.getAttribute("input-tab") ?? "RBLInput",
+					resultTabs: processInputTokens( c.getAttribute("result-tabs") )?.split(",") ?? ["RBLResult"],
+					pipeline: Array.from(c.querySelectorAll("pipeline")).map( ( p, i ) => calcEngineFactory( p, i + 1 ) ),
+					allowConfigureUi: c.getAttribute("configure-ui") != "false",
+					manualResult: false,
+					enabled: processInputTokens( c.getAttribute("enabled") ) != "false"
+				};
+			};
+
 			this.calcEngines = !cloneHost && viewElement != undefined
-				? Array.from(viewElement.querySelectorAll("rbl-config calc-engine")).map(c => {
-					const ce: ICalcEngine = {
-						key: c.getAttribute("key") ?? "default",
-						name: processInputTokens( c.getAttribute("name") ) ?? "UNAVAILABLE",
-						inputTab: c.getAttribute("input-tab") ?? "RBLInput",
-						resultTabs: processInputTokens( c.getAttribute("result-tabs") )?.split(",") ?? ["RBLResult"],
-						preCalcs: c.getAttribute("precalcs") ?? undefined, // getAttribute returned 'null' and I want undefined
-						allowConfigureUi: c.getAttribute("configure-ui") != "false",
-						manualResult: false,
-						enabled: processInputTokens( c.getAttribute("enabled") ) != "false"
-					};
-					return ce;
-				})
+				? Array.from(viewElement.querySelectorAll("rbl-config > calc-engine")).map( c => calcEngineFactory( c ))
 				: cloneHost ? [...this.options.hostApplication!.calcEngines.filter( c => !c.manualResult)] : [];
 
 			if (this.options.resourceStringsEndpoint != undefined) {
@@ -1287,7 +1291,7 @@ class KatApp implements IKatApp {
 									name: calcEngine.name,
 									inputTab: calcEngine.inputTab,
 									resultTabs: calcEngine.resultTabs,
-									preCalcs: calcEngine.preCalcs
+									pipeline: calcEngine.pipeline
 								}
 							]
 						}

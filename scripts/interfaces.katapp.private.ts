@@ -76,7 +76,7 @@ interface ICalcEngine {
 	name: string;
 	inputTab: string;
 	resultTabs: string[];
-	preCalcs?: string;
+	pipeline?: ICalcEngine[];
 	manualResult: boolean;
 	enabled: boolean;
 	allowConfigureUi: boolean;
@@ -114,13 +114,6 @@ interface ISubmitApiData {
 	Configuration: ISubmitApiConfiguration;
 }
 interface ISubmitCalculationInputTable { Name: string, Rows: Array<ICalculationInputTableRow>; }
-
-interface ISubmitCalculationConfiguration {
-	CalcEngine: string;
-	InputTab: string;
-	ResultTabs: string[];
-	PreCalcs?: string;
-}
 
 // Interfaces for responses from RBL Framework
 interface IRblCalculationSuccessResponses {

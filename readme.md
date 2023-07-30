@@ -113,7 +113,7 @@ name | Attribute; The name of the CalcEngine.
 input&#x2011;tab | Attribute; The name of the tab where KatApp framework should inject inputs. Default is `RBLInput`.
 result&#x2011;tabs | Attribute; Comma delimitted list of result tabs to process during RBLe Calculation. When more than one result tab is provided, the tab is referenced by name; usually via a `tab` property passed into a Vue directive. Default is `RBLResult`.
 configure&#x2011;ui | Attribute; Whether or not this CalcEngine should run during the Kaml View's original [Configure UI Calculation](#IKatApp.configureUICalculation). Default is `true`.
-precalcs | Attribute; Comma delimitted list of CalcEngines, i.e. `CalcEngine1,CalcEngineN` to use in a a [Precalc Pipeline](#Precalc Pipelines) for the current CalcEngine. .  By default, if only a CalcEngine name is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.  To use different tabs, each PreCalc CalcEngine 'entity' becomes `CalcEngine|InputTab|ResultTab`.  
+pipeline | Element; One or more 'CalcEngines' to use in a [Calculation Pipelines](#calculation-pipelines) for the current CalcEngine.  Only the `name`, `input-tab`, and `result-tabs` attributes are supported.  By default, if only a `name` is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.
 
 # Kaml View Specifications
 
@@ -4585,7 +4585,7 @@ The RBLe Framework is the backbone of KatApps.  The service is able to marshall 
 - [RBLe Tab Structure](#rble-tab-structure) - Discusses the standard RBLe table processing rules, structure, and features available in generating results for Kaml Views.
 - [Framework Inputs](#framework-inputs) - Discusses the set of inputs that are always passed to calculations automatically (and are not part of the UI).
 - [Input Table Management](#input-table-management) - Discusses how to pass 'input tables' to calculations.
-- [Precalc Pipelines](#precalc-pipelines) - Discusses how multiple CalcEngines can be 'chained' together feedings the 'results' from one CalcEngine into the 'inputs' of the next CalcEngine in the pipeline before generating the final result.
+- [Calculation Pipelines](#calculation-pipelines) - Discusses how multiple CalcEngines can be 'chained' together feedings the 'results' from one CalcEngine into the 'inputs' of the next CalcEngine in the pipeline before generating the final result.
 
 ## RBLe Tab Structure
 
@@ -5110,27 +5110,28 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
 ```
 
 
-## Precalc Pipelines
+## Calculation Pipelines
 
-Precalc CalcEngines simply allow a CalcEngine developer to put some shared logic inside a helper CalcEngine that can be reused.  Results from each CalcEngine specified will flow through a pipeline into the next CalcEngine.  Precalc CalcEngines are ran in the order they are specified ending with the calculation of the Primary CalcEngine.
+Pipeline CalcEngines simply allow a CalcEngine developer to put some shared logic inside a helper CalcEngine that can be reused.  Results from each CalcEngine specified will flow through a pipeline into the next CalcEngine.  Pipeline CalcEngines are ran in the order they are specified ending with the calculation of the Primary CalcEngine.
 
-The format used to specify precalc CalcEngines is a comma delimitted list of CalcEngines, i.e. `CalcEngine1,CalcEngineN`.  By default, if only a CalcEngine name is provided, the input and the result tab with the *same* name as the tabs<sup>1</sup> configured on the primary CalcEngine will be used.  To use different tabs, each CalcEngine 'entity' becomes `CalcEngine|InputTab|ResultTab`.  
+The format used to specify Pipeline CalcEngines is one or more `pipeline` child elements with support for `name`, `input-tab`, and `result-tabs` attributes.  By default, if only the `name` is provided, the input and the result tabs with the *same* name as the tabs<sup>1</sup> configured on the primary CalcEngine will be used.
 
-By specifying precalc CalcEngine(s), the flow in RBLe Service is as follows.
+By specifying Pipeline CalcEngine(s), the flow in RBLe Service is as follows.
 
-1. Load all inputs and data into precalc CalcEngine and run calculation.
+1. Load all inputs and data into Pipeline CalcEngine and run calculation.
 2. Any tables returned by the configured result tab<sup>1</sup> are then passed to the next CalcEngine in the pipeline as a *data* `<history-table>` on the input tab.
 
-<sup>1</sup> For precalc CalcEngines, only one result tab is supported.
+<sup>1</sup> For Pipeline CalcEngines, only one result tab is supported.
 
-### Sample 1: Two precalc CalcEngines
+### Sample 1: Two Pipeline CalcEngines
 Configure two CalcEngines to run in the pipeline before the primary CalcEngine.  In following sample, LAW_Wealth_Helper1_CE and LAW_Wealth_Helper2_CE both use the same tabs configured on LAW_Wealth_CE.
 
 ```html
 <rbl-config templates="Standard_Templates,LAW:Law_Templates">
-    <calc-engine 
-        key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" 
-        precalcs="LAW_Wealth_Helper1_CE,LAW_Wealth_Helper2_CE"></calc-engine>
+    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult">
+		<pipeline name="LAW_Wealth_Helper1_CE" />
+		<pipeline name="LAW_Wealth_Helper2_CE" />
+	</calc-engine>
 </rbl-config>
 ```
 
@@ -5139,9 +5140,10 @@ Configure two CalcEngines with different tabs to run in the pipeline before the 
 
 ```html
 <rbl-config templates="Standard_Templates,LAW:Law_Templates">
-    <calc-engine 
-        key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult" 
-        precalcs="LAW_Wealth_Helper1_CE|RBLInput|RBLHelperResults,LAW_Wealth_Helper2_CE"></calc-engine>
+    <calc-engine key="default" name="LAW_Wealth_CE" input-tab="RBLInput" result-tabs="RBLResult">
+		<pipeline name="LAW_Wealth_Helper1_CE" input-tab="RBLInput" result-tabs="RBLHelperResults" />
+		<pipeline name="LAW_Wealth_Helper2_CE" />
+	</calc-engine>
 </rbl-config>
 ```
 
