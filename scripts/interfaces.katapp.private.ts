@@ -76,10 +76,16 @@ interface ICalcEngine {
 	name: string;
 	inputTab: string;
 	resultTabs: string[];
-	pipeline?: ICalcEngine[];
+	pipeline?: IPipelineCalcEngine[];
 	manualResult: boolean;
 	enabled: boolean;
 	allowConfigureUi: boolean;
+}
+interface IPipelineCalcEngine {
+	key: string;
+	name: string;
+	inputTab?: string;
+	resultTab?: string;
 }
 
 interface ICalculationInputTable {

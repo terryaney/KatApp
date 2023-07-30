@@ -658,24 +658,29 @@ class KatApp implements IKatApp {
 
 			const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
 
-			function calcEngineFactory(c: Element, pipelineIndex?: number): ICalcEngine
+			function calcEngineFactory(c: Element, pipelineIndex?: number): ICalcEngine | IPipelineCalcEngine
 			{
-				return {
-					key: pipelineIndex == undefined
-						? c.getAttribute("key") ?? "default"
-						: `pipeline${pipelineIndex}`,
-					name: processInputTokens( c.getAttribute("name") ) ?? "UNAVAILABLE",
-					inputTab: c.getAttribute("input-tab") ?? "RBLInput",
-					resultTabs: processInputTokens( c.getAttribute("result-tabs") )?.split(",") ?? ["RBLResult"],
-					pipeline: Array.from(c.querySelectorAll("pipeline")).map( ( p, i ) => calcEngineFactory( p, i + 1 ) ),
-					allowConfigureUi: c.getAttribute("configure-ui") != "false",
-					manualResult: false,
-					enabled: processInputTokens( c.getAttribute("enabled") ) != "false"
-				};
+				return pipelineIndex == undefined
+					? {
+						key: c.getAttribute("key") ?? "default",
+						name: processInputTokens(c.getAttribute("name")) ?? "UNAVAILABLE",
+						inputTab: c.getAttribute("input-tab") ?? "RBLInput",
+						resultTabs: processInputTokens(c.getAttribute("result-tabs"))?.split(",") ?? ["RBLResult"],
+						pipeline: Array.from(c.querySelectorAll("pipeline")).map((p, i) => calcEngineFactory(p, i + 1)),
+						allowConfigureUi: c.getAttribute("configure-ui") != "false",
+						manualResult: false,
+						enabled: processInputTokens(c.getAttribute("enabled")) != "false"
+					} as ICalcEngine
+					: {
+						key: `pipeline${pipelineIndex}`,
+						name: processInputTokens(c.getAttribute("name")) ?? "UNAVAILABLE",
+						inputTab: c.getAttribute("input-tab"),
+						resultTab: processInputTokens(c.getAttribute("result-tab"))
+					} as IPipelineCalcEngine;
 			};
 
 			this.calcEngines = !cloneHost && viewElement != undefined
-				? Array.from(viewElement.querySelectorAll("rbl-config > calc-engine")).map( c => calcEngineFactory( c ))
+				? Array.from(viewElement.querySelectorAll("rbl-config > calc-engine")).map( c => calcEngineFactory( c ) as ICalcEngine)
 				: cloneHost ? [...this.options.hostApplication!.calcEngines.filter( c => !c.manualResult)] : [];
 
 			if (this.options.resourceStringsEndpoint != undefined) {

@@ -113,7 +113,7 @@ name | Attribute; The name of the CalcEngine.
 input&#x2011;tab | Attribute; The name of the tab where KatApp framework should inject inputs. Default is `RBLInput`.
 result&#x2011;tabs | Attribute; Comma delimitted list of result tabs to process during RBLe Calculation. When more than one result tab is provided, the tab is referenced by name; usually via a `tab` property passed into a Vue directive. Default is `RBLResult`.
 configure&#x2011;ui | Attribute; Whether or not this CalcEngine should run during the Kaml View's original [Configure UI Calculation](#IKatApp.configureUICalculation). Default is `true`.
-pipeline | Element; One or more 'CalcEngines' to use in a [Calculation Pipelines](#calculation-pipelines) for the current CalcEngine.  Only the `name`, `input-tab`, and `result-tabs` attributes are supported.  By default, if only a `name` is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.
+pipeline | Element; One or more 'CalcEngines' to use in a [Calculation Pipelines](#calculation-pipelines) for the current CalcEngine.  Only the `name`, `input-tab`, and `result-tab` attributes are supported.  By default, if only a `name` is provided, the input and the result tab with the *same* name as the tabs configured on the primary CalcEngine will be used.
 
 # Kaml View Specifications
 
@@ -5114,7 +5114,7 @@ application.on("updateApiOptions.ka", (event, submitOptions) => {
 
 Pipeline CalcEngines simply allow a CalcEngine developer to put some shared logic inside a helper CalcEngine that can be reused.  Results from each CalcEngine specified will flow through a pipeline into the next CalcEngine.  Pipeline CalcEngines are ran in the order they are specified ending with the calculation of the Primary CalcEngine.
 
-The format used to specify Pipeline CalcEngines is one or more `pipeline` child elements with support for `name`, `input-tab`, and `result-tabs` attributes.  By default, if only the `name` is provided, the input and the result tabs with the *same* name as the tabs<sup>1</sup> configured on the primary CalcEngine will be used.
+The format used to specify Pipeline CalcEngines is one or more `pipeline` child elements with support for `name`, `input-tab`, and `result-tab` attributes.  By default, if only the `name` is provided, the input and the result tabs with the *same* name as the tabs<sup>1</sup> configured on the primary CalcEngine will be used.
 
 By specifying Pipeline CalcEngine(s), the flow in RBLe Service is as follows.
 

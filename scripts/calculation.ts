@@ -18,7 +18,7 @@
 							Name: c.name,
 							InputTab: c.inputTab,
 							ResultTabs: c.resultTabs,
-							Pipeline: c.pipeline?.map( p => ({ Name: p.name, InputTab: p.inputTab, ResultTabs: p.resultTabs }) )
+							Pipeline: c.pipeline?.map( p => ({ Name: p.name, InputTab: p.inputTab, ResultTabs: p.resultTab }) )
 						}))
 				}
 			);
@@ -263,8 +263,8 @@ interface ISubmitCalculationConfiguration extends ISubmitApiConfiguration {
 		ResultTabs: string[];
 		Pipeline: {
 			Name: string;
-			InputTab: string;
-			ResultTabs: string[]
+			InputTab?: string;
+			ResultTab?: string
 		} | undefined;
 	}[];
 	InvalidCacheKeys?: string[];
