@@ -1251,7 +1251,7 @@ class KatApp implements IKatApp {
 	public async apiAsync(endpoint: string, apiOptions: IApiOptions | undefined, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
 		// calculationSubmitApiConfiguration is only passed internally, when apiAsync is called within the calculation pipeline and there is already a configuration determined
 
-		if (!this.checkValidity()) {
+		if (!(apiOptions?.skipValidityCheck ?? false) && !this.checkValidity()) {
 			/* 
 				Issue with reportValidity() not displaying if scroll needed
 				https://stackoverflow.com/questions/69015407/html5-form-validation-message-doesnt-show-when-scroll-behaviour-is-set-to-smoo
@@ -1260,7 +1260,7 @@ class KatApp implements IKatApp {
 
 				Currently, just catching invalid event on inputs and putting into state.errors.
 			*/
-			return;
+			throw new ValidityError();
 		}
 
 		if (!this.el[0].hasAttribute("ka-cloak")) {
@@ -2795,5 +2795,10 @@ class KatApp implements IKatApp {
 class ApiError extends Error {
 	constructor(message: string, public innerException: Error | undefined, public apiResponse: IApiErrorResponse) {
 		super(message);
+	}
+}
+class ValidityError extends Error {
+	constructor() {
+		super("checkValidity failed on one or more inputs");
 	}
 }

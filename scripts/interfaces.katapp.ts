@@ -302,6 +302,7 @@ interface IModalResponse {
 }
 
 interface IApiOptions {
+	skipValidityCheck?: boolean;
 	calculationInputs?: ICalculationInputs;
 	apiParameters?: IStringAnyIndexer;
 	isDownload?: boolean;
