@@ -36,6 +36,14 @@ class InputComponentBase extends TemplateBase {
 		}) as T;
 	}
 
+	protected addValidityValidation(application: KatApp, inputName: string, label: (name: string) => string, input: HTMLInputElement) {
+		if (
+			input.validationMessage != undefined && input.validationMessage != "" &&
+			application.state.errors.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) != -1) == undefined
+		) {
+			application.state.errors.push({ "@id": inputName, text: `${label(inputName)}: ${input.validationMessage}` });
+		}
+	}
 	protected removeValidations(application: KatApp, inputName: string) {
 		// If event == "input" don't remove on 'change'.  If client validation adds error on 'input' event
 		// the 'change' event would trigger after and core code would automatically remove validation, so needed to preserve
@@ -67,6 +75,7 @@ class InputComponentBase extends TemplateBase {
 		application: KatApp,
 		scope: IStringAnyIndexer,
 		name: string,
+		label: (name: string) => string,
 		input: HTMLInputElement,
 		defaultValue: (name: string) => string | undefined,
 		isExcluded: boolean,
@@ -145,13 +154,13 @@ class InputComponentBase extends TemplateBase {
 		}
 
 		if (type == "date") {
-			this.bindDateEvents(application, name, input, removeError, inputEventAsync);
+			this.bindDateEvents(application, name, label, input, removeError, inputEventAsync);
 		}
 		else if (type == "range") {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, input, type, mask, keypressRegex, inputEventAsync);
+			this.bindInputEvents(application, name, label, input, type, mask, keypressRegex, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
@@ -160,6 +169,7 @@ class InputComponentBase extends TemplateBase {
 	private bindInputEvents(
 		application: KatApp,
 		name: string,
+		label: (name: string) => string,
 		input: HTMLInputElement,
 		type: string | null,
 		mask: (name: string) => string | undefined,
@@ -178,11 +188,8 @@ class InputComponentBase extends TemplateBase {
 
 			// Textbox...
 			if (type != "radio" && input.tagName == "INPUT") {
-
-				input.addEventListener("input", async () => {
-					await inputEventAsync(false);
-				});
-
+				input.addEventListener("invalid", e => this.addValidityValidation( application, name, label, e.target as HTMLInputElement ) );
+				
 				const inputKeypressRegex = keypressRegex(name);
 
 				if (inputKeypressRegex != null) {
@@ -562,7 +569,7 @@ class InputComponentBase extends TemplateBase {
 		}
 	}
 
-	private bindDateEvents(application: KatApp, name: string, input: HTMLInputElement, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void> ): void {
+	private bindDateEvents(application: KatApp, name: string, label: (name: string) => string, input: HTMLInputElement, removeError: () => void, inputEventAsync: (calculate: boolean) => Promise<void> ): void {
 		// Date fires 'change' every typed number if the date input is valid...and we don't want that, we need to only do it when blur, hit enter, or pick from calendar
 
 		// So flow:
@@ -589,6 +596,7 @@ class InputComponentBase extends TemplateBase {
 			}
 		};
 
+		input.addEventListener("invalid", e => this.addValidityValidation( application, name, label, e.target as HTMLInputElement ) );
 		input.addEventListener("change", dateChangeAsync);
 
 		input.addEventListener("keypress", async e => {
@@ -758,6 +766,7 @@ class InputComponent extends InputComponentBase {
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
 		const keypressRegex = (name: string) => getInputCeValue("keypress-regex") ?? props.keypressRegex;
 		const defaultValue = (name: string) => application.state.inputs[name] as string ?? props.value;
+		const label = (name: string) => application.getLocalizedString( getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? "" )!;
 		const noCalc = (name: string) => typeof props.isNoCalc == "boolean" ? props.isNoCalc : props.isNoCalc?.(base) ?? base.noCalc;
 		const displayFormat = (name: string) => {
 			let ceFormat = getInputCeValue("display-format") ?? "";
@@ -820,8 +829,8 @@ class InputComponent extends InputComponentBase {
 
 			get disabled() { return typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(base) ?? base.disabled; },
 			get display() { return typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(base) ?? base.display; },
-			get noCalc() { return noCalc(name) },
-			get label() { return application.getLocalizedString( getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? "" )!; },
+			get noCalc() { return noCalc(name); },
+			get label() { return label(name); },
 			get hideLabel() { return getInputCeValue("label") == "-1" || (props.hideLabel ?? false); },
 			get placeHolder() {
 				const ph = getInputCeValue("placeholder") ?? props.placeHolder;
@@ -886,7 +895,7 @@ class InputComponent extends InputComponentBase {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 
 		return scope;
 	}
@@ -951,22 +960,26 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			warning: (index: number) => that.errorText(application, names[index])
 		};
 
+		const label = function (name: string) {
+			const index = names.indexOf(name);
+			return application.getLocalizedString(getInputCeValue(index, "label", "rbl-value", "l" + names[index]) ?? labels[index] ?? "")!;
+		};
 		const noCalc = function (name: string) {
 			const index = names.indexOf(name);
 			return typeof props.isNoCalc == "boolean" ? props.isNoCalc : props.isNoCalc?.(index, base) ?? base.noCalc(index);
-		}
+		};
 		const defaultValue = function (name: string) {
 			const index = names.indexOf(name);
 			return application.state.inputs[names[index]] as string ?? values[index];
-		}
+		};
 		const mask = function (name: string) {
 			const index = names.indexOf(name);
 			return getInputCeValue(index, "mask") ?? masks[index];
-		}
+		};
 		const keypressRegex = function (name: string) {
 			const index = names.indexOf(name);
 			return getInputCeValue(index, "keypressRegex") ?? keypressRegexs[index];
-		}		
+		};		
 		const displayFormat = function (name: string) {
 			const index = names.indexOf(name);
 			let ceFormat = getInputCeValue(index, "display-format") ?? "";
@@ -980,7 +993,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			}
 
 			return ceFormat != "" ? ceFormat : displayFormats[index];
-		}
+		};
 
 		const inputType = getInputCeValue(0, "type") ?? props.type ?? "text";
 
@@ -998,7 +1011,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 			disabled: (index: number) => typeof props.isDisabled == "boolean" ? props.isDisabled : props.isDisabled?.(index, base) ?? base.disabled(index),
 			display: (index: number) => typeof props.isDisplay == "boolean" ? props.isDisplay : props.isDisplay?.(index, base) ?? base.display(index),
 			noCalc: (index: number) => noCalc(names[index]),
-			label: (index: number) => application.getLocalizedString( getInputCeValue( index, "label", "rbl-value", "l" + names[ index ] ) ?? labels[index] ?? "" )!,
+			label: (index: number) => label(names[index]),
 			placeHolder: (index: number) => {
 				const ph = getInputCeValue(index, "placeholder", "rbl-value", "ph" + names[index]) ?? placeHolders[index];
 				return ph != undefined ? application.getLocalizedString( ph ) : undefined;
@@ -1054,7 +1067,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			this.mounted(application, scope, name, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
 		};
 
 		return scope;

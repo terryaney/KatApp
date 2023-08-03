@@ -1238,8 +1238,30 @@ class KatApp implements IKatApp {
 		await this.triggerEventAsync("notification", name, information, from);
 	}
 
+	public checkValidity(): boolean {
+		let isValid = true;
+		this.select("input").each((i, e) => {
+			if (( e as HTMLInputElement ).checkValidity() === false) {
+				isValid = false;
+			}
+		});
+		return isValid;
+	}
+
 	public async apiAsync(endpoint: string, apiOptions: IApiOptions | undefined, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined> {
 		// calculationSubmitApiConfiguration is only passed internally, when apiAsync is called within the calculation pipeline and there is already a configuration determined
+
+		if (!this.checkValidity()) {
+			/* 
+				Issue with reportValidity() not displaying if scroll needed
+				https://stackoverflow.com/questions/69015407/html5-form-validation-message-doesnt-show-when-scroll-behaviour-is-set-to-smoo
+				https://github.com/gocodebox/lifterlms/issues/2206
+				https://stackoverflow.com/questions/57846647/how-can-i-get-the-html5-validation-message-to-show-up-without-scrolling
+
+				Currently, just catching invalid event on inputs and putting into state.errors.
+			*/
+			return;
+		}
 
 		if (!this.el[0].hasAttribute("ka-cloak")) {
 			this.traceStart = this.traceLast = new Date();

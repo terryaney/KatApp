@@ -89,7 +89,8 @@ interface IKatApp {
 	configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
 	handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
 	allowCalculation(ceKey: string, enabled: boolean): void;
-	
+
+	checkValidity(): boolean;
 	calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;
 	apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;
 	showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse>;
