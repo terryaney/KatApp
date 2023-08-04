@@ -162,6 +162,7 @@
 
 							return tipElement.attr('data-bs-placement') as any ?? "auto";
 						},
+						fallbackPlacements: tipElement.attr('data-bs-fallback-placements')?.split(",") ?? [ "top", "right", "bottom", "left" ],
 						title: function () {
 							return getTipTitle($(this));
 						},
