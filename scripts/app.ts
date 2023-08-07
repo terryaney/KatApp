@@ -1921,7 +1921,7 @@ class KatApp implements IKatApp {
 			// Should we be using JWT for AuthID, AdminAuthID, Client?
 			AuthID: /* currentOptions.data?.AuthID ?? */ "NODATA",
 			AdminAuthID: undefined,
-			Client: /* currentOptions.data?.Client ?? */ "KatApp",
+			Client: currentOptions.client ?? "KatApp",
 			TestCE: currentOptions.debug?.useTestCalcEngine ?? false,
 			CurrentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
 			RequestIP: currentOptions.requestIP ?? "1.1.1.1",
