@@ -35,7 +35,6 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	view?: string;
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	content?: string;
-	client?: string;
 
 	baseUrl?: string;
 	dataGroup: string;
