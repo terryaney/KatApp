@@ -18,9 +18,9 @@
 							Name: c.name,
 							InputTab: c.inputTab,
 							ResultTabs: c.resultTabs,
-							Pipeline: c.pipeline?.map( p => ({ Name: p.name, InputTab: p.inputTab, ResultTabs: p.resultTab }) )
-						}))
-				}
+							Pipeline: c.pipeline?.map( p => ({ Name: p.name, InputTab: p.inputTab, ResultTabs: p.resultTab } as ISubmitCalculationCalcEnginePipeline ) )
+						} as ISubmitCalculationCalcEngine ))
+				} as ISubmitCalculationConfiguration
 			);
 
 		const submitData: ISubmitApiData = {
@@ -257,15 +257,19 @@ class CalculationError extends Error {
 }
 
 interface ISubmitCalculationConfiguration extends ISubmitApiConfiguration {
-	CalcEngines: {
-		Name: string;
-		InputTab: string;
-		ResultTabs: string[];
-		Pipeline: {
-			Name: string;
-			InputTab?: string;
-			ResultTab?: string
-		} | undefined;
-	}[];
+	CalcEngines: ISubmitCalculationCalcEngine[];
 	InvalidCacheKeys?: string[];
+}
+
+interface ISubmitCalculationCalcEngine {
+	Name: string;
+	InputTab: string;
+	ResultTabs: string[];
+	Pipeline: ISubmitCalculationCalcEnginePipeline | undefined;
+}
+
+interface ISubmitCalculationCalcEnginePipeline {
+	Name: string;
+	InputTab?: string;
+	ResultTab?: string
 }
