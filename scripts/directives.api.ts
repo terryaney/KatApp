@@ -17,9 +17,10 @@
 				}
 
 				try {
+					const propertiesToSkip = ["confirm", "endpoint", "then", "catch"];
 					const response = await application.apiAsync(
 						endpoint,
-						Utils.clone(scope, (k, v) => ["confirm", "endpoint", "then", "catch"].indexOf(k) > -1 ? undefined : v),
+						Utils.clone(scope, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v),
 						$(ctx.el as HTMLElement)
 					);
 

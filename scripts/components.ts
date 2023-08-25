@@ -50,7 +50,7 @@ class InputComponentBase extends TemplateBase {
 		application.state.errors = application.state.errors.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 		application.state.warnings = application.state.warnings.filter(r => (r.event == "input" || r["@id"].replace(/ /g, "").split(",").indexOf(inputName) == -1) && (r.dependsOn ?? "").replace(/ /g, "").split(",").indexOf(inputName) == -1);
 	}
-	protected validationText(application: KatApp, validations: Array<IValidation>, inputName: string) {
+	protected validationText(application: KatApp, validations: Array<IValidationRow>, inputName: string) {
 		var validation = validations.find(r => r["@id"].replace(/ /g, "").split(",").indexOf(inputName) > -1);
 		return validation != undefined ? application.getLocalizedString( validation.text ) : undefined;
 	}
@@ -136,7 +136,7 @@ class InputComponentBase extends TemplateBase {
 					// Don't trigger calc if ka-rbl-no-calc/ka-rbl-exclude attribute as well
 					if (calculate) {
 						application.state.inputs.iInputTrigger = name;
-						await application.calculateAsync();
+						await application.calculateAsync(undefined, true, undefined, false);
 					}
 					else {
 						application.state.needsCalculation = true;
@@ -631,13 +631,13 @@ class InputComponentBase extends TemplateBase {
 
 			/*
 			** Doesn't work, application not defined (although I do pass in second param of application so could use it there) **
-			<div v-ka-input="{name:'iFirst', events: { 'input': async () => await application.calculateAsync() } }"></div>
+			<div v-ka-input="{name:'iFirst', events: { 'input': async () => await application.calculateAsync(undefined, true, undefined, false) } }"></div>
 
 			** Below works **
 			application.update( {
 				handlers: {
 					firstNameClick: async e => {
-						await application.calculateAsync();
+						await application.calculateAsync(undefined, true, undefined, false);
 					}
 				}
 			})

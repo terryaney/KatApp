@@ -9,6 +9,7 @@ enum TraceVerbosity {
 	Diagnostic
 }
 
+// KatApp options interfaces
 interface IKatAppDefaultOptions {
 	calculationUrl: string;
 	katDataStoreUrl: string;
@@ -17,7 +18,7 @@ interface IKatAppDefaultOptions {
 
 	debug: {
 		traceVerbosity: TraceVerbosity;
-		refreshCalcEngine: boolean; // expireCE=1 querystring
+		// refreshCalcEngine: boolean; // expireCE=1 querystring
 		useTestCalcEngine: boolean; // test=1 querystring
 		useTestView: boolean; // testView=1 querystring
 		showInspector: boolean; // showInspector=1 querystring
@@ -29,12 +30,11 @@ interface IKatAppDefaultOptions {
 	encryptCache(data: object): string | Promise<string>;
 	decryptCache(cipher: string): object | Promise<object>;
 }
-
 interface IKatAppOptions extends IKatAppDefaultOptions {
 	// Only missing when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
 	view?: string;
 	// Only present when showModalAsync called 'createAppAsync' and modal was built with 'content' instead of a view
-	content?: string;
+	content?: string | JQuery;
 
 	baseUrl?: string;
 	dataGroup: string;
@@ -58,40 +58,31 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	hostApplication?: IKatApp;
 }
 
-interface IManualTabDef extends IStringIndexer<string | undefined | ITabDefTable> {
-	"@calcEngineKey": string;
-	"@calcEngine": string;
-	"@name": string | undefined;
-}
 
-interface ITabDef extends IStringIndexer<ITabDefTable> { }
-interface ITabDefTable extends Array<ITabDefRow> { }
-interface ITabDefRow extends IStringIndexer<string> { }
-interface ITabDefRblInputRow extends IStringIndexer<string | undefined> { }
-interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { }
 
+
+// KatApp interfaces
 interface IKatAppStatic {
 	getDirty(): Array<IKatApp>;
 	createAppAsync(selector: string, options: IKatAppOptions): Promise<KatApp>;
 	get(key: string | number | Element): KatApp | undefined;
 	handleEvents(selector: string, configAction: (config: IKatAppEventsConfiguration) => void): void;
 }
-
 interface IKatApp {
 	el: JQuery;
 	calcEngines: ICalcEngine[];
 	options: IKatAppOptions;
 	isCalculating: boolean;
 	lastCalculation?: ILastCalculation;
-	state: IApplicationData;
+	state: IState;
 	selector: string;
 
-	configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
-	handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
+	configure(configAction: (config: IConfigureOptions, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
+	handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp;
 	allowCalculation(ceKey: string, enabled: boolean): void;
 
 	checkValidity(): boolean;
-	calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void>;
+	calculateAsync(customInputs?: ICalculationInputs, processResults?: boolean, calcEngines?: ICalcEngine[], allowLogging?: boolean): Promise<ITabDef[] | void>;
 	apiAsync(endpoint: string, apiOptions: IApiOptions, trigger?: JQuery, calculationSubmitApiConfiguration?: ISubmitApiOptions): Promise<IStringAnyIndexer | undefined>;
 	showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse>;
 	navigateAsync(navigationId: string, options?: INavigationOptions): void;
@@ -113,13 +104,45 @@ interface IKatApp {
 
 	debugNext(saveLocations?: string | boolean, serverSideOnly?: boolean, trace?: boolean, expireCache?: boolean): void;
 }
+interface ICalcEngine {
+	key: string;
+	manualResult: boolean;
+	enabled: boolean;
+	allowConfigureUi: boolean;
 
+	name: string;
+	inputTab: string;
+	resultTabs: string[];
+	pipeline?: IPipelineCalcEngine[];
+}
+interface IPipelineCalcEngine {
+	key: string;
+
+	name: string;
+	inputTab?: string;
+	resultTab?: string;
+}
+
+
+
+// KatApp .configure() interfaces
+interface IConfigureOptions {
+	options?: {
+		modalAppOptions?: IModalAppOptions;
+		inputs?: ICalculationInputs;
+	}
+	model?: IStringAnyIndexer;
+	handlers?: IHandlers;
+	components?: IStringAnyIndexer;
+	directives?: IStringIndexer<(ctx: DirectiveContext<Element>) => (() => void) | void>;
+	events: IKatAppEventsConfiguration;
+}
 interface IKatAppEventsConfiguration {
 	initialized?: (application: IKatApp) => void;
 	modalAppInitialized?: (modalApplication: IKatApp, hostApplication: IKatApp) => void;
 	nestedAppInitialized?: (nestedApplication: IKatApp, hostApplication: IKatApp) => void;
-	rendered?: (initializationErrors: IValidation[] | undefined, application: IKatApp) => void;
-	nestedAppRendered?: (nestedApplication: IKatApp, initializationErrors: IValidation[] | undefined, hostApplication: IKatApp) => void;
+	rendered?: (initializationErrors: IValidationRow[] | undefined, application: IKatApp) => void;
+	nestedAppRendered?: (nestedApplication: IKatApp, initializationErrors: IValidationRow[] | undefined, hostApplication: IKatApp) => void;
 	updateApiOptions?: (submitApiOptions: ISubmitApiOptions, endpoint: string, application: IKatApp) => void;
 	calculateStart?: (submitApiOptions: ISubmitApiOptions, application: IKatApp) => void | false;
 	inputsCached?: (cachedInputs: ICalculationInputs, application: IKatApp) => void;
@@ -141,21 +164,7 @@ interface IKatAppEventsConfiguration {
 	notification?: (name: string, information: IStringAnyIndexer | undefined, from: IKatApp) => void;
 	input?: (name: string, calculate: boolean, input: HTMLElement, scope: IKaInputScope | IKaInputGroupScope) => void;
 }
-
-interface IConfigureOptions {
-	options?: {
-		modalAppOptions?: IModalAppOptions;
-		inputs?: ICalculationInputs;
-	}
-	model?: IStringAnyIndexer;
-	handlers?: IHandlers;
-	components?: IStringAnyIndexer;
-	directives?: IStringIndexer<(ctx: DirectiveContext<Element>) => (() => void) | void>;
-	events: IKatAppEventsConfiguration;
-}
-
 interface IHandlers extends IStringAnyIndexer { }
-	
 interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTable[] | ((inputId: string) => number | undefined) | ((inputId: string) => string | undefined) | undefined> {
 	iConfigureUI?: string;
 	iDataBind?: string;
@@ -166,8 +175,18 @@ interface ICalculationInputs extends IStringIndexer<string | ICalculationInputTa
 	getNumber?: (inputId: string) => number | undefined;
 	getOptionText?: (inputId: string) => string | undefined;
 }
+interface ICalculationInputTable {
+	name: string;
+	rows: Array<ICalculationInputTableRow>
+}
+interface ICalculationInputTableRow extends ITabDefRow {
+	index: string;
+}
 
-interface IApplicationData {
+
+
+// State interfaces
+interface IState {
 	kaId: string;
 	application: IKatApp;
 
@@ -216,22 +235,21 @@ interface IApplicationData {
 	components: IStringIndexer<IStringAnyIndexer>;
 
 	inputs: ICalculationInputs;
-	errors: IValidation[];
-	warnings: IValidation[];
+	errors: IValidationRow[];
+	warnings: IValidationRow[];
 
-	rbl: IRblApplicationData;
+	rbl: IStateRbl;
 	onAll: (...values: Array<undefined | string | number>) => boolean;
 	onAny: (...values: Array<undefined | string | number>) => boolean;
 }
-interface IValidation {
+interface IValidationRow {
 	"@id": string;
 	text: string;
 	dependsOn?: string;
 	event?: string;
 	initialization?: boolean;
 }
-
-interface IRblApplicationData {
+interface IStateRbl {
 	results: IStringIndexer<IStringIndexer<Array<ITabDefRow>>>;
 	options: { calcEngine?: string, tab?: string };
 
@@ -245,19 +263,67 @@ interface IRblApplicationData {
 }
 
 
-// Event parameter interfaces
+
+// Calculation/Api Submission interfaces
 interface ISubmitApiOptions {
 	inputs: ICalculationInputs,
 	configuration: ISubmitApiConfiguration | IStringIndexer<string>;
 	isCalculation: boolean;
 }
-
-interface ILastCalculation {
+interface ISubmitCalculationConfiguration extends ISubmitApiConfiguration {
+	invalidCacheKeys?: string[];
+}
+interface ISubmitApiData {
+	// Data?: RBLeRESTServiceResult; // Passed in if non-session calcs being used
 	inputs: ICalculationInputs;
-	results: ITabDef[];
+	inputTables?: Array<ICalculationInputTable>;
+	apiParameters?: IStringAnyIndexer | undefined;
 	configuration: ISubmitApiConfiguration;
 }
+interface ISubmitApiConfiguration {	
+	token?: string; // Used only in submit for session based calcs
+	comment?: string; // currently never passed
+	testCE: boolean;
+	authID: string; // used in non-session version, when options has a 'data' property of json formatted xds data
+	client: string;
+	adminAuthID: string | undefined;
+	currentPage: string;
+	requestIP: string;
+	currentUICulture: string;
+	environment: string;
+	calcEngines: ISubmitCalculationCalcEngine[];
+	nextCalculation?: INextCalculation;
+	// RefreshCalcEngine: boolean;
+	allowLogging: boolean;
 
+	cacheRefreshKeys?: string[];
+}
+interface ISubmitCalculationCalcEngine {
+	name: string;
+	inputTab: string;
+	resultTabs: string[];
+	pipeline: ISubmitCalculationCalcEnginePipeline | undefined;
+}
+interface ISubmitCalculationCalcEnginePipeline {
+	name: string;
+	inputTab?: string;
+	resultTab?: string
+}
+
+interface INextCalculation {
+	saveLocations: { location: string, serverSideOnly: boolean }[];
+	expireCache: boolean;
+	trace: boolean;
+	originalVerbosity: TraceVerbosity;
+}
+
+
+
+// Modal KatApp interfaces
+interface IKamlVerifyResult {
+	path: string;
+	manualInputs?: IStringIndexer<string>;
+}
 interface IModalOptions {
 	view?: string;
 	content?: string | JQuery;
@@ -301,6 +367,8 @@ interface IModalResponse {
 	modalApp: IKatApp;
 }
 
+
+// apiAsync interfaces
 interface IApiOptions {
 	skipValidityCheck?: boolean;
 	calculationInputs?: ICalculationInputs;
@@ -325,7 +393,6 @@ interface IApiErrorResponse {
 	apiResult?: IStringAnyIndexer;
 	apiPayload?: IStringAnyIndexer;
 }
-
 interface IExceptionDetail {
 	message: string;
 	type: string;
@@ -333,10 +400,37 @@ interface IExceptionDetail {
 	innerException?: IExceptionDetail;
 }
 
+
+
+// navigateAsync interfaces
 interface INavigationOptions {
 	inputs?: ICalculationInputs;
 	persistInputs?: boolean;
 }
+
+
+// Calculation interfaces
+interface ILastCalculation {
+	inputs: ICalculationInputs;
+	results: Array<ITabDef>;
+	diagnostics?: Array<IRblCalculationDiagnostics | undefined>;
+	configuration: ISubmitApiConfiguration;
+}
+// Calculation failure interfaces
+interface ICalculationFailedResponse {
+	calcEngine: string;
+	configuration: ISubmitApiConfiguration;
+	inputs: ICalculationInputs;
+	diagnostics?: IRblCalculationDiagnostics;
+	exceptions: Array<ICalculationResponseException>;
+}
+interface ICalculationResponseException {
+	message: string;
+	type: string;
+	stackTrace: string[];
+}
+
+
 
 // Directive Options
 interface IKaNavigateModel {
@@ -504,9 +598,9 @@ interface IKaInputGroupModel {
 	ce?: string;
 	tab?: string;
 
-	isNoCalc?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
-	isDisabled?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
-	isDisplay?: ((index: number, base: IKaInputGroupModelBase) => boolean) | boolean;
+	isNoCalc?: ((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean;
+	isDisabled?: ((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean;
+	isDisplay?: ((index: number, base: IKaInputGroupScopeBase) => boolean) | boolean;
 
 	events?: IStringIndexer<((e: Event, application: KatApp) => void)>
 }
@@ -552,8 +646,11 @@ interface IKaInputGroupScopeBase {
 	error: (index: number) => string | undefined;
 	warning: (index: number) => string | undefined;
 }
-interface IKaInputGroupModelBase {
-	display: (index: number) => boolean;
-	noCalc: (index: number) => boolean;
-	disabled: (index: number) => boolean;
+
+
+// Utility interfaces
+interface IStringIndexer<T> extends Record<string, T> { }
+interface IStringAnyIndexer extends IStringIndexer<any> { } // eslint-disable-line @typescript-eslint/no-explicit-any
+interface IStringAnyIndexerReplacer {
+	(this: any, key: string, value: any): any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }

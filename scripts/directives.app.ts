@@ -5,8 +5,10 @@
 			const scope: IKaAppModel = ctx.get();
 			const view = scope.view;
 
-			const nestedAppOptions = Utils.extend<IKatAppOptions>(
-				Utils.clone<IKatAppOptions>(application.options, (k, v) => ["handlers", "view", "modalAppOptions", "hostApplication", "currentPage"].indexOf(k) > -1 ? undefined : v),
+			const propertiesToSkip = ["handlers", "view", "modalAppOptions", "hostApplication", "currentPage"];
+			
+			const nestedAppOptions = Utils.extend<IKatAppOptions>(				
+				Utils.clone<IKatAppOptions>(application.options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v),
 				{
 					view: view,
 					currentPage: view,

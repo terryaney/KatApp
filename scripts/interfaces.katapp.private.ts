@@ -1,45 +1,4 @@
-﻿interface IKatAppPartialModalOptions {
-	view?: string;
-	content?: string | JQuery;
-	currentPage: string;
-	hostApplication: KatApp;
-	modalAppOptions: IModalAppOptions;
-	inputs: ICalculationInputs;
-}
-interface ISubmitApiConfiguration {	
-	Token?: string; // Used only in submit for session based calcs
-	Comment?: string; // currently never passed
-	TestCE: boolean;
-	TraceEnabled: number;
-	SaveCE: string;
-	AuthID: string; // used in non-session version, when options has a 'data' property of json formatted xds data
-	Client: string;
-	AdminAuthID: string | undefined;
-	RefreshCalcEngine: boolean;
-	CurrentPage: string;
-	RequestIP: string;
-	CurrentUICulture: string;
-	Environment: string;
-	Framework: string;
-}
-interface INextCalculation {
-	saveLocations: { location: string, serverSideOnly: boolean }[];
-	expireCache: boolean;
-	trace: boolean;
-	originalVerbosity: TraceVerbosity;
-}
-interface IStringIndexer<T> extends Record<string, T> { }
-interface IStringAnyIndexer extends IStringIndexer<any> { } // eslint-disable-line @typescript-eslint/no-explicit-any
-interface IStringAnyIndexerReplacer {
-	(this: any, key: string, value: any): any; // eslint-disable-line @typescript-eslint/no-explicit-any
-}
-interface IModalAppVerifyResult {
-	path: string;
-	manualInputs?: IStringIndexer<string>;
-}
-
-
-interface IKaTableColumnConfiguration {
+﻿interface IKaTableColumnConfiguration {
 	name: string;
 	cssClass: string | undefined;
 	isTextColumn: boolean;
@@ -53,6 +12,17 @@ interface IKaTableColumnConfiguration {
 
 
 // RBLe Result Row Types
+interface IManualTabDef extends IStringIndexer<string | undefined | ITabDefTable> {
+	"@calcEngineKey": string;
+	"@calcEngine": string;
+	"@name": string | undefined;
+}
+interface ITabDef extends IStringIndexer<ITabDefTable> { }
+interface ITabDefTable extends Array<ITabDefRow> { }
+interface ITabDefRow extends IStringIndexer<string> { }
+interface ITabDefRowWithNulls extends IStringIndexer<string | undefined> { }
+interface ITabDefMetaRow extends IStringIndexer<string | IStringIndexer<string>> { }
+
 interface IRblHighChartsOverrideRow extends IRblHighChartsOptionRow {
 	"@id": string;
 }
@@ -71,31 +41,7 @@ interface IHighChartsPlotConfigurationRow {
 	plotBand: string;
 }
 
-interface ICalcEngine {
-	key: string;
-	name: string;
-	inputTab: string;
-	resultTabs: string[];
-	pipeline?: IPipelineCalcEngine[];
-	manualResult: boolean;
-	enabled: boolean;
-	allowConfigureUi: boolean;
-}
-interface IPipelineCalcEngine {
-	key: string;
-	name: string;
-	inputTab?: string;
-	resultTab?: string;
-}
 
-interface ICalculationInputTable {
-	name: string;
-	rows: ICalculationInputTableRow[]
-}
-
-interface ICalculationInputTableRow extends ITabDefRow {
-	index: string;
-}
 
 interface ITabDefKatAppInfo {
 	calcEngineKey: string;
@@ -112,15 +58,6 @@ interface IRbleTabDef extends IStringIndexer<string | ITabDefRow | ITabDefTable>
 	"@name": string;
 }
 
-interface ISubmitApiData {
-	// Data?: RBLeRESTServiceResult; // Passed in if non-session calcs being used
-	Inputs: ICalculationInputs;
-	InputTables?: Array<ISubmitCalculationInputTable>;
-	ApiParameters?: IStringAnyIndexer | undefined;
-	Configuration: ISubmitApiConfiguration;
-}
-interface ISubmitCalculationInputTable { Name: string, Rows: Array<ICalculationInputTableRow>; }
-
 // Interfaces for responses from RBL Framework
 interface IRblCalculationSuccessResponses {
 	Results: Array<{
@@ -136,23 +73,26 @@ interface IMergedRblCalculationSuccessResponses {
 		Result: IRblCalculationSuccessResponse;
 	}>;
 }
-interface IRblCalculationSuccessResponse {
-	Diagnostics: {
-		CalcEngineVersion: string;
-		Timings: {
-			Status: Array<{ "@Start": string; "#text": string; }>;
-		};
-		RBLeServer: string;
-		SessionID: string;
-		ServiceUrl: string;
-		Trace?: {
-			Item: Array<string>;
-		}
+
+interface IRblCalculationDiagnostics {
+	CalcEngineVersion: string;
+	Timings: {
+		Status: Array<{ "@Start": string; "#text": string; }>;
 	};
+	RBLeServer: string;
+	SessionID: string;
+	ServiceUrl: string;
+	Trace?: {
+		Item: Array<string>;
+	}
+}
+interface IRblCalculationSuccessResponse {
+	Diagnostics: IRblCalculationDiagnostics;
 
 	Exception: {
 		Message: string;
-		StackTrace: string;
+		Type: string;
+		StackTrace: Array<string>;
 	};
 
 	RBL: {
@@ -163,25 +103,3 @@ interface IRblCalculationSuccessResponse {
 		}
 	}
 }
-
-// Interfaces used by KatApp framework
-interface ICalculationFailedResponse {
-	calcEngine: string;
-	exception: ICalculationResponseException;
-}
-interface ICalculationSuccessResponse {
-	calcEngine: string;
-	results: IRbleTabDef[];
-}
-interface ICalculationResponseException {
-	message: string;
-	detail: Array<ICalculationResponseExceptionDetail>;
-	configuration: ISubmitApiConfiguration;
-	inputs: ICalculationInputs;
-}
-interface ICalculationResponseExceptionDetail {
-	type: string;
-	message: string;
-	stackTrace: string[];
-}
-// interface ICalculationResponseExceptionConfiguration extends ISubmitApiConfiguration, ISubmitCalculationConfiguration { }

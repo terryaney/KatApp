@@ -5,7 +5,7 @@
 		calcEngines: ICalcEngine[],
 		inputs: ICalculationInputs,
 		configuration: ISubmitApiConfiguration | undefined
-	): Promise<IRbleTabDef[]> {
+	): Promise<Array<{ Diagnostics?: IRblCalculationDiagnostics, TabDefs: Array<IRbleTabDef>}>> {
 		Utils.trace(application, "Calculation", "calculateAsync", "Start", TraceVerbosity.Detailed);
 
 		const submitConfiguration =
@@ -13,24 +13,28 @@
 				{},
 				configuration,
 				{
-					CalcEngines: calcEngines.filter(c => !c.manualResult && c.enabled)
+					calcEngines: calcEngines.filter(c => !c.manualResult && c.enabled)
 						.map(c => ({
-							Name: c.name,
-							InputTab: c.inputTab,
-							ResultTabs: c.resultTabs,
-							Pipeline: c.pipeline?.map( p => ({ Name: p.name, InputTab: p.inputTab, ResultTabs: p.resultTab } as ISubmitCalculationCalcEnginePipeline ) )
+							name: c.name,
+							inputTab: c.inputTab,
+							resultTabs: c.resultTabs,
+							pipeline: c.pipeline?.map(p => {
+								const ce: ISubmitCalculationCalcEnginePipeline = { name: p.name, inputTab: p.inputTab, resultTab: p.resultTab };
+								return ce;
+							} )
 						} as ISubmitCalculationCalcEngine ))
 				} as ISubmitCalculationConfiguration
 			);
 
+		const inputPropertiesToSkip = ["tables", "getNumber", "getOptionText"];
 		const submitData: ISubmitApiData = {
-			Inputs: Utils.clone(inputs, (k, v) => k == "tables" ? undefined : v?.toString()),
-			InputTables: inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
-			Configuration: submitConfiguration
+			inputs: Utils.clone(inputs, (k, v) => inputPropertiesToSkip.indexOf(k) > -1 ? undefined : v?.toString()),
+			inputTables: inputs.tables?.map<ICalculationInputTable>(t => ({ name: t.name, rows: t.rows })),
+			configuration: submitConfiguration
 		};
 
 		const failedResponses: Array<ICalculationFailedResponse> = [];
-		const successResponses: Array<Array<IRbleTabDef>> = [];
+		const successResponses: Array<{ Diagnostics?: IRblCalculationDiagnostics, TabDefs: Array<IRbleTabDef>}> = [];
 
 		try {
 			Utils.trace(application, "Calculation", "calculateAsync", "Posting Data", TraceVerbosity.Detailed);
@@ -57,8 +61,8 @@
 
 			if (invalidCacheResults.length > 0) {
 				const retryCalcEngines = invalidCacheResults.map(r => r.CalcEngine);
-				(submitData.Configuration as ISubmitCalculationConfiguration).CalcEngines = (submitData.Configuration as ISubmitCalculationConfiguration).CalcEngines.filter(c => retryCalcEngines.indexOf(c.Name) > -1);
-				(submitData.Configuration as ISubmitCalculationConfiguration).InvalidCacheKeys = invalidCacheResults.map(r => r.CacheKey!);
+				(submitData.configuration as ISubmitCalculationConfiguration).calcEngines = (submitData.configuration as ISubmitCalculationConfiguration).calcEngines.filter(c => retryCalcEngines.indexOf(c.name) > -1);
+				(submitData.configuration as ISubmitCalculationConfiguration).invalidCacheKeys = invalidCacheResults.map(r => r.CacheKey!);
 				const retryResults = await this.submitCalculationAsync(application, serviceUrl, inputs, submitData);
 
 				for (var i = 0; i < retryResults.Results.length; i++) {
@@ -96,69 +100,48 @@
 				}>;
 			};
 
-			if (submitConfiguration.TraceEnabled) {
-				mergedResults.Results
-					.filter(r => r.Result.Diagnostics != undefined)
-					.forEach(r => {
-						const utcDateLength = 28;
-						const timings: string[] = r.Result.Diagnostics.Timings.Status.map(t => {
-							const start = (t["@Start"] + "       ").substring(0, utcDateLength);
-							return start + ": " + t["#text"];
-						}) ?? [];
-
-						const diag = {
-							Server: r.Result.Diagnostics.RBLeServer,
-							Session: r.Result.Diagnostics.SessionID,
-							Url: r.Result.Diagnostics.ServiceUrl,
-							Timings: timings,
-							Trace: r.Result.Diagnostics.Trace?.Item.map(i => i.substring(2))
-						};
-						Utils.trace(application, "Calculation", "calculateAsync", `${r.CalcEngine} ${r.Result.Diagnostics.CalcEngineVersion} Diagnostics`, TraceVerbosity.Detailed, diag);
-					});
-			}
-
 			mergedResults.Results.filter(r => r.Result.Exception != undefined).forEach(r => {
 				const response: ICalculationFailedResponse = {
 					calcEngine: r.CalcEngine,
-					exception: {
+					diagnostics: r.Result.Diagnostics,
+					configuration: submitConfiguration,
+					inputs: inputs,
+					exceptions: [{
 						message: r.Result.Exception.Message,
-						detail: [{
-							message: r.Result.Exception.Message,
-							stackTrace: r.Result.Exception.StackTrace.split("\n")
-						}] as Array<ICalculationResponseExceptionDetail>,
-						configuration: submitConfiguration,
-						inputs: inputs
-					}
+						type: r.Result.Exception.Type,
+						stackTrace: r.Result.Exception.StackTrace
+					}]
 				};
 
 				failedResponses.push(response);
 			});
 
-			mergedResults.Results.filter(r => r.Result.Exception == undefined).forEach(r => {
-				const tabDefs = r.Result.RBL.Profile.Data.TabDef;
-				successResponses.push(tabDefs instanceof Array ? tabDefs : [tabDefs]);
-			});
+			mergedResults.Results
+				.filter(r => r.Result.Exception == undefined)
+				.forEach(r => {
+					const tabDefs = r.Result.RBL.Profile.Data.TabDef;
+					successResponses.push(
+						{
+							Diagnostics: r.Result.Diagnostics,
+							TabDefs: tabDefs instanceof Array ? tabDefs : [tabDefs]
+						});
+				});
 
 			if (failedResponses.length > 0) {
 				throw new CalculationError("Unable to complete calculation(s)", failedResponses);
 			}
-			return successResponses.flatMap(r => r);
-
+			return successResponses;
 		} catch (e) {
 			if (e instanceof CalculationError) {
 				throw e;
 			}
 
 			const exception: ICalculationResponseException = {
-				message: e instanceof Error ? e.message : e + "Unable to process RBL calculation.",
-				inputs: inputs,
-				configuration: submitConfiguration,
-				detail: [{
-					message: "Unable to submit Calculation to " + serviceUrl,
-					stackTrace: e instanceof Error
-						? e.stack?.split("\n") ?? ["No stack available"]
-						: ["Calculation.calculateAsync (rest is missing)"]
-				}] as Array<ICalculationResponseExceptionDetail>
+				message: e instanceof Error ? e.message : e + "Unable to submit Calculation to " + serviceUrl,
+				type: e instanceof Error ? e.name : "Error",
+				stackTrace: e instanceof Error
+					? e.stack?.split("\n") ?? ["No stack available"]
+					: ["Calculation.calculateAsync (rest is missing)"],
 			};
 
 			if (!(e instanceof Error)) {
@@ -166,8 +149,10 @@
 				console.log({ e });
 			}
 			throw new CalculationError("Unable to complete calculation(s)", [{
-				calcEngine: submitConfiguration.CalcEngines.map(c => c.Name).join(", "),
-				exception: exception
+				calcEngine: submitConfiguration.calcEngines.map(c => c.name).join(", "),
+				inputs: inputs,
+				configuration: submitConfiguration,
+				exceptions: [exception]
 			}]);
 		}
 	}
@@ -203,25 +188,16 @@
 				(((e as JQuery.jqXHR<any>).responseText?.startsWith("{") ?? false) ? JSON.parse((e as JQuery.jqXHR<any>).responseText) : undefined) ??
 				{ exceptions: [{ message: "No additional details available." }] };
 
+			const exceptions = errorResponse.exceptions ?? [];
 			const response: ICalculationFailedResponse = {
-				calcEngine: (submitData.Configuration as ISubmitCalculationConfiguration).CalcEngines.map(c => c.Name).join(", "),
-				exception: {
-					message:
-						errorResponse.errors?.[Object.keys(errorResponse.errors)[0]][0] ??
-						(errorResponse.exceptions?.[0] ?? {}).message ??
-						status,
-					detail: errorResponse.exceptions?.map(e => {
-						const detail: ICalculationResponseExceptionDetail = {
-							message: e.message,
-							type: e.type,
-							stackTrace: e.stackTrace
-						};
-
-						return detail;
-					}) ?? [],
-					configuration: submitData.Configuration,
-					inputs: inputs
-				}
+				calcEngine: (submitData.configuration as ISubmitCalculationConfiguration).calcEngines.map(c => c.name).join(", "),
+				configuration: submitData.configuration,
+				inputs: inputs,
+				exceptions: exceptions.map(ex => ({
+					message: ex.message,
+					type: ex.type ?? "Unknown type",
+					stackTrace: ex.stackTrace
+				}))
 			};
 
 			throw new CalculationError("Unable to complete calculation(s)", [response]);
@@ -248,28 +224,4 @@
 
 		return cacheResult;
 	}
-}
-
-class CalculationError extends Error {
-	constructor(message: string, public failures: ICalculationFailedResponse[]) {
-		super(message);
-	}
-}
-
-interface ISubmitCalculationConfiguration extends ISubmitApiConfiguration {
-	CalcEngines: ISubmitCalculationCalcEngine[];
-	InvalidCacheKeys?: string[];
-}
-
-interface ISubmitCalculationCalcEngine {
-	Name: string;
-	InputTab: string;
-	ResultTabs: string[];
-	Pipeline: ISubmitCalculationCalcEnginePipeline | undefined;
-}
-
-interface ISubmitCalculationCalcEnginePipeline {
-	Name: string;
-	InputTab?: string;
-	ResultTab?: string
 }

@@ -99,7 +99,7 @@ Inside each Kaml View file is a required `<rbl-config>` element; This should be 
 </rbl-config>
 ```
 
-When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See the [`rbl.source()`](#irblsource) method for more information on how the appropriate CalcEngine/Tab name combination is determined specifying non-default CalcEngine results and how they are used in the [`rbl.exists()`](#irblexists), [`rbl.boolean()`](#irblboolean), [`rbl.value()`](#irblvalue) and [`rbl.number()`](#irblnumber) methods and the [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), and [v-ka-highchart](#v-ka-highchart) directives.
+When multiple CalcEngines or result tabs are used, additional information can be required to specify the appropriate results.  See the [`rbl.source()`](#istaterblsource) method for more information on how the appropriate CalcEngine/Tab name combination is determined specifying non-default CalcEngine results and how they are used in the [`rbl.exists()`](#istaterblexists), [`rbl.boolean()`](#istaterblboolean), [`rbl.value()`](#istaterblvalue) and [`rbl.number()`](#istaterblnumber) methods and the [v-ka-value](#v-ka-value), [v-ka-table](#v-ka-table), and [v-ka-highchart](#v-ka-highchart) directives.
 
 **Important** - Whenever multiple CalcEngines are used, you must provide a `key` attribute; minimally on CalcEngines 2...N, but ideally on all of them.  Note that the first CalcEngine will be assigned a key value of `default` if no `key` is provided.
 
@@ -267,16 +267,16 @@ See [IKatApp Methods](#IKatApp-Methods) for more details.
 
 # KatApp State
 
-When Vue applications are created (which is done behind the scenes in the KatApp framework), they are passed a 'model' which is the 'parent scope' for all Vue directives.  The KatApp framework passes in a IApplicationData model which is described below.  All properties and methods of this model can be used directly in Vue directives.
+When Vue applications are created (which is done behind the scenes in the KatApp framework), they are passed a 'model' which is the 'parent scope' for all Vue directives.  The KatApp framework passes in a IState model which is described below.  All properties and methods of this model can be used directly in Vue directives.
 
 **This is probably the most important section of documentation since this object is used most often in the Vue directives used by Kaml Views when rendering pages.**
 
-- [IApplicationData](#IApplicationData) - The 'state model' used in all Vue directives.
+- [IState](#istate) - The 'state model' used in all Vue directives.
 - [RBLe Framework Result Processing in KatApp State](#rble-framework-result-processing-in-katapp-state) - Describes how RBLe Framework calculation results are turned into 'state model' results.
 
-## IApplicationData
+## IState
 
-The `IApplicationData` interface represents the 'scope' that is passed in to all KatApp Framework Vue enabled applications. Any of the property types below that are not primitive types (i.e. `string`, `boolean`, `any`, etc.) are explained in more detail in the [Supporting Interfaces](#supporting-interfaces) section. 
+The `IState` interface represents the 'scope' that is passed in to all KatApp Framework Vue enabled applications. Any of the property types below that are not primitive types (i.e. `string`, `boolean`, `any`, etc.) are explained in more detail in the [Supporting Interfaces](#supporting-interfaces) section. 
 
 It is vital to understand the properties and methods of this interface for Kaml View developers.
 
@@ -285,7 +285,7 @@ This 'scope' object will be accessed in both [Vue directives](#common-vue-direct
 ```html
 <!-- 
 In Vue directives, access the properties/methods 'directly' given 
-that the 'scope' for Vue directives is the IApplicationData object.
+that the 'scope' for Vue directives is the IState object.
 -->
 <div v-html="rbl.value('name-first')"></div>
 ```
@@ -299,7 +299,7 @@ application.state object.
 const nameFirst = application.state.rbl.value("name-first");
 ```
 
-### IApplicationData Properties
+### IState Properties
 
 Property | Type | Description
 ---|---|---
@@ -315,19 +315,19 @@ Property | Type | Description
 `inputs` | [`ICalculationInputs`](#icalculationinputs) | Inputs to pass along to each calculation during life span of KatApp.  See ICalculationInputs for more detail the the built in `getNumber()` and `getOptionText()` methods.
 `errors` | [`Array<IValidation>`](#ivalidation) | Error array populated from the `error` calculation result table, API validation issues, unhandled exceptions in KatApp Framework or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
 `warnings` | [`Array<IValidation>`](#ivalidation) | Warning array populated from the `warning` calculation result table or manually via `push` Kaml View javascript.  Typically they are bound to a validation summary template and input templates.
-`rbl` | [`IRbl`](#irbl) | Helper object used to access RBLe Framework Calculation results.
+`rbl` | [`IStateRbl`](#istaterbl) | Helper object used to access RBLe Framework Calculation results.
 
 
-### IApplicationData Methods
+### IState Methods
 
 Name | Description
 ---|---
-[`canSubmit`](#iapplicationdatacansubmit) | Returns `true` if application is in the 'state' to submit to server for processing.
-[`onAll`](#iapplicationdataonall) | Returns `true` if **all** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
-[`onAny`](#iapplicationdataonany) | Returns `true` if **any** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#irblboolean)
-[`pushTo`](#iapplicationdatapushto) | Allows Kaml Views to manually push 'additional result rows' into a calculation result table.
+[`canSubmit`](#istatecansubmit) | Returns `true` if application is in the 'state' to submit to server for processing.
+[`onAll`](#istateonall) | Returns `true` if **all** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#istaterblboolean)
+[`onAny`](#istateonany) | Returns `true` if **any** values passed in evaluate to `true` using same conditions described in [`rbl.boolean()`](#istaterblboolean)
+[`pushTo`](#istatepushto) | Allows Kaml Views to manually push 'additional result rows' into a calculation result table.
 
-#### IApplicationData.canSubmit
+#### IState.canSubmit
 
 **`canSubmit(whenInputsHaveChanged: boolean | undefined) => boolean`**
 
@@ -338,18 +338,18 @@ Returns `true` if `( whenInputsHaveChanged ? inputsChanged : isDirty ) && !uiBlo
 The `errors.filter` is ensuring that there are no `v-ka-input` validation errors that the user could correct.  
 
 This property is helpful to use in modal applications with a submit button to control the `disabled` state.
-#### IApplicationData.onAll
+#### IState.onAll
 
 **`onAll(...values: any[]) => boolean`**
 
 Returns `true` if **all** values passed in evaluate to `true` using same conditions described in `rbl.boolean()`.
-#### IApplicationData.onAny
+#### IState.onAny
 
 **`onAny(...values: any[]) => boolean`**
 
 Returns `true` if **any** value passed in evaluates to `true` using same conditions described in `rbl.boolean()`.
 
-#### IApplicationData.pushTo
+#### IState.pushTo
 
 **`pushTo(tabDef: ITabDef, table: string, rows: ITabDefRow | Array<ITabDefRow>, calcEngine?: string, tab?: string) => void`**
 
@@ -372,15 +372,15 @@ application.on("resultsProcessing.ka", (event, results, inputs) => {
 ```
 
 
-## IRbl
+## IStateRbl
 
 Helper object used to access RBLe Framework Calculation results.
 
-### IRbl Properties
+### IStateRbl Properties
 
 Property | Type | Description
-`results`<sup>1</sup> | `IStringIndexer<IStringIndexer<Array<ITabDefRow>>>` | JSON object containing results of all assocatied CalcEngines.  Typically not used by Kaml developers.  Instead, use other methods of `IRbl` to grab results.  The `string` key to results is the concatenation of `CalcEngineKey.TabName`.
-`options`<sup>2</sup> | `{ calcEngine?: string, tab?: string }` | Default configuration settings to be applied when working with the `IApplicationData.rbl` object and its methods.  The CalcEngine key and/or the `ITabDef` name to use as the default source when the CalcEngine key is not provided in methods that access RBLe Framework results.  If not provided, the *first* CalcEngine key and its *first* result tab defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
+`results`<sup>1</sup> | `IStringIndexer<IStringIndexer<Array<ITabDefRow>>>` | JSON object containing results of all assocatied CalcEngines.  Typically not used by Kaml developers.  Instead, use other methods of `IStateRbl` to grab results.  The `string` key to results is the concatenation of `CalcEngineKey.TabName`.
+`options`<sup>2</sup> | `{ calcEngine?: string, tab?: string }` | Default configuration settings to be applied when working with the `IState.rbl` object and its methods.  The CalcEngine key and/or the `ITabDef` name to use as the default source when the CalcEngine key is not provided in methods that access RBLe Framework results.  If not provided, the *first* CalcEngine key and its *first* result tab defined in the [`<rbl-config>`](#configuring-calcengines-and-template-files) element in the Kaml View will be used when accessing results.
 
 <sup>1</sup> The `results` object can be visualized as below (See [RBLe Framework Result Processing in KatApp State](#rble-framework-result-processing-in-katapp-state) to understand how RBLe Framework result managed in KatApp state to ensure proper `reactivity` after each calculation):
 
@@ -432,26 +432,26 @@ application.state.rbl.options.tab = "RBLHelpers";
 application.state.rbl.value("firstName"); // return rbl-value.firstName from LAW_Shared_CE, RBLHelpers tab
 ```
 
-### IRbl Methods
+### IStateRbl Methods
 
 Name | Description
 ---|---
-[`source`](#irblsource) | Returns table rows from `results`.
-[`exists`](#irblexists) | Check for existence of table row(s).
-[`value`](#irblvalue) | Return a single value (`undefined` if not present) from `results`.
-[`number`](#irblnumber) | Return a single *number* value (`0` if not present or not a number) from `results`.
-[`boolean`](#irblboolean) | Return whether or not a single row.column value is truthy.
+[`source`](#istaterblsource) | Returns table rows from `results`.
+[`exists`](#istaterblexists) | Check for existence of table row(s).
+[`value`](#istaterblvalue) | Return a single value (`undefined` if not present) from `results`.
+[`number`](#istaterblnumber) | Return a single *number* value (`0` if not present or not a number) from `results`.
+[`boolean`](#istaterblboolean) | Return whether or not a single row.column value is truthy.
 
-#### IRbl.source
+#### IStateRbl.source
 
 **`source(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean) => Array<ITabDefRow>`**
 
-The core method that returns table rows from `results` (and is leveraged internally by other `IApplicationData.rbl` methods).  The CalcEngine key and `ITabDef` name can be passed in if not using the 'default' CalcEngine and result tab. 
+The core method that returns table rows from `results` (and is leveraged internally by other `IState.rbl` methods).  The CalcEngine key and `ITabDef` name can be passed in if not using the 'default' CalcEngine and result tab. 
 
-When the `calcEngine` and/or `tab` parameter is not provided, a 'default' location has to be determined.  This can be set via the the `IApplicationData.rbl.options` object.
+When the `calcEngine` and/or `tab` parameter is not provided, a 'default' location has to be determined.  This can be set via the the `IState.rbl.options` object.
 
-1. CalcEngine is determined by `calcEngine` param, then [`rbl.options.calcEngine`](#iapplicationdatarbloptionscalcengine) setting.
-1. Tab name is determined by `tab` param, then [`rbl.options.tab`](#iapplicationdatarbloptionstab) setting.
+1. CalcEngine is determined by `calcEngine` param, then [`rbl.options.calcEngine`](#istaterbloptionscalcengine) setting.
+1. Tab name is determined by `tab` param, then [`rbl.options.tab`](#istaterbloptionstab) setting.
 
 The `predicate` parameter indicates how the result rows should be filtered before returning them.
 
@@ -474,7 +474,7 @@ application.state.rbl.source("brdResultTable", "BRD", r => r.topic == 'head');
 ```
 
 
-#### IRbl.exists
+#### IStateRbl.exists
 
 **`exists(table: string, calcEngine?: string, tab?: string, predicate?: (row: ITabDefRow) => boolean ) => boolean`**
 
@@ -493,7 +493,7 @@ A `predicate` can be passed to filter rows before checking for existence.
 </div>
 ```
 
-#### IRbl.value
+#### IStateRbl.value
 
 **`value(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined`**
 
@@ -534,7 +534,7 @@ const name = application.state.rbl.value("custom-table", "name-first", "value2",
                 "BRD", "RBLResult2");
 ```
 
-#### IRbl.number
+#### IStateRbl.number
 
 **`number(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => number`**
 
@@ -542,11 +542,11 @@ Return a single *number* value (`undefined` if not present) from `results` given
 
 After `keyValue`, all parameters are optional. If `returnField` is not passed in, the `value` column is used.  If `keyField` is not passed in, the `@id` column is used.
 
-Internally, `number()` first retrieves a value using the [`value()`](#irblvalue) method, then converts it to a number.  If the value is `undefined` or unable to be converted to a number, `0` is returned.
+Internally, `number()` first retrieves a value using the [`value()`](#istaterblvalue) method, then converts it to a number.  If the value is `undefined` or unable to be converted to a number, `0` is returned.
 
 See `rbl.value()` for examples on syntax available.
 
-#### IRbl.boolean
+#### IStateRbl.boolean
 
 **`boolean(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string, valueWhenMissing?: boolean) => boolean`**
 
@@ -967,7 +967,7 @@ There are some scenarios when an input template renders multiple inputs and some
 
 # Common Vue Directives
 
-Vue supports [many directives](https://vuejs.org/api/built-in-directives.html), however, there are only a handful that commonly used in Kaml View files.  Below are the most common directives used and some examples of how to use them with the [IApplicationData scope object](#iapplicationdata).
+Vue supports [many directives](https://vuejs.org/api/built-in-directives.html), however, there are only a handful that commonly used in Kaml View files.  Below are the most common directives used and some examples of how to use them with the [IState scope object](#istate).
 
 - [v-html / v-text](#v-html--v-text) - Update the element's `innerHTML` or text content.
 - [v-bind](#v-bind) - Dynamically bind one or more attributes to an expression.
@@ -989,7 +989,7 @@ Or, use the `v-html` directive to:
 
 > [Vue](https://vuejs.org/api/built-in-directives.html#v-html): Update the element's [innerHTML](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML).
 
-The `v-html`, and less common `v-text`, directive is most commonly used inside the processing of a [`v-for`](#v-for) directive.  It can also be used in conjunction with the [`rbl.value()`](#iapplicationdatarblvalue) method as well.
+The `v-html`, and less common `v-text`, directive is most commonly used inside the processing of a [`v-for`](#v-for) directive.  It can also be used in conjunction with the [`rbl.value()`](#istaterblvalue) method as well.
 
 The `v-text` directive *does* have a `{{ }}` shorthand syntax that allows for more terse markup.
 
@@ -1250,7 +1250,7 @@ There are two allowed syntaxes for `v-for`.
 1. `v-for="item in array"` where `item` is just a 'variable name' representing each item in the iterable source.  In this case, the `array` value, usually `rbl.source()`, represents the iterable source.
 1. `v-for="(item, index) in array"` functions the same as above, except with this signature, an 'index' variable has been introduced (it can be named anything) that is a `0..N` integer representing the current position of `item` in the `array`. This is helpful when you need to conditionally change markup based on the first or last item in the iterable source.
 
-Kaml Views will most often use `v-for` in conjunction with [`rbl.source()`](#iapplicationdatarblsource).
+Kaml Views will most often use `v-for` in conjunction with [`rbl.source()`](#istaterblsource).
 
 For all samples in this section, assume calculation results of the following:
 
@@ -1504,7 +1504,7 @@ When an element is toggled, the element and its contained directives are destroy
 
 Use the `v-pre` directive to an element that is used for [IModalOptions.contentSelector](#imodaloptionscontentselector) if the markup within the element should not be processed by the host application, but instead should be processed and become reactive when the modal application is created.
 
-When this directive is applied to an element targeted with `contentSelector`, the resulting modal application's [`state`](#iapplicationdata) is a clone from the host application, so that all `v-*` and `v-ka-*` directives have all the data they need to correctly process.  The `v-pre` is discarded when the application is created and regular Vue processing/compilation correctly occurs for the modal application.
+When this directive is applied to an element targeted with `contentSelector`, the resulting modal application's [`state`](#istate) is a clone from the host application, so that all `v-*` and `v-ka-*` directives have all the data they need to correctly process.  The `v-pre` is discarded when the application is created and regular Vue processing/compilation correctly occurs for the modal application.
 
 # Custom KatApp Directives
 
@@ -1526,12 +1526,12 @@ Similiar to common Vue directives, the KatApp Framework provides custom directiv
 - [v-ka-inline](#v-ka-inline) - Render *raw HTML* without the need for a `HTMLElement` 'container'.
 - [v-ka-rbl-no-calc](#v-ka-rbl-no-calc) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change.
 - [v-ka-rbl-exclude](#v-ka-rbl-exclude) - Flag an element so that any contained `v-ka-input` elements do not trigger a RBLe calculation upon change *and* are never submitted to an RBLe calculation.
-- [v-ka-unmount-clears-inputs](#v-ka-unmount-clears-inputs) - Flag an element so that when any contained `v-ka-input` elements are removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) value is also removed.
+- [v-ka-unmount-clears-inputs](#v-ka-unmount-clears-inputs) - Flag an element so that when any contained `v-ka-input` elements are removed from the DOM, the associated [`state.inputs`](#istate-properties) value is also removed.
 - [v-ka-nomount](#v-ka-nomount) - Flag an element so that any contained `v-ka-input` elements allow for the KatApp framework to wire up all automatic processing.
 
 ## v-ka-value
 
-The `v-ka-value` directive is responsible for assigning element HTML content from the calculation results.  It is simply a shorthand syntax to use in place of [`v-html`](#v-html--v-text) and [`rbl.value()`](#iapplicationdatarblvalue).
+The `v-ka-value` directive is responsible for assigning element HTML content from the calculation results.  It is simply a shorthand syntax to use in place of [`v-html`](#v-html--v-text) and [`rbl.value()`](#istaterblvalue).
 
 - [v-ka-value Model](#v-ka-value-model) - Discusses the properties that can be passed in to configure the `v-ka-value` directive.
 - [v-ka-value Samples](#v-ka-value-samples) - Various use examples of how to use `v-ka-value`.
@@ -1541,7 +1541,7 @@ The `v-ka-value` directive is responsible for assigning element HTML content fro
 
 The model used to configure how a `v-ka-value` will find the appropriate calculation result value is simply a `.` delimitted `string`.
 
-The selector has the format of `table.keyValue.returnField.keyField.calcEngine.tab`. As you can see, it has the same parameters as the [rbl.value()](#iapplicationdatarblvalue) method and behaves the same way. Each of the model 'segments' are optional.
+The selector has the format of `table.keyValue.returnField.keyField.calcEngine.tab`. As you can see, it has the same parameters as the [rbl.value()](#istaterblvalue) method and behaves the same way. Each of the model 'segments' are optional.
 
 The `v-ka-value` directive has the same shorthand capabilities as `rbl.value()` which allows for more terse markup.  If the `rbl-value` is the table being selected from, you can simply provide a single `@id` value to the directive.
 
@@ -1816,7 +1816,7 @@ Property | Type | Description
 `mask` | `string` | Provide an input `mask` to apply during user input for text inputs.  The value can also be provided via the `rbl-input.mask` RBLe Framework calculation value.<br/><br/>The supported masks are:<br/>1. `phone`, `(###) ###-####`<br/>2. `zip+4`, `#####-####`<br/>3. `cc-expire`, `MM/YY`<br/>4. `email` (only permits letters, numbers, period, `@`, `_`, and `-`)<br/>5. A 'money' mask which verifies the input is entered as a currency value taking into consideration the current cultures decimal place separator.  You can control decimal places and whether or not it allows negative values.  The format is `[-]money[N]` where the `-` is optional to indicate negatives are allowed and the `N` is optional to specify the number of decimal places to allow.  By default, specifying only `money` results in positive only values and 2 decimal places.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.mask` RBLe Framework calculation value<br/>2. `model.mask` property<br/>3. `undefined` if no value provided.
 `keyboardRegex` | `string` | Provide an regular expression to evaluate during user input for text inputs.  This is to provide a simple, first line of defense against bad input, you can supply a regular expression to inputs via the keypressRegex(s) property that simply evaluates the keyboard input while the user types.  Full client/server validation should still be performed, this is simply a UI aid to guard 99% of users.  i.e. `\d` would only allow numerical input.<br/><br/>The property value is determined based on following precedence:<br/><br/>1. `rbl-input.keyboard-regex` RBLe Framework calculation value<br/>2. `model.keyboardRegex` property<br/>3. `undefined` if no value provided.
 `uploadEndpoint` | `string` | Provide an `uploadEndpoint` value for the input that could be used if `type="file"` or if the template will render a 'file upload' UI component.
-`clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) value is also removed.
+`clearOnUnmount` | `boolean` | If `true`, when an input is removed from the DOM, the associated [`state.inputs`](#istate-properties) value is also removed.
 `help` | `{ title?: string; content: string; width?: number; }` | Provide the help configuration when the input displays contextual help.<br/><br/>When `help` is provided, `content` is required and both `title` and `content` are HTML strings.<br/><br/>Values can also be provided via the RBLe Framework calculation.<br/>1. `title` via `rbl-value[@id=='h' + name + 'Title'].value` or `rbl-input.help-title`.<br/>2.`content` via `rbl-value[@id=='h' + name].value` or `rbl-input.help`.<br/>3. `width` via `rbl-input.help-width` (`width` is often used when leveraging [Bootstrap popovers](https://getbootstrap.com/docs/5.0/components/popovers/#options) to render the contextual help).
 `css` | `{ container?: string; input?: string; }` | Provide css configuration that can be applied to the 'container' element or any 'inputs' within a template markup.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to `HTMLInputElements` based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
@@ -1868,8 +1868,8 @@ Property | Type | Description
 `min` | `string` | Gets the min value allowed if the rendered input supports the concept of minimum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.min` RBLe Framework calculation value<br/>2. `model.min` property<br/>3. `""` if no value provided.
 `max` | `string` | Gets the max value allowed if the rendered input supports the concept of maximum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.max` RBLe Framework calculation value<br/>2. `model.max` property<br/>3. `""` if no value provided.
 `step` | `number` | Gets the step increment value to use if the rendered input supports the concept of incremental steps (i.e. `range` types).<br/><br/>Returns value based on following precedence:<br/><br/>1. `rbl-input.step` RBLe Framework calculation value<br/>2. `model.step` property<br/>3. `1` if no value provided.
-`error` | `string \| undefined` | Gets the error message associated with the current input from the [state.errors property](#iapplicationdataerrors). A value of `undefined` indicates no error.  The value can only by provided the [state.errors property](#iapplicationdataerrors).
-`warning` | `string \| undefined` | Gets the warning message associated with the current input from the [`state.warnings` property](#iapplicationdatawarnings). A value of `undefined` indicates no warning.  The value can only by provided the `state.warnings` property.
+`error` | `string \| undefined` | Gets the error message associated with the current input from the [state.errors property](#istateerrors). A value of `undefined` indicates no error.  The value can only by provided the [state.errors property](#istateerrors).
+`warning` | `string \| undefined` | Gets the warning message associated with the current input from the [`state.warnings` property](#istatewarnings). A value of `undefined` indicates no warning.  The value can only by provided the `state.warnings` property.
 `uploadAsync` | `() => void \| undefined` | If an [uploadEndpoint](#ikainputmodeluploadendpoint) was provided, the KatApp Framework provides a help function that can be called to automatically submit the rendered [input.files](https://developer.mozilla.org/en-US/docs/Web/API/File_API/Using_files_from_web_applications#getting_information_about_selected_files) list to the uploadEndpoint for processing.  Error handling is built in and 'success' is implied if no error occurs.
 
 ### rbl-input Table
@@ -2104,7 +2104,7 @@ The following template uses most of the previous properties and additionally use
 
 ## v-ka-input-group
 
-The `v-ka-input-group` directive is responsible for initializing groups of HTML inputs to be used in conjunction with the RBLe Framework calculations via synchronizing [`state.inputs`](#iapplicationdata-properties) and HTML inputs. It behaves the same as a [v-ka-input directive](#v-ka-input) except that all the properties on the model and scope are essentially array based to support whatever number of inputs the specified template supports.
+The `v-ka-input-group` directive is responsible for initializing groups of HTML inputs to be used in conjunction with the RBLe Framework calculations via synchronizing [`state.inputs`](#istate-properties) and HTML inputs. It behaves the same as a [v-ka-input directive](#v-ka-input) except that all the properties on the model and scope are essentially array based to support whatever number of inputs the specified template supports.
 
 **The `v-ka-input-group` directive can only be used when a `template` is assigned.**
 
@@ -2146,7 +2146,7 @@ Property | Type | Description
 `isDisabled`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) \| boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be disabled.  The value can also be provided via the `rbl-disabled.value` or `rbl-input.disabled` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `isDisplay`<sup>2</sup> | `((index: number, base: IKaInputGroupScopeBase) => boolean) \| boolean` | Provide a simple boolean value or a delegate to the input group scope that can be called to determine if an input should be displayed.  The value can also be provided via the `rbl-display.value` or `rbl-input.display` RBLe Framework calculation value where the `@id` is one of the values provided by `names`.
 `events` | `IStringIndexer<((e: Event, application: KatApp) => void)>` | Provide a javascript object where each property is an event handler.  These event handlers will automatically be added to all the group `HTMLInputElement`s based on the property name.  The property name follows the same patterns as the [`v-on`](#v-on) directive (including [modifiers](#v-on-modifiers)).
-`clearOnUnmount` | `boolean` | If `true`, when the inputs of an input group are removed from the DOM, the associated [`state.inputs`](#iapplicationdata-properties) values are also removed.
+`clearOnUnmount` | `boolean` | If `true`, when the inputs of an input group are removed from the DOM, the associated [`state.inputs`](#istate-properties) values are also removed.
 
 <sup>1</sup> The format should be valid a C# format string in the format of `{0:format}` where `format` is a format string described in one of the links below.
 
@@ -2186,8 +2186,8 @@ Property | Type | Description
 `min` | `(index: number) => string` | Given an input index, gets the min value allowed if the rendered input supports the concept of minimum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.min` RBLe Framework calculation value<br/>2. `model.mins[index]` property<br/>3. `""` if no value provided.
 `max` | `(index: number) => string` | Given an input index, gets the max value allowed if the rendered input supports the concept of maximum value (i.e. `range` or `date` types).<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.max` RBLe Framework calculation value<br/>2. `model.maxes[index]` property<br/>3. `""` if no value provided.
 `step` | `(index: number) => number` | Given an input index, gets the step increment value to use if the rendered input supports the concept of incremental steps (i.e. `range` types).<br/><br/>Returns value based on following precedence:<br/>1. `rbl-input.step` RBLe Framework calculation value<br/>2. `model.steps[index]` property<br/>3. `1` if no value provided.
-`error` | `(index: number) => string \| undefined` | Given an input index, gets the error message associated with the current input from the [state.errors property](#iapplicationdataerrors). A value of `undefined` indicates no error.  The value can only by provided the [state.errors property](#iapplicationdataerrors).
-`warning` | `(index: number) => string \| undefined` | Given an input index, gets the warning message associated with the current input from the [`state.warnings` property](#iapplicationdatawarnings). A value of `undefined` indicates no warning.  The value can only by provided the `state.warnings` property.
+`error` | `(index: number) => string \| undefined` | Given an input index, gets the error message associated with the current input from the [state.errors property](#istateerrors). A value of `undefined` indicates no error.  The value can only by provided the [state.errors property](#istateerrors).
+`warning` | `(index: number) => string \| undefined` | Given an input index, gets the warning message associated with the current input from the [`state.warnings` property](#istatewarnings). A value of `undefined` indicates no warning.  The value can only by provided the `state.warnings` property.
 
 ### v-ka-input-group Samples
 
@@ -2335,7 +2335,7 @@ inputs: {
 
 ## v-ka-template
 
-The `v-ka-template` directive is responsible for manually rendering a template with or without a data source. The data source can be a simple javascript object or it can be an array of data (usually obtained via [rbl.source()](#iapplicationdatarblsource)).  When the source is an `Array<>`, the template can get access to this property via the scope's `rows` properties.
+The `v-ka-template` directive is responsible for manually rendering a template with or without a data source. The data source can be a simple javascript object or it can be an array of data (usually obtained via [rbl.source()](#istaterblsource)).  When the source is an `Array<>`, the template can get access to this property via the scope's `rows` properties.
 
 - [v-ka-template Model](#v-ka-template-model) - Discusses the properties that can be passed in to configure the `v-ka-template` directive.
 - [v-ka-template Scope](#v-ka-template-scope) - Discusses how/which properties are exposed on the `v-ka-template` scope and can be used in Kaml View markup.  See [Scopes with Properties that are Reactive](#scopes-with-properties-that-are-reactive) for information on how to define the `source` property when information is reactive (i.e. a custom source defining a `rows` property that changes via new calculation results).
@@ -3077,7 +3077,7 @@ Attempt is in quotes because when the user 'thinks' they click the button, they 
 
 A worse scenario is when a page with inputs and a submit button *also display calculation results* that are providing the user information to confirm before submitting the transaction.  With the same flow, when the user edits the last input but has not triggered the `change` event via a loss of focus, the 'information' on the screen is out of sync with the input values, however, the user may assume that the information is accurate and is attempting to submit based on the information displayed.  Most likely the 'two clicks to function' scenario described above will occur, but the user may not notice that the 'information' has updated after the calculation and simply clicks on the submit again.
 
-To aleviate this issue, the Kaml Views can decorate 'submit buttons' with a `v-ka-needs-calc` attribute which will ultimately take advantage of the [state.needsCalculation](#iapplicationdataneedscalculation) property.  The directive can be applied with or without a value.  When a value is provided, it is the label of the 'cloned button' (otherwise `Refresh` is the default label).  An example will better illustrate this.
+To aleviate this issue, the Kaml Views can decorate 'submit buttons' with a `v-ka-needs-calc` attribute which will ultimately take advantage of the [state.needsCalculation](#istateneedscalculation) property.  The directive can be applied with or without a value.  When a value is provided, it is the label of the 'cloned button' (otherwise `Refresh` is the default label).  An example will better illustrate this.
 
 ```html
 <a v-ka-needs-calc href="#" class="btn btn-primary btn-sm" @click.prevent="console.log('save inputs')">Save Inputs</a>
@@ -3204,7 +3204,7 @@ The `v-ka-rbl-exclude` directive has the same effect as the [`IKaInputModel.isEx
 
 ## v-ka-unmount-clears-inputs
 
-The `v-ka-unmount-clears-inputs` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained [`v-ka-input`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#v-ka-input) elements are removed from the DOM, the associated [`state.inputs`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#iapplicationdatainputs) value is also removed.
+The `v-ka-unmount-clears-inputs` directive is a 'marker' directive (no model/attribute value) that can be assigned to any HTML element to indicate that any contained [`v-ka-input`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#v-ka-input) elements are removed from the DOM, the associated [`state.inputs`](https://github.com/terryaney/nexgen-documentation/blob/main/KatApp.Vue.md#istateinputs) value is also removed.
 
 The `v-ka-unmount-clears-inputs` directive has the same effect as the [`IKaInputModel.clearOnUnmount` property](#v-ka-input-model) when it returns `true`.
 
@@ -3235,7 +3235,7 @@ Using `v-ka-unmount-clears-inputs` is useful if a `v-for` generates `v-ka-inputs
 
 ## v-ka-nomount
 
-When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#iapplicationdata-properties) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
+When using `v-ka-input` or [input templates](#input-templates), all 'discovered' inputs are automatically processed when they are mounted (rendered) or unmounted (removed from the page) to ensure that the KatApp [`state.inputs`](#istate-properties) are properly synchronized and additionally HTML DOM events are attached for default behaviors needed to handle RBLe Framework calculations.
 
 There are some situations where **inputs should not be automatically processed** (i.e. if a view/template has hidden inputs that are for internal use only - i.e. file upload templates).  When an input should **not** be processed, the `v-ka-nomount` attribute can be applied to the input.
 
@@ -3249,8 +3249,8 @@ During the mounting of a KatApp input the following occurs:
 1. DOM events are attached
     1. All Inputs
         1. On 'change' (i.e. any modification to the input value)
-            1. Remove an [`state.errors`](#iapplicationdataerrors) associated with the input.
-            1. Set [`state.needsCalculation`](#iapplicationdataneedscalculation) to `true`.
+            1. Remove an [`state.errors`](#istateerrors) associated with the input.
+            1. Set [`state.needsCalculation`](#istateneedscalculation) to `true`.
         1. On 'update', syncronize `state.inputs` if `rbl-exclude` class is not used.
         1. On 'update', trigger RBLe Calculation if `rbl-skip` class is not used and [`scope.noCalc`](#ikainputscopenocalc) is `false`.
         1. On `update`, set `state.needsCalculation` to `false`.
@@ -3270,7 +3270,7 @@ During the mounting of a KatApp input the following occurs:
 
 During the unmounting of a KatApp input the following occurs:
 
-1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#iapplicationdata-properties).
+1. If the [`model.clearOnUnmount`](#ikainputmodelclearonunmount) is `true`, the input will be removed from the [`state.inputs`](#istate-properties).
 1. If the input, or a container, has a [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive, the input will be removed from the `state.inputs`.
     1. Note, since Vue handles [`v-if`](#v-if--v-else--v-else-if) and [`v-for`](#v-for) directives with special 'cloned nodes', if the [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is applied *outside* of these elements, they will not work properly.
     1. [`v-ka-unmount-clears-inputs`](#v-ka-unmount-clears-inputs) directive is useful to use if you can wrap a group of inputs with the class and the inputs themselves will never show and hide based on their `display` property.  For example if a modal has a 'view' mode and 'edit' mode.  The 'edit' mode gets processed and returns the 'view' mode.  If the user wants to edit/create again in the 'edit' mode, you want all the inputs to be cleared after they were hidden/processed.
@@ -3311,7 +3311,7 @@ During the unmounting of a KatApp input the following occurs:
 </div>
 ```
 
-The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#iapplicationdata-properties) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
+The `<template>` content will be rendered and searched for any `HTMLInputElement`s and automatically have event watchers added to trigger RBLe Framework calculations as needed and well as binding to the [state.inputs](#istate-properties) model. The `<template>` markup will have access to the [scope](#v-ka-input-scope).
 
 
 
@@ -3337,7 +3337,7 @@ Name | Description
 [`createAppAsync`](#katappcreateappasync) | Asyncronous method to create a new KatApp bound to an `HTMLElement` selected via `selector`.
 [`get`](#katappget) | Get access to an existing KatApp.
 [`handleEvents`](#katapphandleasync) | Similar to [`IKatApp.handleEvents`](#ikatapphandleevents) and allows for events to be attached to applications.  Used generic javascript libraries that want to attach events to an application, but is have direct access to an application or the application may not be created/available at the time the library wants to register the events.
-[`getDirty`](#katappgetdirty) | Returns all currently running KatApps where the [`isDirty`](#iapplicationdata-properties) flag is `true`.
+[`getDirty`](#katappgetdirty) | Returns all currently running KatApps where the [`isDirty`](#istate-properties) flag is `true`.
 
 ### KatApp.createAppAsync
 
@@ -3403,7 +3403,7 @@ When using this method to bind events, *almost always*, the last parameter, `app
 
 `getDirty(): Array<IKatApp>`
 
-Returns all currently running KatApps where the [`isDirty`](#iapplicationdata-properties) flag is `true`.  Useful for preventing navigation if anything is dirty.
+Returns all currently running KatApps where the [`isDirty`](#istate-properties) flag is `true`.  Useful for preventing navigation if anything is dirty.
 
 ```javascript
 (function () {
@@ -3441,7 +3441,7 @@ Property | Type | Description
 `environment` | `string` | The name of the current environment as it is known in the Host Environment. This can be used in Kaml View javascript or a CalcEngine if different functionality needs to occur based on which environment (i.e. DEV, QA, PROD) a Kaml View is running<br/><br/>This value is passed into the RBLe Framework calculations via the `iEnvironment` input.
 `requestIP` | `string` | The IP address of the browser running the current KatApp.
 `currentUICulture` | `string` | The current culture as it is known in the Host Environment.  This enables culture specific number and date formatting and is in the format of `languagecode2-country/regioncode2`.  The default value is `en-US`.<br/><br/>This value is passed into the RBLe Framework calculations via the `iCurrentUICulture` input.
-`inputs` | [`ICalculationInputs`](#icalculationinputs) | The Host Environment can pass in inputs that serve as the default values to inputs rendered in the Kaml View or simply as 'fixed' inputs (if no matching rendered inputs are present that would update them) that will be passed to every RBLe Framework calculation.  This value becomes the initial value for [`IApplicationData.inputs`](#iapplicationdatainputs-icalculationinputs) when the KatApp is created.
+`inputs` | [`ICalculationInputs`](#icalculationinputs) | The Host Environment can pass in inputs that serve as the default values to inputs rendered in the Kaml View or simply as 'fixed' inputs (if no matching rendered inputs are present that would update them) that will be passed to every RBLe Framework calculation.  This value becomes the initial value for [`IState.inputs`](#istateinputs-icalculationinputs) when the KatApp is created.
 `inputCaching` | `boolean` | Whether or not the page inputs are cached after each calculation.  This allows the user to leave a page and come back and the inputs would automatically be retored.  The default is `false`.
 `manualResults`<sup>1</sup> | [`Array<IManualTabDef>`](#imanualtabdef) | The Host Environment can pass in 'manual results'.  These are results that are usually generated one time on the server and cached as needed.  Passing manual results to a KatApp removes the overhead needed to perform a RBLe Framework calculation.  
 `manualResultsEndpoint` | `string` | Similiar to `manualResults`, if provided, this endpoint could be called to retrieve a `manualResults` object from the Host Environment that is of type [`Array<IManualTabDef>`](#imanualtabdef).  Used to leverage browser caching.
@@ -3490,7 +3490,6 @@ Optional debugging options that can be used during the development of a KatApp's
 Property | Type | Description
 ---|---|---
 `traceVerbosity`<sup>1</sup> | `TraceVerbosity` | Control the trace output level to display for the current KatApp by assigning desired enum value.  The default value is `TraceVerbosity.None`.
-`refreshCalcEngine` | `boolean` | Whether or not the RBLe Framework should check for an updated CalcEngine every single calculation.  By default, the RBLe Framework only checks every 5 minutes.  A `boolean` value can be passed in or using the querystring of `expireCE=1` will enable the settings.  The default value is `false`.
 `useTestCalcEngine` | `boolean` | Whether or not the RBLe Framework should the test version of the specified CalcEngine.  A `boolean` value can be passed in or using the querystring of `test=1` will enable the settings.  The default value is `false`.
 `useTestView` | `boolean` | Whether or not the KatApp Framework should use the test versions of any requested Kaml Views or Kaml Template Files that are hosted in the KAT CMS instead of by the Host Environment.  A `boolean` value can be passed in or using the querystring of `testview=1` will enable the settings. The default value is `false`.
 `showInspector` | `boolean` | Whether or not the KatApp Framework should show diagnostic information for all Vue directives.  When enabled, pressing `CTRL+SHIFT` together will toggle visual cues for each 'Vue enabled' element.  Then you can use the browser 'inspect tool' to view an HTML comment about the element.  A `boolean` value can be passed in or using the querystring of `showinspector=1` will enable the settings.  The default value is `false`.
@@ -3521,7 +3520,7 @@ Property | Type | Description
 `options` | [`IKatAppOptions`](#ikatappoptions) | The `IKatAppOptions` that configure the options that control the `IKatApp`.
 `isCalculating` | `boolean` | Read Only; Whether or not the KatApp is currently triggering and processing a RBLe Framework calculation.
 `lastCalculation` | [`ILastCalculation | undefined`](#ilastcalculation) | Read Only; If a RBLe Framework calculation has previously run, this property will contain a snapshot of the `ILastCalculation` object.
-`state` | [`IApplicationData`](#iapplicationdata) | The global state object passed into the Vue application.  Any updates to properties on the `state` object can trigger reactivity.
+`state` | [`IState`](#istate) | The global state object passed into the Vue application.  Any updates to properties on the `state` object can trigger reactivity.
 `selector` | `string` | The JQuery selector string that was used to locate the `HTMLElement` and set the `el` property which hosts the KatApp.
 
 ### IKatApp Methods
@@ -3549,7 +3548,7 @@ Name | Description
 
 #### IKatApp.configure
 
-**`configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp`**
+**`configure(configAction: (config: IConfigureOptions, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp`**
 
 The `configure` method can only be called one time and must be called before the Kaml View is 'mounted' by Vue. Allows for the Kaml View to update application options by modifying the `config` parameter.  See [`IConfigureOptions`](#iconfigureoptions) for more information.
 
@@ -3605,7 +3604,7 @@ application.configure((config, rbl, model, inputs, handlers) => {
 
 #### IKatApp.handleEvents
 
-**`handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp`**
+**`handleEvents(configAction: (events: IKatAppEventsConfiguration, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp`**
 
 Allows for the Kaml View to add additional event handlers to an application via the `events` parameter.  This is similar to the original `configure()` method call and assigning specific events, but is allowed to be called at any time during the application life cycle.
 
@@ -3705,7 +3704,7 @@ Return a [`ICalculationInputs`](#icalculationinputs) object that represent the u
 
 **`getInputValue(input: string, allowDisabled?: boolean): string | undefined;`**
 
-Get the current input value of the input name passed in by inspecting the raw HTML markup/elements versus the [`state.inputs`](#iapplicationdata-properties) object.
+Get the current input value of the input name passed in by inspecting the raw HTML markup/elements versus the [`state.inputs`](#istate-properties) object.
 
 By default, `allowDisabled` is `false`, but if `true` is passed in, and the input element is disabled, the method returns `undefined`.
 
@@ -3713,7 +3712,7 @@ By default, `allowDisabled` is `false`, but if `true` is passed in, and the inpu
 
 **`setInputValue(name: string, value: string | undefined, calculate?: boolean): JQuery | undefined;`**
 
-Given and input `name` and `value`, set the value of the HTML element and the value in the [`state.inputs`](#iapplicationdata-properties). If `value` is undefined, the input name and property will be removed from `state.inputs`.
+Given and input `name` and `value`, set the value of the HTML element and the value in the [`state.inputs`](#istate-properties). If `value` is undefined, the input name and property will be removed from `state.inputs`.
 
 By default, `calculate` is `false` so that setting input values does not trigger a calculation and Kaml Views can safely set multiple input values without a calculation. If `true` is passed in, then a RBLe Framework calculation will occur after the input value is applied.
 
@@ -4106,9 +4105,9 @@ interface ICalculationInputTableRow extends ITabDefRow {
 	index: string;
 }
 interface ISubmitApiData {
-	Inputs: ICalculationInputs;
-	InputTables?: Array<{ Name: string, Rows: Array<ICalculationInputTableRow>; }>;
-	Configuration: ISubmitApiConfiguration;
+	inputs: ICalculationInputs;
+	inputTables?: Array<{ Name: string, Rows: Array<ICalculationInputTableRow>; }>;
+	configuration: ISubmitApiConfiguration;
 }
 ```
 
@@ -4226,7 +4225,7 @@ Property | Type | Description
 `text` | `string` | The text to display for the validation.
 `dependsOn` | `string?` | The 'id' of another input (or comma delimitted list) that this validation depends on.  For example, a radio button list where there are different 'child' inputs displayed based on radio selection.  If the `dependsOn` input is updated, any validations that contain that input ID in the `dependsOn` property will automatically be removed.  This is different from using a comma delimitted list in the `id` property because adding an ID(s) to `dependsOn` will not set the `v-ka-input.error` or `v-ka-input.warning` properties of the associated ID(s).
 
-**Note**: All `errors` and `warnings` are automatically removed when the [application.calculateAsync](#calculateAsync) method is called or when the [application.apiAsync](#apiAsync) method is called.  This is to ensure that the user is not presented with stale errors/warnings.  They can also be manually removed by simply setting [application.state.errors](#iapplicationdata-properties) or [application.state.warnings](#iapplicationdata-properties) to an empty array.
+**Note**: All `errors` and `warnings` are automatically removed when the [application.calculateAsync](#calculateAsync) method is called or when the [application.apiAsync](#apiAsync) method is called.  This is to ensure that the user is not presented with stale errors/warnings.  They can also be manually removed by simply setting [application.state.errors](#istate-properties) or [application.state.warnings](#istate-properties) to an empty array.
 
 ### INavigationOptions
 
@@ -4272,7 +4271,7 @@ Generally speaking, `ICalculationInputs` is a [IStringIndexer&lt;string>](#istri
 }
 ```
 
-**NOTE**: When creating or passing ICalculationInputs, the above javascript object represent the available features.  However, the [state.inputs](#iapplicationdata-properties) has a built in method of `getNumber( inputId: string ) => number | undefined` what will try to parse the input as a number taking the current cultures decimal place separator into account.  If the value cannot be parsed, `undefined` is returned.
+**NOTE**: When creating or passing ICalculationInputs, the above javascript object represent the available features.  However, the [state.inputs](#istate-properties) has a built in method of `getNumber( inputId: string ) => number | undefined` what will try to parse the input as a number taking the current cultures decimal place separator into account.  If the value cannot be parsed, `undefined` is returned.
 
 #### ICalculationInputs.getNumber
 
@@ -4471,7 +4470,7 @@ Property | Type | Description
 ---|---|---
 `confirmed` | `boolean` | Whether or not the dialog was 'confirmed' or 'cancelled'.
 `response` | `any \| undefined` | If a modal application returns a custom response via the `IModalAppOptions.confirmedAsync` or `IModalAppOptions.cancelled` callbacks, the object will be available here.
-`modalApp` | [`IKatApp`](#ikatapp) | A reference to the modal KatApp in case the caller needs access to anything present in the KatApp's [state](#iapplicationdata).
+`modalApp` | [`IKatApp`](#ikatapp) | A reference to the modal KatApp in case the caller needs access to anything present in the KatApp's [state](#istate).
 
 ### IModalAppOptions
 
@@ -4533,19 +4532,27 @@ The payload representing the current configuration to submit to either a RBLe Fr
 
 Property | Type | Description
 ---|---|---
-`Token` | `string` | If the data used in RBLe Framework calculations was 'registered' with the RBLe Framework web service, this is the token returned uniquely identifying the user's transaction package.
-`TestCE` | `boolean` | Whether or not the RBLe Framework should use the 'test' CalcEngine when running the calculation.
-`TraceEnabled` | `number` | Whether or not the RBLe Framework should provide diagnostic trace for the next calculation. A value of `1` will trace and `0` will not.
-`SaveCE` | `string` | A `\|` delimitted list of secure file location folders to save a debug copy of the CalcEngine(s) used during the calculation.
-`AuthID` | `string | Used in non-session version, when options has a 'data' property of json formatted xDS Data.
-`Client` | `string` | A `string` value representing a 'client name' used during the calculation for logging purposes.
-`AdminAuthID` | `string` | If an admin user is impersonating a normal user during the execution of the Kaml View, this value should contain the ID of the admin user to indicate to CalcEngine(s) that an admin user is initiating the calculation.
-`RefreshCalcEngine` | `boolean` | Whether or not the RBLe Framework should check for an updated CalcEngine the next calculation. This value is determined from the [`options.debug.refreshCalcEngine'](#ikatappoptionsdebugrefreshcalcengine) property.
-`CurrentPage` | `string` | The name of the current page as it is known in the Host Environment. This value is determined from the [`options.currentPage'](#ikatappoptionscurrentpage) property.
-`RequestIP` | `string` | The IP address of the browser running the current KatApp. This value is determined from the [`options.requestIP'](#ikatappoptionsrequestip) property.
-`CurrentUICulture` | `string` | The current culture as it is known in the Host Environment. This value is determined from the [`options.currentUICulture'](#ikatappoptionscurrentuiculture) property.
-`Environment` | `string` | The name of the current environment as it is known in the Host Environment. This value is determined from the [`options.environment'](#ikatappoptionsenvironment) property.
-`Framework` | `string` | The name of the current 'framework' submitting to the RBLe Framework. This value is set to `"KatApp"`.
+`token` | `string` | If the data used in RBLe Framework calculations was 'registered' with the RBLe Framework web service, this is the token returned uniquely identifying the user's transaction package.
+`testCE` | `boolean` | Whether or not the RBLe Framework should use the 'test' CalcEngine when running the calculation.
+`authID` | `string | Used in non-session version, when options has a 'data' property of json formatted xDS Data.
+`client` | `string` | A `string` value representing a 'client name' used during the calculation for logging purposes.
+`adminAuthID` | `string` | If an admin user is impersonating a normal user during the execution of the Kaml View, this value should contain the ID of the admin user to indicate to CalcEngine(s) that an admin user is initiating the calculation.
+`currentPage` | `string` | The name of the current page as it is known in the Host Environment. This value is determined from the [`options.currentPage'](#ikatappoptionscurrentpage) property.
+`requestIP` | `string` | The IP address of the browser running the current KatApp. This value is determined from the [`options.requestIP'](#ikatappoptionsrequestip) property.
+`currentUICulture` | `string` | The current culture as it is known in the Host Environment. This value is determined from the [`options.currentUICulture'](#ikatappoptionscurrentuiculture) property.
+`environment` | `string` | The name of the current environment as it is known in the Host Environment. This value is determined from the [`options.environment'](#ikatappoptionsenvironment) property.
+`nextCalculation` | `INextCalculation` | Whether or not the RBLe Framework should provide diagnostic trace, list of secure file location folders to save a debug copy of the CalcEngine(s) used during the calculation, or force CalcEngine cache to expire.  See [INextCalculation](#inextcalculation) for more information.
+`allowLogging` | `boolean` | Whether or not the calculation should be logged in backend monitoring systems.  Usually set to `false` after the first page calculation has finished.
+
+### INextCalculation
+
+The `INextCalculation` interface represents the information that enables developer diagnostics to occur.  The properties can be set via [debugNext()](#ikatappdebugnext).
+
+Property | Type | Description
+---|---|---
+`expireCache` | `boolean` | Whether or not to expire CalcEngine cache and check KAT Data Store for new version.
+`trace` | `boolean` | Whether or not to generate diagnostic trace during the next calculation.
+`saveLocations` | `{ location: string, serverSideOnly: boolean }[]` | The locations to save debug CalcEngines to used during the next Calculation.  `serverSideOnly` will only save CalcEngines processed during an API endpoint call.
 
 ### ISubmitApiOptions
 

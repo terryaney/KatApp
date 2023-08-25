@@ -100,7 +100,7 @@ class KatApp implements IKatApp {
 	public isCalculating: boolean;
 	public lastCalculation?: ILastCalculation;
 	public options: IKatAppOptions;
-	public state: IApplicationData;
+	public state: IState;
 	public el: JQuery;
 	public traceStart: Date;
 	public traceLast: Date;
@@ -128,12 +128,19 @@ class KatApp implements IKatApp {
 		this.applicationCss = ".katapp-" + this.id.substring(2);
 		this.isCalculating = false;
 
+		/*
+		// From SubmitApiOptions
+		`RefreshCalcEngine` | `boolean` | Whether or not the RBLe Framework should check for an updated CalcEngine the next calculation. This value is determined from the [`options.debug.refreshCalcEngine'](#ikatappoptionsdebugrefreshcalcengine) property.
+
+		// From debug.options
+		`refreshCalcEngine` | `boolean` | Whether or not the RBLe Framework should check for an updated CalcEngine every single calculation.  By default, the RBLe Framework only checks every 5 minutes.  A `boolean` value can be passed in or using the querystring of `expireCE=1` will enable the settings.  The default value is `false`.
+		*/
 		const defaultOptions: IKatAppDefaultOptions = {
 			inputCaching: false,
 			debug: {
 				traceVerbosity: Utils.pageParameters["tracekatapp"] === "1" ? TraceVerbosity.Diagnostic : TraceVerbosity.None,
 				showInspector: Utils.pageParameters["showinspector"] === "1" || Utils.pageParameters["localserver"] != undefined,
-				refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
+				// refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
 				useTestCalcEngine: Utils.pageParameters["test"] === "1",
 				useTestView: Utils.pageParameters["testview"] === "1",
 				debugResourcesDomain: Utils.pageParameters["localserver"],
@@ -230,8 +237,10 @@ class KatApp implements IKatApp {
 			const calcEngine = args.length >= 5 ? args[4] : undefined;
 			const tab = args.length >= 6 ? args[5] : undefined;
 
-			return getResultTableRows(table, calcEngine, tab)
-				.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"];
+			return that.getLocalizedString(
+				getResultTableRows(table, calcEngine, tab)
+					.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"]
+			);
 		}
 
 		const isTrue = (v: any) => {
@@ -247,7 +256,7 @@ class KatApp implements IKatApp {
 
 		let _isDirty: boolean | undefined = false;
 
-		const state: IApplicationData = {
+		const state: IState = {
 			kaId: this.id,
 
 			application: this,
@@ -599,7 +608,7 @@ class KatApp implements IKatApp {
 	}
 
 
-	public configure(configAction: (config: IConfigureOptions, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
+	public configure(configAction: (config: IConfigureOptions, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
 		if (this.isMounted) {
 			throw new Error("You cannot call 'configure' after the KatApp has been mounted.");
 		}
@@ -625,7 +634,7 @@ class KatApp implements IKatApp {
 		return this;
 	}
 
-	public handleEvents(configAction: (config: IKatAppEventsConfiguration, rbl: IRblApplicationData, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
+	public handleEvents(configAction: (config: IKatAppEventsConfiguration, rbl: IStateRbl, model: IStringAnyIndexer | undefined, inputs: ICalculationInputs, handlers: IHandlers | undefined) => void): IKatApp {
 		const config: IKatAppEventsConfiguration = {};
 		configAction(config, this.state.rbl, this.state.model, this.state.inputs, this.state.handlers);
 		this.eventConfigurations.push(config);
@@ -646,6 +655,8 @@ class KatApp implements IKatApp {
 			this.viewTemplates = viewElement != undefined
 				? [...(await this.getViewTemplatesAsync(viewElement)), this.id].reverse()
 				: [this.id];
+
+			Utils.trace(this, "KatApp", "mountAsync", `View Templates Complete`, TraceVerbosity.Detailed);
 
 			const inputs = this.options.inputs;
 			const processInputTokens = (value: string | null): string | null => {
@@ -683,11 +694,14 @@ class KatApp implements IKatApp {
 				? Array.from(viewElement.querySelectorAll("rbl-config > calc-engine")).map( c => calcEngineFactory( c ) as ICalcEngine)
 				: cloneHost ? [...this.options.hostApplication!.calcEngines.filter( c => !c.manualResult)] : [];
 
+			Utils.trace(this, "KatApp", "mountAsync", `CalcEngines configured`, TraceVerbosity.Detailed);
+
 			if (this.options.resourceStringsEndpoint != undefined) {
 				const apiUrl = this.getApiUrl(this.options.resourceStringsEndpoint);
 
 				try {
 					this.options.resourceStrings = await $.ajax({ method: "GET", url: apiUrl.url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
+					Utils.trace(this, "KatApp", "mountAsync", `Resource Strings downloaded`, TraceVerbosity.Detailed);
 				} catch (e) {
 					Utils.trace(this, "KatApp", "mountAsync", `Error downloading resourceStrings ${this.options.resourceStringsEndpoint}`, TraceVerbosity.None, e);
 				}
@@ -698,6 +712,7 @@ class KatApp implements IKatApp {
 
 				try {
 					this.options.manualResults = await $.ajax({ method: "GET", url: apiUrl.url, cache: true, headers: { 'Cache-Control': 'max-age=0' } });
+					Utils.trace(this, "KatApp", "mountAsync", `Manual Results downloaded`, TraceVerbosity.Detailed);
 				} catch (e) {
 					Utils.trace(this, "KatApp", "mountAsync", `Error downloading manualResults ${this.options.manualResultsEndpoint}`, TraceVerbosity.None, e);
 				}
@@ -1002,7 +1017,7 @@ class KatApp implements IKatApp {
 				const calculateOnConfirm = (typeof options.calculateOnConfirm == 'boolean') ? options.calculateOnConfirm : true;
 				const calculationInputs = (typeof options.calculateOnConfirm == 'object') ? options.calculateOnConfirm : undefined;
 				if (calculateOnConfirm) {
-					await that.options.hostApplication!.calculateAsync(calculationInputs);
+					await that.options.hostApplication!.calculateAsync(calculationInputs, true, undefined, false);
 				}
 			}
 
@@ -1121,7 +1136,12 @@ class KatApp implements IKatApp {
 		await this.options.katAppNavigate?.(navigationId);
 	}
 
-	public async calculateAsync(customInputs?: ICalculationInputs, processResults = true, calcEngines?: ICalcEngine[]): Promise<ITabDef[] | void> {
+	public async calculateAsync(
+		customInputs?: ICalculationInputs,
+		processResults = true,
+		calcEngines?: ICalcEngine[],
+		allowLogging = true
+	): Promise<ITabDef[] | void> {
 		// First calculation done before application is even mounted, just get the results setup
 		const isConfigureUICalculation = customInputs?._iConfigureUI === "1";
 		if (!isConfigureUICalculation) {
@@ -1143,16 +1163,18 @@ class KatApp implements IKatApp {
 				true
 			);
 
+			getSubmitApiConfigurationResults.configuration.allowLogging = allowLogging;
+
 			if (!processResults) {
-				return this.toTabDefs(
-					await Calculation.calculateAsync(
-						this,
-						serviceUrl,
-						calcEngines ?? this.calcEngines,
-						getSubmitApiConfigurationResults.inputs,
-						getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration
-					)
-				) as Array<ITabDef>;
+				const calculationResults = await Calculation.calculateAsync(
+					this,
+					serviceUrl,
+					calcEngines ?? this.calcEngines,
+					getSubmitApiConfigurationResults.inputs,
+					getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration
+				);
+
+				return this.toTabDefs(calculationResults.flatMap(r => r.TabDefs)) as Array<ITabDef>;
 			}
 			else {
 				this.isCalculating = true;
@@ -1171,17 +1193,17 @@ class KatApp implements IKatApp {
 						return;
 					}
 
-					const results = this.toTabDefs(
-						await Calculation.calculateAsync(
-							this,
-							serviceUrl,
-							isConfigureUICalculation
-								? this.calcEngines.filter(c => c.allowConfigureUi)
-								: this.calcEngines,
-							inputs,
-							submitApiConfiguration as ISubmitApiConfiguration
-						)
+					const calculationResults = await Calculation.calculateAsync(
+						this,
+						serviceUrl,
+						isConfigureUICalculation
+							? this.calcEngines.filter(c => c.allowConfigureUi)
+							: this.calcEngines,
+						inputs,
+						submitApiConfiguration as ISubmitApiConfiguration
 					);
+
+					const results = this.toTabDefs(calculationResults.flatMap(r => r.TabDefs));
 
 					await this.cacheInputsAsync(inputs);
 
@@ -1192,6 +1214,9 @@ class KatApp implements IKatApp {
 					this.lastCalculation = {
 						inputs: inputs,
 						results: results as Array<ITabDef>,
+						diagnostics: calculationResults.find(r => r.Diagnostics != undefined)
+							? calculationResults.flatMap(r => r.Diagnostics)
+							: undefined,
 						configuration: submitApiConfiguration as ISubmitApiConfiguration
 					};
 
@@ -1300,14 +1325,15 @@ class KatApp implements IKatApp {
 
 			const calcEngine = this.calcEngines.find(c => !c.manualResult);
 
-			const rbleApiConfiguration = ["Token", "TraceEnabled", "SaveCE", "RefreshCalcEngine", "AuthID", "AdminAuthID", "Client", "TestCE", "CurrentPage", "RequestIP", "CurrentUICulture", "Environment", "Framework"];
+			const inputPropertiesToSkip = ["tables", "getNumber", "getOptionText"];
+			const optionPropertiesToSkip = ["manualResults", "manualResultsEndpoint", "resourceStrings", "resourceStringsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate", "decryptCache", "encryptCache"];
 
 			const submitData: ISubmitApiData = {
-				Inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => k == "tables" || k == "getNumber" ? undefined : v?.toString()),
-				InputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ISubmitCalculationInputTable>(t => ({ Name: t.name, Rows: t.rows })),
-				ApiParameters: apiOptions.apiParameters,
-				Configuration: Utils.extend(
-					Utils.clone(this.options, (k, v) => ["manualResults", "manualResultsEndpoint", "resourceStrings", "resourceStringsEndpoint", "modalAppOptions", "hostApplication", "relativePathTemplates", "handlers", "nextCalculation", "katAppNavigate" ].indexOf(k) > -1 ? undefined : v),
+				inputs: Utils.clone(getSubmitApiConfigurationResults.inputs ?? {}, (k, v) => inputPropertiesToSkip.indexOf(k) > -1 ? undefined : v?.toString()),
+				inputTables: getSubmitApiConfigurationResults.inputs.tables?.map<ICalculationInputTable>(t => ({ name: t.name, rows: t.rows })),
+				apiParameters: apiOptions.apiParameters,
+				configuration: Utils.extend<ISubmitApiConfiguration>(
+					Utils.clone(this.options, (k, v) => optionPropertiesToSkip.indexOf(k) > -1 ? undefined : v),
 					apiOptions.calculationInputs != undefined ? { inputs: apiOptions.calculationInputs } : undefined,
                     // Endpoints only ever use first calc engine...so reset calcEngines property in case kaml
                     // changed calcEngine in the onCalculationOptions.
@@ -1321,10 +1347,9 @@ class KatApp implements IKatApp {
 									pipeline: calcEngine.pipeline
 								}
 							]
-						}
-						: { calcEngines: [] },
-					{ nextCalculation: this.nextCalculation },
-					Utils.clone(getSubmitApiConfigurationResults.configuration, (k, v) => rbleApiConfiguration.indexOf(k) > -1 ? undefined : v)
+						} as ISubmitApiConfiguration
+						: { calcEngines: [] as Array<ISubmitCalculationCalcEngine> } as ISubmitApiConfiguration,
+					getSubmitApiConfigurationResults.configuration
 				)
 			};
 
@@ -1333,22 +1358,20 @@ class KatApp implements IKatApp {
 				return undefined;
 			}
 
-			const formData = this.buildFormData(submitData);
-
-			// FastEndpionts - once converted, no need to do a 'buildFormData' method
-			formData.append("inputs", JSON.stringify(submitData.Inputs));
-			if (submitData.InputTables != undefined) {
-				formData.append("inputTables", JSON.stringify(submitData.InputTables));
+			const formData = new FormData();
+			formData.append("inputs", JSON.stringify(submitData.inputs));
+			if (submitData.inputTables != undefined) {
+				formData.append("inputTables", JSON.stringify(submitData.inputTables));
 			}
-			if (submitData.ApiParameters != undefined) {
-				formData.append("apiParameters", JSON.stringify(submitData.ApiParameters));
+			if (submitData.apiParameters != undefined) {
+				formData.append("apiParameters", JSON.stringify(submitData.apiParameters));
 			}
-			formData.append("configuration", JSON.stringify(submitData.Configuration));
+			formData.append("configuration", JSON.stringify(submitData.configuration));
 			
 			if (apiOptions.files != undefined) {
 				Array.from(apiOptions.files)
 					.forEach((f,i) => {
-						formData.append("PostedFiles[" + i + "]", f);
+						formData.append("postedFiles[" + i + "]", f);
 					});
 			}
 
@@ -1382,7 +1405,7 @@ class KatApp implements IKatApp {
 				const calculateOnSuccess = (typeof apiOptions.calculateOnSuccess == 'boolean') ? apiOptions.calculateOnSuccess : true;
 				const calculationInputs = (typeof apiOptions.calculateOnSuccess == 'object') ? apiOptions.calculateOnSuccess : undefined;
 				if (calculateOnSuccess) {
-					await this.calculateAsync(calculationInputs);
+					await this.calculateAsync(calculationInputs, true, undefined, false);
 				}
 			}
 
@@ -1415,10 +1438,8 @@ class KatApp implements IKatApp {
 			throw new ApiError("Unable to complete API submitted to " + endpoint, e instanceof Error ? e : undefined, errorResponse);
 		}
 		finally {
-			const nextCalculation = this.nextCalculation;
-			nextCalculation.saveLocations = nextCalculation.saveLocations.filter(l => !l.serverSideOnly);
-			this.nextCalculation = nextCalculation;
-
+			// Remove server side only locations, but leave client side ones for 'next' client calculation
+			this.nextCalculation.saveLocations = this.nextCalculation.saveLocations.filter(l => !l.serverSideOnly);
 			// this.triggerEvent("onActionComplete", endpoint, apiOptions, trigger);
 			this.unblockUI();
 		}
@@ -1465,41 +1486,6 @@ class KatApp implements IKatApp {
 			url: this.options.baseUrl ? this.options.baseUrl + url : url,
 			endpoint: url.split("?")[0].substring(4)
 		};
-	}
-
-	private buildFormData(submitData: ISubmitApiData): FormData {
-		// https://gist.github.com/ghinda/8442a57f22099bdb2e34#gistcomment-3405266
-		const buildForm = function (formData: FormData, data: IStringAnyIndexer, parentKey?: string, asDictionary?: boolean): void {
-			if (data && typeof data === 'object' && !(data instanceof Date) && !(data instanceof File) && !(data instanceof Blob)) {
-				Object.keys(data).forEach((key, index) => {
-					if (asDictionary ?? false) {
-						formData.append(`${parentKey}[${index}].Key`, key);
-						formData.append(`${parentKey}[${index}].Value`, data[key]);
-					}
-					else {
-						const formName = parentKey ? `${parentKey}[${key}]` : key;
-						const createDictionary = formName == "Inputs";
-						if (key != "manualResults" && key != "manualResultsEndpoint" && key != "resourceStrings" && key != "resourceStringsEndpoint") {
-							buildForm(formData, data[key], formName, createDictionary);
-						}
-					}
-				});
-			} else if (data != null) {
-				const value = (data instanceof Date)
-					? data.toISOString()
-					: data;
-
-				if (typeof value !== "function") {
-					formData.append(parentKey!, value); // eslint-disable-line @typescript-eslint/no-non-null-assertion
-				}
-			}
-		};
-
-		const fd = new FormData();
-
-		buildForm(fd, submitData);
-
-		return fd;
 	}
 
 	private async processDomElementsAsync() {
@@ -1801,13 +1787,8 @@ class KatApp implements IKatApp {
 
 	// public so HelpTips can call when needed
 	public cloneOptions(includeManualResults: boolean): IKatAppOptions {
-		return Utils.clone<IKatAppOptions>(
-			this.options,
-			(k, v) =>
-				["handlers", "view", "content", "modalAppOptions", "hostApplication"].indexOf(k) > -1 || (!includeManualResults && k == "manualResults")
-					? undefined
-					: v
-		);
+		const propertiesToSkip = ["handlers", "view", "content", "modalAppOptions", "hostApplication"].concat(includeManualResults ? [] : ["manualResults"]);
+		return Utils.clone<IKatAppOptions>( this.options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v );
 	}
 		
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
@@ -1849,17 +1830,18 @@ class KatApp implements IKatApp {
 				KatApp.remove(previousModalApp);
 			}
 
-			// const d: JQuery.Deferred<ICalculationSuccessResponse | ICalculationFailedResponse> = $.Deferred();
 			const d: JQuery.Deferred<IModalResponse> = $.Deferred();
 
-			const modalOptions: IKatAppPartialModalOptions = {
+			const propertiesToSkip = ["content", "view"];
+			// Omitting properties that will be picked up from the .extend<> below
+			const modalOptions: Omit<IKatAppOptions, 'debug' | 'dataGroup' | 'calculationUrl' | 'katDataStoreUrl' | 'kamlVerifyUrl' | 'inputCaching' | 'encryptCache' | 'decryptCache'> = {
 				view: options.view,
 				content: options.content,
 				currentPage: options.view ?? this.options.currentPage,
 				hostApplication: this,
 				modalAppOptions: Utils.extend<IModalAppOptions>(
 					{ promise: d, triggerLink: triggerLink, cloneHost: cloneHost },
-					Utils.clone(options, (k, v) => ["content", "view"].indexOf(k) > -1 ? undefined : v)
+					Utils.clone(options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v)
 				),
 				inputs: {
 					iModalApplication: "1"
@@ -1913,21 +1895,21 @@ class KatApp implements IKatApp {
 
 		const currentOptions = this.options;
 
-		const submitConfiguration: ISubmitApiConfiguration = {
-			Token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
-			TraceEnabled: this.nextCalculation.trace ? 1 : 0,
-			SaveCE: this.nextCalculation.saveLocations.map(l => l.location).join("|"),
-			RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
+		// CalcEngines will be assigned later
+		const submitConfiguration: Omit<ISubmitApiConfiguration, 'calcEngines'> = {
+			token: /* (currentOptions.registerDataWithService ?? true) ? currentOptions.registeredToken : */ undefined,
+			nextCalculation: this.nextCalculation,
 			// Should we be using JWT for AuthID, AdminAuthID, Client?
-			AuthID: /* currentOptions.data?.AuthID ?? */ "NODATA",
-			AdminAuthID: undefined,
-			Client: currentOptions.dataGroup ?? "KatApp",
-			TestCE: currentOptions.debug?.useTestCalcEngine ?? false,
-			CurrentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
-			RequestIP: currentOptions.requestIP ?? "1.1.1.1",
-			CurrentUICulture: currentOptions.currentUICulture ?? "en-US",
-			Environment: currentOptions.environment ?? "EW.PROD",
-			Framework: "KatApp"
+			authID: /* currentOptions.data?.AuthID ?? */ "NODATA",
+			adminAuthID: undefined,
+			client: currentOptions.dataGroup ?? "KatApp",
+			testCE: currentOptions.debug?.useTestCalcEngine ?? false,
+			currentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
+			requestIP: currentOptions.requestIP ?? "1.1.1.1",
+			currentUICulture: currentOptions.currentUICulture ?? "en-US",
+			environment: currentOptions.environment ?? "EW.PROD",
+			// RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
+			allowLogging: true // default, calculateAsync will set this appropriately
 		};
 
 		return {
@@ -2111,7 +2093,7 @@ class KatApp implements IKatApp {
 			if (isRblInputTable && value == "" && (row["@" + colName] as unknown as IStringIndexer<string>)?.["@text-forced"] != "true") {
 				// For rbl-input (which is special table), I want any 'blanks' to be returned as undefined, any other table, I always want '' in there
 				// so Kaml Views don't always have to code undefined protection code
-				(row as ITabDefRblInputRow)[colName] = undefined;
+				(row as ITabDefRowWithNulls)[colName] = undefined;
 			}
 
 			// Make sure every row has every property that is returned in the *first* row of results...b/c RBL service doesn't export blanks after first row
@@ -2144,23 +2126,23 @@ class KatApp implements IKatApp {
 										this.setInputValue(r["@id"], r["value"]);
 									}
 									if ((r["error"] ?? "") != "") {
-										const v: IValidation = { "@id": r["@id"], text: this.getLocalizedString(r.error)!, dependsOn: r.dependsOn };
+										const v: IValidationRow = { "@id": r["@id"], text: this.getLocalizedString(r.error)!, dependsOn: r.dependsOn };
 										this.state.errors.push(v);
 									}
 									if ((r["warning"] ?? "") != "") {
-										const v: IValidation = { "@id": r["@id"], text: this.getLocalizedString(r.warning)!, dependsOn: r.dependsOn };
+										const v: IValidationRow = { "@id": r["@id"], text: this.getLocalizedString(r.warning)!, dependsOn: r.dependsOn };
 										this.state.warnings.push(v);
 									}
 									break;
 
 								case "errors":
 									r.text = this.getLocalizedString(r.text)!;
-									this.state.errors.push(r as unknown as IValidation);
+									this.state.errors.push(r as unknown as IValidationRow);
 									break;
 
 								case "warnings":
 									r.text = this.getLocalizedString(r.text)!;
-									this.state.warnings.push(r as unknown as IValidation);
+									this.state.warnings.push(r as unknown as IValidationRow);
 									break;
 
 								case "table-output-control":
@@ -2297,7 +2279,7 @@ class KatApp implements IKatApp {
 			const apiUrl = this.getApiUrl(`${this.options.kamlVerifyUrl}?applicationId=${view}&currentId=${this.options.hostApplication!.options.currentPage}` );
 
 			try {
-				const response: IModalAppVerifyResult = await $.ajax({ method: "GET", url: apiUrl.url, dataType: "json" });
+				const response: IKamlVerifyResult = await $.ajax({ method: "GET", url: apiUrl.url, dataType: "json" });
 
 				Utils.extend( this.options, { view: response.path, currentPath: view } );
 
@@ -2312,6 +2294,8 @@ class KatApp implements IKatApp {
 		if (this.options.view != undefined) {
 			const viewResource = await KamlRepository.getViewResourceAsync(this.options, this.options.view);
 
+			Utils.trace(this, "KatApp", "getViewElementAsync", `Resource Returned`, TraceVerbosity.Detailed);
+
 			const viewContent =
 				viewResource[this.options.view]
 					.replace(/{id}/g, this.id)
@@ -2324,6 +2308,8 @@ class KatApp implements IKatApp {
 			}
 
 			this.processKamlMarkup(viewElement, this.id);
+
+			Utils.trace(this, "KatApp", "getViewElementAsync", `Markup Processed`, TraceVerbosity.Detailed);
 		}
 		else if (this.options.content == undefined) {
 			// just mounting existing html (usually just a help tip is what this was made for)
