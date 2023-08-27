@@ -396,6 +396,8 @@ interface IApiErrorResponse {
 interface IExceptionDetail {
 	message: string;
 	type: string;
+	traceId: string;
+	requestId: string;
 	stackTrace: Array<string>;
 	innerException?: IExceptionDetail;
 }
@@ -427,6 +429,8 @@ interface ICalculationFailedResponse {
 interface ICalculationResponseException {
 	message: string;
 	type: string;
+	traceId?: string;
+	requestId?: string;
 	stackTrace: string[];
 }
 

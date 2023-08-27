@@ -92,6 +92,8 @@ interface IRblCalculationSuccessResponse {
 	Exception: {
 		Message: string;
 		Type: string;
+		TraceId: string;
+		RequestId: string;
 		StackTrace: Array<string>;
 	};
 

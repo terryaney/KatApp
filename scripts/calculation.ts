@@ -109,8 +109,10 @@
 					exceptions: [{
 						message: r.Result.Exception.Message,
 						type: r.Result.Exception.Type,
+						traceId: r.Result.Exception.TraceId,
+						requestId: r.Result.Exception.RequestId,
 						stackTrace: r.Result.Exception.StackTrace
-					}]
+					} as ICalculationResponseException ]
 				};
 
 				failedResponses.push(response);
@@ -189,6 +191,7 @@
 				{ exceptions: [{ message: "No additional details available." }] };
 
 			const exceptions = errorResponse.exceptions ?? [];
+
 			const response: ICalculationFailedResponse = {
 				calcEngine: (submitData.configuration as ISubmitCalculationConfiguration).calcEngines.map(c => c.name).join(", "),
 				configuration: submitData.configuration,
@@ -196,6 +199,8 @@
 				exceptions: exceptions.map(ex => ({
 					message: ex.message,
 					type: ex.type ?? "Unknown type",
+					traceId: ex.traceId,
+					requestId: ex.requestId,
 					stackTrace: ex.stackTrace
 				}))
 			};
