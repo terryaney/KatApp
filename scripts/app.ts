@@ -552,7 +552,7 @@ class KatApp implements IKatApp {
 					// apiAsync already traces error, so I don't need to do again
 					if (!(error instanceof ApiError)) {
 						Utils.trace(this, "KatApp", "triggerEventAsync", `Error calling ${eventName}: ${error}`, TraceVerbosity.None, error);
-						this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+						this.addUnexpectedError(error);
 					}
 				}
 			}
@@ -842,7 +842,7 @@ class KatApp implements IKatApp {
 				this.handleEvents(events => {
 					events.calculationErrors = async (key, exception) => {
 						if (key == "SubmitCalculation.ConfigureUI") {
-							this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+							this.addUnexpectedError(exception);
 							Utils.trace(this, "KatApp", "mountAsync", isModalApplication ? "KatApp Modal Exception" : "KatApp Exception", TraceVerbosity.None, exception);
 						}
 					};
@@ -1235,7 +1235,7 @@ class KatApp implements IKatApp {
 					this.nextCalculation = undefined;
 				}
 				catch (error) {
-					this.state.errors.push({ "@id": "System", text: "An unexpected error has occurred.  Please try again and if the problem persists, contact technical support." });
+					this.addUnexpectedError(error);
 
 					if (!isConfigureUICalculation) {
 						// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
@@ -1421,8 +1421,9 @@ class KatApp implements IKatApp {
 					this.state.errors.push({ "@id": id, text: this.getLocalizedString(errorResponse.errors[id][0])!, dependsOn: errorResponse.errorsDependsOn?.[id] });
 				}
 			}
+
 			if (this.state.errors.length == 0) {
-				this.state.errors.push({ "@id": "System", text: this.getLocalizedString("An unexpected error has occurred.  Please try again and if the problem persists, contact technical support.")! });
+				this.addUnexpectedError(errorResponse);
 			}
 
 			if (errorResponse.warnings != undefined) {
@@ -1443,6 +1444,14 @@ class KatApp implements IKatApp {
 			// this.triggerEvent("onActionComplete", endpoint, apiOptions, trigger);
 			this.unblockUI();
 		}
+	}
+	
+	private addUnexpectedError(errorResponse: any): void {
+		this.state.errors.push(
+			errorResponse.requestId != undefined
+				? { "@id": "System", text: this.getLocalizedString("We apologize for the inconvenience, but we are unable to process your request at this time. The system has recorded technical details of the issue and our engineers are working on a solution.  Please contact Customer Service and provide the following Request ID: {{requestId}}", errorResponse)! }
+				: { "@id": "System", text: this.getLocalizedString("We apologize for the inconvenience, but we are unable to process your request at this time. The system has recorded technical details of the issue and our engineers are working on a solution.")! }
+		);
 	}
 
 	private downloadBlob(blob: Blob, filename: string): void {

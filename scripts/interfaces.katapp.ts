@@ -390,6 +390,7 @@ interface IApiErrorResponse {
 	// extensions
 	exceptions?: Array<IExceptionDetail>;
 	traceId?: string;
+	requestId?: string;
 	apiResult?: IStringAnyIndexer;
 	apiPayload?: IStringAnyIndexer;
 }
