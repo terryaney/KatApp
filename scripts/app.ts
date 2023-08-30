@@ -237,10 +237,8 @@ class KatApp implements IKatApp {
 			const calcEngine = args.length >= 5 ? args[4] : undefined;
 			const tab = args.length >= 6 ? args[5] : undefined;
 
-			return that.getLocalizedString(
-				getResultTableRows(table, calcEngine, tab)
-					.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"]
-			);
+			return getResultTableRows(table, calcEngine, tab)
+					.find(r => r[keyField ?? "@id"] == keyValue)?.[returnField ?? "value"];
 		}
 
 		const isTrue = (v: any) => {
@@ -342,7 +340,8 @@ class KatApp implements IKatApp {
 
 					return isTrue(v);
 				},
-				value() { return getValue(...arguments) },
+				text() { return that.getLocalizedString(getValue(...arguments)); },
+				value() { return getValue(...arguments); },
 				number() {
 					const v = +(getValue(...arguments) ?? 0);
 					return isNaN(v) ? 0 : v;

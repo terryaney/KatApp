@@ -534,6 +534,12 @@ const name = application.state.rbl.value("custom-table", "name-first", "value2",
                 "BRD", "RBLResult2");
 ```
 
+#### IStateRbl.text
+
+**`text(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => string | undefined`**
+
+The exact same functionality as `rbl.value()` except that the value returned from `rbl.value` is used as a key to look into resource strings.  If a resource string is not found, the value returned from `rbl.value` is returned.
+
 #### IStateRbl.number
 
 **`number(table: string, keyValue: string, returnField?: string, keyField?: string, calcEngine?: string, tab?: string) => number`**
