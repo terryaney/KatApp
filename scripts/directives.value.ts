@@ -27,14 +27,16 @@
 
 			ctx.effect(() => {
 				ctx.el.innerHTML =
-					application.state.rbl.value(
-						model?.table ?? getSelector(0)!,
-						model?.keyValue ?? getSelector(1)!,
-						model?.returnField ?? getSelector(2),
-						model?.keyField ?? getSelector(3),
-						model?.ce ?? getSelector(4),
-						model?.tab ?? getSelector(5)
-					) ?? ctx.el.innerHTML;
+					application.getLocalizedString(
+						application.state.rbl.value(
+							model?.table ?? getSelector(0)!,
+							model?.keyValue ?? getSelector(1)!,
+							model?.returnField ?? getSelector(2),
+							model?.keyField ?? getSelector(3),
+							model?.ce ?? getSelector(4),
+							model?.tab ?? getSelector(5)
+						) ?? ctx.el.innerHTML
+					)!;
 			});
 		};
 	}

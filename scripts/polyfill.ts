@@ -27,7 +27,7 @@
 
 	if (String.formatTokens === undefined) {
 		String.formatTokens = function (template, parameters): string {
-			// String.formatTokens( "{greeting} {who}!", {greeting: "Hello", who: "world"} )
+			// String.formatTokens( "{{greeting}} {{who}}!", {greeting: "Hello", who: "world"} )
 			return template.replace(/{{([^}]+)}}/g, function (match, token) {
 				const valueType = typeof parameters[token];
 
