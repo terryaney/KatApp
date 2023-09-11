@@ -201,8 +201,10 @@
 					type: ex.type ?? "Unknown type",
 					traceId: ex.traceId,
 					requestId: ex.requestId,
-					stackTrace: ex.stackTrace
-				}))
+					stackTrace: ex.stackTrace,
+					apiResult: errorResponse.apiResult,
+					apiPayload: errorResponse.apiPayload
+				} as ICalculationResponseException))
 			};
 
 			throw new CalculationError("Unable to complete calculation(s)", [response]);

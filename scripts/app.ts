@@ -286,7 +286,7 @@ class KatApp implements IKatApp {
 						if (currencyString == undefined) return undefined;
 
 						const decimalSeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
-						const moneyRegEx = new RegExp(`[^0-9${decimalSeparator}]+`, "g");
+						const moneyRegEx = new RegExp(`[^\-0-9${decimalSeparator}]+`, "g");
 						// Parse the cleaned string as a float, replacing the French decimal separator with a dot
 						var parsedValue = parseFloat(currencyString.replace(moneyRegEx, "").replace(decimalSeparator, "."));
 						

@@ -433,6 +433,8 @@ interface ICalculationResponseException {
 	type: string;
 	traceId?: string;
 	requestId?: string;
+	apiResult?: IStringAnyIndexer;
+	apiPayload?: IStringAnyIndexer;
 	stackTrace: string[];
 }
 
