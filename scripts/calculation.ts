@@ -5,7 +5,7 @@
 		calcEngines: ICalcEngine[],
 		inputs: ICalculationInputs,
 		configuration: ISubmitApiConfiguration | undefined
-	): Promise<Array<{ Diagnostics?: IRblCalculationDiagnostics, TabDefs: Array<IRbleTabDef>}>> {
+	): Promise<Array<IKatAppCalculationResponse>> {
 		Utils.trace(application, "Calculation", "calculateAsync", "Start", TraceVerbosity.Detailed);
 
 		const submitConfiguration =
@@ -34,7 +34,7 @@
 		};
 
 		const failedResponses: Array<ICalculationFailedResponse> = [];
-		const successResponses: Array<{ Diagnostics?: IRblCalculationDiagnostics, TabDefs: Array<IRbleTabDef>}> = [];
+		const successResponses: Array<IKatAppCalculationResponse> = [];
 
 		try {
 			Utils.trace(application, "Calculation", "calculateAsync", "Posting Data", TraceVerbosity.Detailed);
@@ -124,6 +124,7 @@
 					const tabDefs = r.Result.RBL.Profile.Data.TabDef;
 					successResponses.push(
 						{
+							CalcEngine: r.CalcEngine,
 							Diagnostics: r.Result.Diagnostics,
 							TabDefs: tabDefs instanceof Array ? tabDefs : [tabDefs]
 						});

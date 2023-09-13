@@ -800,7 +800,8 @@ class KatApp implements IKatApp {
 				const hasCalcEngines = this.calcEngines.length > 0;
 				this.calcEngines.push(...this.toCalcEngines(this.options.manualResults));
 
-				const manualResultTabDefs = this.toTabDefs(this.options.manualResults as unknown as IRbleTabDef[]);
+				const tabDefs = this.options.manualResults.map( r => ({ CalcEngine: r[ "@calcEngine" ], TabDef: r as unknown as IRbleTabDef }))
+				const manualResultTabDefs = this.toTabDefs(tabDefs);
 
 				// Some Kaml's without a CE have manual results only.  They will be processed one time during
 				// mount since they theoretically never change.  However, resultsProcessing is used to inject some
@@ -1173,7 +1174,9 @@ class KatApp implements IKatApp {
 					getSubmitApiConfigurationResults.configuration as ISubmitApiConfiguration
 				);
 
-				return this.toTabDefs(calculationResults.flatMap(r => r.TabDefs)) as Array<ITabDef>;
+				return this.toTabDefs(
+					calculationResults.flatMap(r => r.TabDefs.map(t => ({ CalcEngine: r.CalcEngine, TabDef: t })))
+				) as Array<ITabDef>;
 			}
 			else {
 				this.isCalculating = true;
@@ -1202,7 +1205,9 @@ class KatApp implements IKatApp {
 						submitApiConfiguration as ISubmitApiConfiguration
 					);
 
-					const results = this.toTabDefs(calculationResults.flatMap(r => r.TabDefs));
+					const results = this.toTabDefs(
+						calculationResults.flatMap(r => r.TabDefs.map(t => ({ CalcEngine: r.CalcEngine, TabDef: t })))
+					);
 
 					await this.cacheInputsAsync(inputs);
 
@@ -1985,12 +1990,13 @@ class KatApp implements IKatApp {
 		return [];
 	}
 
-	private toTabDefs(rbleResults: IRbleTabDef[]): IKaTabDef[] {
+	private toTabDefs(rbleResults: Array<{CalcEngine: string, TabDef: IRbleTabDef}>): IKaTabDef[] {
 		const calcEngines = this.calcEngines;
 		const defaultCEKey = calcEngines[0].key;
 
-		return rbleResults.map((t, i) => {
-			const ceName = this.getCeName(t["@calcEngine"]);
+		return rbleResults.map(r => {
+			const t = r.TabDef;
+			const ceName = this.getCeName(r.CalcEngine);
 			const configCe = calcEngines.find(c => c.name.toLowerCase() == ceName.toLowerCase());
 
 			if (configCe == undefined) {

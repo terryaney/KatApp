@@ -1,4 +1,9 @@
-﻿interface IKaTableColumnConfiguration {
+﻿interface IKatAppCalculationResponse {
+	CalcEngine: string;
+	Diagnostics?: IRblCalculationDiagnostics;
+	TabDefs: Array<IRbleTabDef>;
+}
+interface IKaTableColumnConfiguration {
 	name: string;
 	cssClass: string | undefined;
 	isTextColumn: boolean;
