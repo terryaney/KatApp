@@ -188,7 +188,12 @@ class KatApp implements IKatApp {
 			// Supposedly always need this on there...
 			this.el.attr("v-scope", "");
 		}
-		if (this.el.attr("ka-cloak") == undefined && (options.view != undefined || options.content != undefined)) {
+
+		// Not sure why I added ka-cloak ONLY when view/content provided vs content-selector, but if I added content-selector
+		// then LWC profile popup width not calculated right with data-bs-offset since hidden, so instead of simply adding all the
+		// time if missing, I continued with view/content provided OR if cloneHost was provided (i.e. LWC alert center - which is why
+		// I wanted ka-cloak anyway b/c v-pre elements need to process before page looks good)
+		if (this.el.attr("ka-cloak") == undefined && (options.view != undefined || options.content != undefined || ( options.cloneHost ?? false ) !== false )) {
 			// Hide app until first calc done...
 			this.el.attr("ka-cloak", "");
 		}
