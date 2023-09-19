@@ -250,8 +250,8 @@ class KatApp implements IKatApp {
 			return !(!v);
 		};
 
-		const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
-
+		const cloneApplication = this.getCloneApplication(this.options);
+		
 		let _isDirty: boolean | undefined = false;
 
 		const state: IState = {
@@ -305,8 +305,8 @@ class KatApp implements IKatApp {
 				return values.find(v => (v ?? "") != "" && isTrue(v)) != undefined;
 			},
 			rbl: {
-				results: cloneHost ? Utils.clone(this.options.hostApplication!.state.rbl.results) : {},
-				options: cloneHost ? Utils.clone(this.options.hostApplication!.state.rbl.options) : {},
+				results: cloneApplication ? Utils.clone(cloneApplication.state.rbl.results) : {},
+				options: cloneApplication ? Utils.clone(cloneApplication.state.rbl.options) : {},
 				pushTo(tabDef, table, rows) {
 					const t = (tabDef[table] ?? (tabDef[table] = [])) as ITabDefTable;
 					const toPush = rows instanceof Array ? rows : [rows];
@@ -389,8 +389,8 @@ class KatApp implements IKatApp {
 				}
 			},
 
-			model: cloneHost ? Utils.clone(this.options.hostApplication!.state.model) : {},
-			handlers: cloneHost ? Utils.clone(this.options.hostApplication!.state.handlers ?? {}) : {},
+			model: cloneApplication ? Utils.clone(cloneApplication.state.model) : {},
+			handlers: cloneApplication ? Utils.clone(cloneApplication.state.handlers ?? {}) : {},
 			components: {},
 
 			// Private
@@ -522,6 +522,14 @@ class KatApp implements IKatApp {
 		this.state = PetiteVue.reactive(state);
 	}
 
+	private getCloneApplication(options: IKatAppOptions): IKatApp | undefined {
+		const cloneHost = options.cloneHost ?? false;
+		const cloneApplication = typeof cloneHost == "string"
+			? KatApp.get(cloneHost)
+			: cloneHost === true ? this.options.hostApplication : undefined;
+		return cloneApplication;
+	}
+
 	public async triggerEventAsync(eventName: string, ...args: (object | string | undefined | unknown)[]): Promise<boolean | undefined> {
 		Utils.trace(this, "KatApp", "triggerEventAsync", `Start: ${eventName}.`, TraceVerbosity.Detailed);
 
@@ -534,7 +542,7 @@ class KatApp implements IKatApp {
 
 			const eventArgs = [...args, this];
 
-			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector.split(",").indexOf(this.selector) > -1).map( e => e.events))) {
+			for (const eventConfiguration of this.eventConfigurations.concat(KatApp.globalEventConfigurations.filter( e => e.selector.split(",").map( s => s.trim() ).indexOf(this.selector) > -1).map( e => e.events))) {
 				try {
 					// Make application.element[0] be 'this' in the event handler
 					let delegateResult = (eventConfiguration as IStringAnyIndexer)[eventName]?.apply(this.el, eventArgs);
@@ -666,7 +674,8 @@ class KatApp implements IKatApp {
 				});
 			};
 
-			const cloneHost = this.options.modalAppOptions?.cloneHost ?? false;
+			const cloneApplication = this.getCloneApplication(this.options);
+			this.options.hostApplication = this.options.hostApplication ?? cloneApplication;
 
 			function calcEngineFactory(c: Element, pipelineIndex?: number): ICalcEngine | IPipelineCalcEngine
 			{
@@ -689,9 +698,9 @@ class KatApp implements IKatApp {
 					} as IPipelineCalcEngine;
 			};
 
-			this.calcEngines = !cloneHost && viewElement != undefined
+			this.calcEngines = cloneApplication == undefined && viewElement != undefined
 				? Array.from(viewElement.querySelectorAll("rbl-config > calc-engine")).map( c => calcEngineFactory( c ) as ICalcEngine)
-				: cloneHost ? [...this.options.hostApplication!.calcEngines.filter( c => !c.manualResult)] : [];
+				: cloneApplication ? [...cloneApplication.calcEngines.filter( c => !c.manualResult)] : [];
 
 			Utils.trace(this, "KatApp", "mountAsync", `CalcEngines configured`, TraceVerbosity.Detailed);
 
@@ -838,7 +847,7 @@ class KatApp implements IKatApp {
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
-			if (!cloneHost && this.state.errors.length == 0 && isConfigureUICalculation) {
+			if (cloneApplication == undefined && this.state.errors.length == 0 && isConfigureUICalculation) {
 				this.handleEvents(events => {
 					events.calculationErrors = async (key, exception) => {
 						if (key == "SubmitCalculation.ConfigureUI") {
@@ -867,7 +876,7 @@ class KatApp implements IKatApp {
 			this.vueApp.mount(this.selector);
 			this.isMounted = true;
 
-			if (!initializationErrors && !cloneHost) {
+			if (!initializationErrors && cloneApplication == undefined) {
 				// Now that everything has been processed, can trigger iConfigureUI 'calculation' events
 				if (isConfigureUICalculation && this.lastCalculation) {
 					await this.triggerEventAsync("configureUICalculation", this.lastCalculation);
@@ -1803,9 +1812,22 @@ class KatApp implements IKatApp {
 		const propertiesToSkip = ["handlers", "view", "content", "modalAppOptions", "hostApplication"].concat(includeManualResults ? [] : ["manualResults"]);
 		return Utils.clone<IKatAppOptions>( this.options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v );
 	}
-		
+	
+	public getCloneHostSetting(el: HTMLElement): string | boolean {
+		let cloneHost: boolean | string = el.hasAttribute("v-pre");
+
+		if (cloneHost) {
+			const hostName = el.getAttribute("v-pre") ?? "";
+			if (hostName != "") {
+				cloneHost = hostName;
+			}
+		}
+
+		return cloneHost;
+	}
+
 	public async showModalAsync(options: IModalOptions, triggerLink?: JQuery): Promise<IModalResponse> {
-		let cloneHost = false;
+		let cloneHost: boolean | string = false;
 
 		if (options.contentSelector != undefined) {
 			await PetiteVue.nextTick(); // Just in case kaml js set property that would trigger updating this content
@@ -1816,7 +1838,8 @@ class KatApp implements IKatApp {
 				throw new Error(`The content selector (${options.contentSelector}) did not return any content.`);
 			}
 
-			cloneHost = selectContent[0].hasAttribute("v-pre");
+			cloneHost = this.getCloneHostSetting(selectContent[0]);
+
 			const selectorContent = $("<div/>");
 			// Use this instead of .html() so I keep my bootstrap events
 			selectorContent.append(selectContent.contents().clone());
@@ -1851,9 +1874,12 @@ class KatApp implements IKatApp {
 				view: options.view,
 				content: options.content,
 				currentPage: options.view ?? this.options.currentPage,
-				hostApplication: this,
+				// If modal is launching from a popover, the popover CANNOT be the hostApplication because it
+				// is removed, so I have to use passed in host-application or current hostApplication.
+				hostApplication: this.selector.startsWith( "#popover" ) ? this.options.hostApplication : this,
+				cloneHost: cloneHost,
 				modalAppOptions: Utils.extend<IModalAppOptions>(
-					{ promise: d, triggerLink: triggerLink, cloneHost: cloneHost },
+					{ promise: d, triggerLink: triggerLink },
 					Utils.clone(options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v)
 				),
 				inputs: {
@@ -1862,7 +1888,7 @@ class KatApp implements IKatApp {
 			};
 
 			const modalAppOptions = Utils.extend<IKatAppOptions>(
-				this.cloneOptions(options.content == undefined),
+				( modalOptions.hostApplication as KatApp ).cloneOptions(options.content == undefined),
 				modalOptions,
 				options.inputs != undefined ? { inputs: options.inputs } : undefined
 			);

@@ -56,6 +56,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	// Set by framework when nested/modal app
 	modalAppOptions?: IModalAppOptions;
 	hostApplication?: IKatApp;
+	cloneHost?: boolean | string;
 }
 
 
@@ -359,8 +360,6 @@ interface IModalAppOptions extends IModalOptions {
 
 	// If a dialog does its own buttons and is a 'step' based dialog and at the final step hides all but 'ok', the 'X' at the top of the dialog needs to trigger 'confirm' as well.
 	closeButtonTrigger?: string; 
-
-	cloneHost: boolean;
 }
 interface IModalResponse {
 	confirmed: boolean;

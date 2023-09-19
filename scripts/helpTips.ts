@@ -1,6 +1,7 @@
 ﻿class HelpTips {
 	private static visiblePopover: HTMLElement | undefined;
 	private static visiblePopoverApp: KatApp | undefined;
+	private static visiblePopupContentSource: JQuery<HTMLElement> | undefined;
 
 	// Code to hide tooltips if you click anywhere outside the tooltip
 	// Combo of http://stackoverflow.com/a/17375353/166231 and https://stackoverflow.com/a/21007629/166231 (and 3rd comment)
@@ -61,9 +62,30 @@
 					}
 				})
 				.on("inserted.bs.popover.ka", async e => {
-					const templateId = "#" + $(e.target).attr("aria-describedby");
+					const target = $(e.target);
+					const templateId = "#" + target.attr("aria-describedby");
 					document.querySelector(templateId)!.classList.add("kaPopup");
-					HelpTips.visiblePopoverApp = await KatApp.createAppAsync(templateId, application.cloneOptions(false));
+					// Always hide popups until completely rendered
+					document.querySelector(templateId)!.setAttribute("ka-cloak", "");
+
+					const popupAppOptions = application.cloneOptions(false);
+
+					let cloneHost: string | boolean = false;
+
+					if (HelpTips.visiblePopupContentSource?.length == 1) {
+						// If v-pre on content-selector element, need to set the clone host to either the 
+						// selector in v-pre value or the application that hosts the v-pre element
+						cloneHost = application.getCloneHostSetting(HelpTips.visiblePopupContentSource[0]);
+						if (cloneHost === true) {
+							cloneHost = application.selector;
+						}
+						popupAppOptions.cloneHost = cloneHost;
+					}
+		
+					HelpTips.visiblePopoverApp = await KatApp.createAppAsync(
+						templateId,
+						popupAppOptions
+					);
 				})
 				.on("shown.bs.popover.ka", e => HelpTips.visiblePopover = e.target)
 				.on("hide.bs.popover.ka", e => {
@@ -72,6 +94,7 @@
 					}
 					HelpTips.visiblePopover = undefined;
 					HelpTips.visiblePopoverApp = undefined;
+					HelpTips.visiblePopupContentSource = undefined;
 				})
 				.attr("ka-init-tip", "true");
 		}
@@ -95,13 +118,14 @@
 			const dataContentSelector = h.attr('data-bs-content-selector');
 
 			if (dataContentSelector != undefined) {
-				const selectContent = select(dataContentSelector);
+				HelpTips.visiblePopupContentSource = select(dataContentSelector);
 
-				if (selectContent.length == 0) return undefined;
+				if (HelpTips.visiblePopupContentSource.length == 0) return undefined;
 
 				const selectorContent = $("<div/>");
+
 				// Use this instead of .html() so I keep my bootstrap events
-				selectorContent.append(selectContent.contents().clone(true));
+				selectorContent.append(HelpTips.visiblePopupContentSource.contents().clone(true));
 				return selectorContent;
 			}
 
