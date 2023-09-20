@@ -395,7 +395,8 @@ class InputComponentBase extends TemplateBase {
 
 										let input = target.value;
 										const isNegative = allowNegative && input.indexOf("-") == 0;
-										input = input.replace(new RegExp(`[^0-9${currencySeparator}]+`, "g"), '');
+										const sepRegEx = decimalPlaces > 0 ? `\\${currencySeparator}` : "";
+										input = input.replace(new RegExp(`[^0-9${sepRegEx}]+`, "g"), '');
 
 										const inputParts = input.split(currencySeparator);
 
