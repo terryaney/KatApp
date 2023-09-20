@@ -139,7 +139,7 @@
 				: content;
 		};
 
-		(tipsToProcess ?? select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container[0].tagName == "A" ? container.parent() : container ))
+		(tipsToProcess ?? select(selector ?? "[data-bs-toggle='tooltip'], [data-bs-toggle='popover']", container[0].tagName == "A" || container[0].tagName == "BUTTON" ? container.parent() : container ))
 			.not('[ka-init-tip="true"]')
 			.each((i, tip) => {
 				const tipElement = $(tip);
