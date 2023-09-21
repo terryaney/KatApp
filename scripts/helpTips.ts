@@ -65,8 +65,6 @@
 					const target = $(e.target);
 					const templateId = "#" + target.attr("aria-describedby");
 					document.querySelector(templateId)!.classList.add("kaPopup");
-					// Always hide popups until completely rendered
-					document.querySelector(templateId)!.setAttribute("ka-cloak", "");
 
 					const popupAppOptions = application.cloneOptions(false);
 

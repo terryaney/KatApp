@@ -1,4 +1,12 @@
 ﻿class Utils {
+	public static chunk<T>(array: Array<T>, size: number): Array<Array<T>> {
+		const chunks = [];
+		for (let i = 0; i < array.length; i += size) {
+		  chunks.push(array.slice(i, i + size));
+		}
+		return chunks;			
+	}
+
 	// https://blog.logrocket.com/4-different-techniques-for-copying-objects-in-javascript-511e422ceb1e/
 	// Wanted explicitly 'undefined' properties set to undefined and jquery .Extend() didn't do that
 	public static extend<T>(target: IStringAnyIndexer, ...sources: (IStringAnyIndexer | undefined)[]): T {
