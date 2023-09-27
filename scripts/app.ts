@@ -1700,7 +1700,7 @@ class KatApp implements IKatApp {
 			key;
 		
 		const value = typeof resource == "object" ? resource.text : resource;
-		return String.formatTokens(value, formatObject ?? {} );
+		return String.formatTokens(value, ( formatObject?.keyValueObject as unknown as IStringIndexer<string> ) ?? formatObject ?? {} );
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {
