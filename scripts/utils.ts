@@ -72,6 +72,18 @@
 
 		return qsValues;
 	}
+	public static generateQueryString( qsObject: IStringIndexer<string>, allowQs: ( ( key: string ) => boolean ) | undefined ): string | undefined {
+
+		let qs = "";
+
+		Object.keys(qsObject).forEach((key) => {
+			if (allowQs == undefined || allowQs(key)) {
+				qs += `${key}=${qsObject[key]}&`;
+			}
+		});
+
+		return qs.length > 0 ? `?${qs.substring(0, qs.length - 1)}` : undefined;
+	}
 
 	public static pageParameters = this.readPageParameters();
 	private static _pageParameters: IStringIndexer<string> | undefined;

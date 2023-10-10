@@ -1897,6 +1897,15 @@ class KatApp implements IKatApp {
 				modalOptions,
 				options.inputs != undefined ? { inputs: options.inputs } : undefined
 			);
+
+			if (modalAppOptions.anchoredQueryStrings != undefined && modalAppOptions.inputs != undefined) {
+				modalAppOptions.anchoredQueryStrings = Utils.generateQueryString(
+					Utils.parseQueryString(modalAppOptions.anchoredQueryStrings),
+					// If showing modal and the url has an input with same name as input passed in, then don't include it...
+					key => !key.startsWith("ki-") || modalAppOptions.inputs![ 'i' + key.split('-').slice(1).map(segment => segment.charAt(0).toUpperCase() + segment.slice(1)).join("") ] == undefined
+				);
+			}
+
 			delete modalAppOptions.inputs!.iNestedApplication;
 			await KatApp.createAppAsync(".kaModal", modalAppOptions);
 
@@ -2068,16 +2077,16 @@ class KatApp implements IKatApp {
 		});
 	}
 	
-	private copyTabDefToRblState(ce: string, tab: string, t: IKaTabDef, propName: string) {
+	private copyTabDefToRblState(ce: string, tab: string, rows: ITabDefTable, tableName: string) {
 		const key = `${ce}.${tab}`;
 		if (this.state.rbl.results[key] == undefined) {
 			this.state.rbl.results[key] = {};
 		}
 
-		this.state.rbl.results[key][propName] = t[propName] as ITabDefTable ?? [];
+		this.state.rbl.results[key][tableName] = rows;
 	}
 
-	private mergeTableToRblState(ce: string, tab: string, table: ITabDefTable, tableName: string) {
+	private mergeTableToRblState(ce: string, tab: string, rows: ITabDefTable, tableName: string) {
 		if (ce == "_ResultProcessing" && this.calcEngines.length > 0) {
 			ce = this.calcEngines[0].key;
 			tab = this.calcEngines[0].resultTabs[0];
@@ -2091,7 +2100,7 @@ class KatApp implements IKatApp {
 			this.state.rbl.results[key][tableName] = [];
 		}
 
-		table.forEach(row => {
+		rows.forEach(row => {
 			if (tableName == "rbl-skip") {
 				row["@id"] = row.key;
 				// Legacy support...didn't have ability to turn on and off, so if they don't have value column, imply that it is on
@@ -2109,10 +2118,13 @@ class KatApp implements IKatApp {
 				this.state.rbl.results[key][tableName].push(row);
 			}
 		});
+		this.state.rbl.results[key][tableName] = this.state.rbl.results[key][tableName].filter(r => r.on != "0");
 	}
 
 	private async processResultsAsync(results: IKaTabDef[], calculationSubmitApiConfiguration: ISubmitApiOptions | undefined): Promise<void> {
 		Utils.trace(this, "KatApp", "processResultsAsync", `Start: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
+		
+		// Merge these tables into state instead of 'replacing'...
 		const tablesToMerge = ["rbl-disabled", "rbl-display", "rbl-skip", "rbl-value", "rbl-listcontrol", "rbl-input"];
 
 		const processResultColumn = (row: ITabDefRow, colName: string, isRblInputTable: boolean) => {
@@ -2152,13 +2164,13 @@ class KatApp implements IKatApp {
 				// No idea how ItemDefs is in here, but not supporting going forward, it was returned by IRP CE but the value was null so it blew up the code
 				.filter(k => !k.startsWith("@") && k != "_ka" && k != "ItemDefs")
 				.forEach(tableName => {
-					const rows = t[tableName] as ITabDefTable ?? [];
-
-					if (rows.length > 0) {
+					const rows = (t[tableName] as ITabDefTable ?? []);
+					const onRows = rows.filter(r => r.on != "0");
+					if (onRows.length > 0) {
 						const isRblInputTable = tableName == "rbl-input";
-						const colNames = Object.keys(rows[0]);
+						const colNames = Object.keys(onRows[0]);
 
-						rows.forEach(r => {
+						onRows.forEach(r => {
 							colNames.forEach(c => processResultColumn(r, c, isRblInputTable))
 
 							switch (tableName) {
@@ -2196,7 +2208,7 @@ class KatApp implements IKatApp {
 									// export = 0 = don't export table but leave Vue state
 									// export = 1 = try export table and if empty, clear Vue state
 									if ((r["export"] == "-1" || r["export"] == "1") && t[r["@id"]] == undefined) {
-										this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, r["@id"]);
+										this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, [], r["@id"]);
 									}
 									break;
 							}
@@ -2204,10 +2216,11 @@ class KatApp implements IKatApp {
 					}
 
 					if (tablesToMerge.indexOf(tableName) == -1) {
-						this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, t, tableName);
+						this.copyTabDefToRblState(t._ka.calcEngineKey, t._ka.name, onRows, tableName);
 					}
 					else {
-						this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, t[tableName] as ITabDefTable, tableName);
+						// Pass rows so 'on=0' can be assigned if modified by caller then removed...
+						this.mergeTableToRblState(t._ka.calcEngineKey, t._ka.name, rows, tableName);
 					}
 				});
 
