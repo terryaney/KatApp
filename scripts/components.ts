@@ -81,7 +81,9 @@ class InputComponentBase extends TemplateBase {
 		isExcluded: boolean,
 		noCalc: (name: string) => boolean,
 		displayFormat: (name: string) => string | undefined,
+		hasMask: boolean,
 		mask: (name: string) => string | undefined,
+		maxLength: (name: string) => number,
 		keypressRegex: (name: string) => string | undefined,
 		events: undefined | IStringIndexer<((e: Event, application: KatApp, scope: IStringAnyIndexer) => void)>,
 		refs: IStringIndexer<HTMLElement>
@@ -160,7 +162,7 @@ class InputComponentBase extends TemplateBase {
 			this.bindRangeEvents(name, input, refs, displayFormat, inputEventAsync);
 		}
 		else {
-			this.bindInputEvents(application, name, label, input, type, mask, keypressRegex, inputEventAsync);
+			this.bindInputEvents(application, name, label, input, type, hasMask, mask, maxLength, keypressRegex, inputEventAsync);
 		}
 
 		this.bindCustomEvents(application, input, events, scope);
@@ -172,7 +174,9 @@ class InputComponentBase extends TemplateBase {
 		label: (name: string) => string,
 		input: HTMLInputElement,
 		type: string | null,
+		hasMask: boolean,
 		mask: (name: string) => string | undefined,
+		maxLength: (name: string) => number,
 		keypressRegex: (name: string) => string | undefined,
 		inputEventAsync: (calculate: boolean) => Promise<void>
 	): void {
@@ -209,41 +213,13 @@ class InputComponentBase extends TemplateBase {
 				}
 
 				const inputMask = mask(name);
-				let maxLength = input.getAttribute("maxlength");
 	
-				if (inputMask != undefined || maxLength != null) {
-					if (inputMask != undefined) {
-						input.setAttribute("ka-mask", inputMask);
-					}
-
-					switch (inputMask) {
-						case "zip+4":
-						case "#####-####":
-							{
-								input.setAttribute("maxlength", maxLength = "10");
-								break;
-							}
-
-						case "cc-expire":
-						case "MM/YY":
-							{
-								input.setAttribute("maxlength", maxLength = "5");
-								break;
-							}
-
-						case "phone":
-						case "(###) ###-####":
-							{
-								input.setAttribute("maxlength", maxLength = "14");
-								break;
-							}
-					}
-
-					if (inputMask != undefined) {						
+				if (hasMask) {
+					if (hasMask) {						
 						// NOTE: This doesn't work for Android mobile, no keypress events are fired
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
 							const target = event.target as HTMLInputElement;
-							const inputMask = target.getAttribute("ka-mask");
+							const inputMask = mask(name);
 							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
 										
 							switch ( isMoney ? "money" : inputMask ) {
@@ -261,6 +237,8 @@ class InputComponentBase extends TemplateBase {
 								case "zip+4":
 								case "#####-####":
 									{
+										input.setAttribute("maxlength", "10");
+
 										// Number, (, ), or -
 										if (event.key.match(/[0-9\-]/) === null) {
 											event.preventDefault();
@@ -314,6 +292,8 @@ class InputComponentBase extends TemplateBase {
 								case "cc-expire":
 								case "MM/YY":
 									{
+										input.setAttribute("maxlength", "5");
+
 										if (event.key.match(/[0-9\/]/) === null) {
 											event.preventDefault();
 										}
@@ -326,6 +306,8 @@ class InputComponentBase extends TemplateBase {
 								case "phone":
 								case "(###) ###-####":
 									{
+										input.setAttribute("maxlength", "14");
+
 										// Number, (, ), or -
 										if (event.key.match(/[0-9\(\)\-\s]/) === null) {
 											event.preventDefault();
@@ -344,13 +326,17 @@ class InputComponentBase extends TemplateBase {
 										}
 										break;
 									}
+
+								default:
+									input.setAttribute("maxlength", maxLength(name).toString());
+									break;
 							}
 						});
 						
 						const kuEmailRegex = new RegExp(`[^A-Za-z0-9.@_-]`, "g");
 						input.addEventListener("input", (event: Event) => {
 							const target = event.target as HTMLInputElement;
-							const inputMask = target.getAttribute("ka-mask");
+							const inputMask = mask(name) ?? "";
 							const selectionStart = target.selectionStart;
 							const isBackspace = (event as InputEvent).inputType == "deleteContentBackward";
 							const isDelete = (event as InputEvent).inputType == "deleteContentForward";
@@ -372,6 +358,8 @@ class InputComponentBase extends TemplateBase {
 								case "zip+4":
 								case "#####-####":
 									{
+										target.setAttribute("maxlength", "10");
+
 										let input = target.value;
 										const hasDash = input.indexOf("-") == 5;
 										input = input.replace(/\D/g, '').substring(0, 9);
@@ -419,6 +407,8 @@ class InputComponentBase extends TemplateBase {
 								case "cc-expire":
 								case "MM/YY":
 									{
+										target.setAttribute("maxlength", "5");
+
 										let input = target.value;
 										const hasSlash = input.indexOf("/") == 3;
 										input = input.replace(/\D/g, '').substring(0, 4);
@@ -435,6 +425,8 @@ class InputComponentBase extends TemplateBase {
 								case "phone":
 								case "(###) ###-####":
 									{
+										target.setAttribute("maxlength", "14");
+
 										let input = target.value;
 
 										input = input.replace(/\D/g, '').substring(0, 10);
@@ -451,23 +443,21 @@ class InputComponentBase extends TemplateBase {
 										application.setInputValue(name, target.value);
 										break;
 									}
+
+								default:
+									target.setAttribute("maxlength", maxLength(name).toString());
 							}
 
 							if (isBackspace || isDelete) {
 								target.selectionStart = target.selectionEnd = selectionStart;
 							}
-						});
-					}
 
-					// Android mobile doesn't enforce maxlength until blur
-					if ( maxLength != undefined ) {
-						input.addEventListener("input", (event: Event) => {
-							const target = event.target as HTMLInputElement;
-							const maxLength = +(target.getAttribute("maxlength")!);
+							// Android mobile doesn't enforce maxlength until blur
+							const maxLengthValue = +(target.getAttribute("maxlength")!);
 							const value = target.value;
 
-							if (value.length > maxLength) {
-								application.setInputValue(name, target.value = value.slice(0, maxLength));
+							if (value.length > maxLengthValue) {
+								application.setInputValue(name, target.value = value.slice(0, maxLengthValue));
 							}
 						});
 					}
@@ -765,6 +755,13 @@ class InputComponent extends InputComponentBase {
 		};
 
 		const mask = (name: string) => getInputCeValue("mask") ?? props.mask;
+		const hasMask = mask(name) != undefined || typeof Object.getOwnPropertyDescriptor(props, 'mask')?.get === "function";
+
+		const maxLength = (name: string) => {
+			const v = getInputCeValue("max-length");
+			return (v != undefined ? +v : undefined) ?? props.maxLength ?? 250;
+		};
+
 		const keypressRegex = (name: string) => getInputCeValue("keypress-regex") ?? props.keypressRegex;
 		const defaultValue = (name: string) => application.state.inputs[name] as string ?? props.value;
 		const label = (name: string) => application.getLocalizedString( getInputCeValue("label", "rbl-value", "l" + name) ?? props.label ?? "" )!;
@@ -866,10 +863,7 @@ class InputComponent extends InputComponentBase {
 			},
 			get prefix() { return getInputCeValue("prefix") ?? props.prefix; },
 			get suffix() { return getInputCeValue("suffix") ?? props.suffix; },
-			get maxLength() {
-				const v = getInputCeValue("max-length");
-				return (v != undefined ? +v : undefined) ?? props.maxLength ?? 250;
-			},
+			get maxLength() { return maxLength(name); },
 			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString() ?? ""; },
 			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString() ?? ""; },
 			get step() {
@@ -896,7 +890,7 @@ class InputComponent extends InputComponentBase {
 			}
 		};
 
-		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+		scope.inputMounted = (input: HTMLInputElement, refs: IStringIndexer<HTMLElement>) => this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, hasMask, mask, maxLength, keypressRegex, props.events, refs);
 
 		return scope;
 	}
@@ -976,7 +970,15 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 		const mask = function (name: string) {
 			const index = names.indexOf(name);
 			return getInputCeValue(index, "mask") ?? masks[index];
+		};		
+		const hasMask = names.some(name => mask(name) !== undefined) || typeof Object.getOwnPropertyDescriptor(props, 'masks')?.get === "function";
+
+		const maxLength = function(name: string) {
+			const index = names.indexOf(name);
+			const v = getInputCeValue(index, "max-length");
+			return (v != undefined ? +v : undefined) ?? maxLengths[index] ?? 250;
 		};
+
 		const keypressRegex = function (name: string) {
 			const index = names.indexOf(name);
 			return getInputCeValue(index, "keypressRegex") ?? keypressRegexs[index];
@@ -1044,10 +1046,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				return list.map(r => ({ key: r.key, text: application.getLocalizedString((r.text).toString())! }));				
 			},
 			hideLabel: (index: number) => { return getInputCeValue(index, "label") == "-1" || ( hideLabels[index] ?? false ); },
-			maxLength: (index: number) => {
-				const v = getInputCeValue(index, "max-length");
-				return (v != undefined ? +v : undefined) ?? maxLengths[index];
-			},
+			maxLength: (index: number) => maxLength(names[index]),
 			min: (index: number) => getInputCeValue(index, "min") ?? application.state.rbl.value("rbl-sliders", names[index], "min", undefined, calcEngine, tab) ?? mins[index],
 			max: (index: number) => getInputCeValue(index, "max") ?? application.state.rbl.value("rbl-sliders", names[index], "max", undefined, calcEngine, tab) ?? maxes[index],
 			step: (index: number) => {
@@ -1068,7 +1067,7 @@ class TemplateMultipleInputComponent extends InputComponentBase {
 				throw new Error("You must assign a name attribute via :name=\"name(index)\".");
 			}
 
-			this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, mask, keypressRegex, props.events, refs);
+			this.mounted(application, scope, name, label, input, defaultValue, props.isExcluded ?? false, noCalc, displayFormat, hasMask, mask, maxLength, keypressRegex, props.events, refs);
 		};
 
 		return scope;
