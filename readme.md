@@ -3903,7 +3903,9 @@ Triggered after KatApp Framework has finished injecting the Kaml View and any de
 
 **`modalAppInitialized(modalApplication: IKatApp, hostApplication: IKatApp )`**
 
-This event is triggered after a modal application has been initialized. It allows for a host application to assign events to the modal application if needed or retain a reference to the modalApplication for later use.
+This event is triggered in two situations.
+
+1. It is triggered **on a host application** after a modal application has been initialized. It allows for a host application to assign events to the modal application if needed or retain a reference to the modalApplication for later use.
 
 ```javascript
 // Code that shows a modal, and uses all inputs from the modal/irp application
@@ -3928,6 +3930,9 @@ if (response.confirmed) {
     application.setInputValue('iReplaceRatio', Math.round(Number(irpInputs.iReplaceRatio) * 100 / 5) * 5, true);
 }
 ```
+
+2. It is triggered **on the modal application** after the modal application has been initialized and calculations and/or manualResults has been processed.  It allows for a modal application to cancel the display of the modal if needed.  This is accomplished by returning `false`.  No return or returning `true` allows the modal application to display as requested.
+
 
 #### IKatApp.nestedAppInitialized
 

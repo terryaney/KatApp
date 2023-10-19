@@ -543,7 +543,7 @@ class KatApp implements IKatApp {
 				await PetiteVue.nextTick();
 			}
 
-			const isReturnable = (result: false | undefined) => result != undefined && typeof(result) == "boolean" && ["calculateStart", "apiStart"].indexOf(eventName) > -1 && !result;
+			const isReturnable = (result: false | undefined) => result != undefined && typeof(result) == "boolean" && ["modalAppInitialized", "calculateStart", "apiStart"].indexOf(eventName) > -1 && !result;
 
 			const eventArgs = [...args, this];
 
@@ -788,26 +788,27 @@ class KatApp implements IKatApp {
 				}
 			}
 
-			if (this.options.hostApplication != undefined) {
-				if (this.options.inputs?.iModalApplication == "1") {
+			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == "1";
+			const isNestedApplication = this.options.hostApplication != undefined && this.options.inputs?.iNestedApplication == "1";
+			if (isModalApplication) {
 
-					if (this.options.modalAppOptions?.buttonsTemplate != undefined) {
-						this.select(".modal-footer-buttons button").remove();
-						this.select(".modal-footer-buttons").attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.buttonsTemplate + "'})");
-					}
-
-					if (this.options.modalAppOptions?.headerTemplate != undefined) {
-						this.select(".modal-header.valid-content")
-							.attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.headerTemplate + "'})")
-							.children().remove();
-					}
-
-					await ( this.options.hostApplication as KatApp ).triggerEventAsync("modalAppInitialized", this);
+				if (this.options.modalAppOptions?.buttonsTemplate != undefined) {
+					this.select(".modal-footer-buttons button").remove();
+					this.select(".modal-footer-buttons").attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.buttonsTemplate + "'})");
 				}
-				else if (this.options.inputs?.iNestedApplication == "1") {
-					await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppInitialized", this);
+
+				if (this.options.modalAppOptions?.headerTemplate != undefined) {
+					this.select(".modal-header.valid-content")
+						.attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.headerTemplate + "'})")
+						.children().remove();
 				}
+
+				await ( this.options.hostApplication as KatApp ).triggerEventAsync("modalAppInitialized", this);
 			}
+			if (isNestedApplication) {
+				await ( this.options.hostApplication as KatApp ).triggerEventAsync("nestedAppInitialized", this);
+			}
+
 			await this.triggerEventAsync("initialized");
 
 			if (this.options.manualResults != undefined) {
@@ -848,7 +849,6 @@ class KatApp implements IKatApp {
 					});
 			}
 
-			const isModalApplication = this.options.hostApplication != undefined && this.options.inputs?.iModalApplication == "1";
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
 			// initialized event might have called apis and got errors, so we don't want to clear out errors or run calculation
@@ -863,6 +863,16 @@ class KatApp implements IKatApp {
 				});
 				// _iConfigureUI is 'indicator' to calcuateAsync to not trigger events
 				await this.calculateAsync({ _iConfigureUI: "1", iConfigureUI: "1", iDataBind: "1" });
+			}
+
+			if (isModalApplication) {
+				const modalAppInitialized = await this.triggerEventAsync("modalAppInitialized") ?? true;
+				if (!modalAppInitialized) {
+					this.el.remove();
+					KatApp.remove(this);
+					this.options.hostApplication!.unblockUI();
+					return; // remove app and element - check close modal and see what it does
+				}
 			}
 
 			this.state.errors.forEach(error => error.initialization = true);
@@ -1083,7 +1093,7 @@ class KatApp implements IKatApp {
 
 		this.select('.modal-invalid-footer-buttons .continueButton, .modal-header.invalid-content .btn-close').on("click.ka", async (e) => {
 			e.preventDefault();
-			await options.cancelled!();
+			options.cancelled!();
 		});
 		if (!hasCustomHeader) {
 			this.select(".modal-header.valid-content .btn-close").on("click.ka", async e => await closeButtonClickAsync(e) );
