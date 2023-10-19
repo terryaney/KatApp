@@ -3931,7 +3931,7 @@ if (response.confirmed) {
 }
 ```
 
-2. It is triggered **on the modal application** after the modal application has been initialized and calculations and/or manualResults has been processed.  It allows for a modal application to cancel the display of the modal if needed.  This is accomplished by returning `false`.  No return or returning `true` allows the modal application to display as requested.
+2. It is triggered **on the modal application** after the modal application has been initialized and calculations and/or manualResults has been processed.  It allows for a modal application to cancel the display of the modal if needed.  This is accomplished by returning `false`.  No return or returning `true` allows the modal application to display normally.
 
 
 #### IKatApp.nestedAppInitialized
