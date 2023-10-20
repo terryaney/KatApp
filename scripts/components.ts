@@ -864,8 +864,8 @@ class InputComponent extends InputComponentBase {
 			get prefix() { return getInputCeValue("prefix") ?? props.prefix; },
 			get suffix() { return getInputCeValue("suffix") ?? props.suffix; },
 			get maxLength() { return maxLength(name); },
-			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString() ?? ""; },
-			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString() ?? ""; },
+			get min() { return getInputCeValue("min") ?? application.state.rbl.value("rbl-sliders", name, "min", undefined, calcEngine, tab) ?? props.min?.toString(); },
+			get max() { return getInputCeValue("max") ?? application.state.rbl.value("rbl-sliders", name, "max", undefined, calcEngine, tab) ?? props.max?.toString(); },
 			get step() {
 				const v = getInputCeValue("step") ?? application.state.rbl.value("rbl-sliders", name, "step", undefined, calcEngine, tab);
 				return (v != undefined ? +v : undefined) ?? props.step ?? 1;

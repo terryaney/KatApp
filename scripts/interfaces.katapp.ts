@@ -549,8 +549,8 @@ interface IKaInputScope {
 	readonly prefix: string | undefined; // from ce ?? markup
 	readonly suffix: string | undefined; // from ce ?? markup
 	readonly maxLength: number; // from ce ?? markup
-	readonly min: string; // from ce ?? markup
-	readonly max: string; // from ce ?? markup
+	readonly min: string | undefined; // from ce ?? markup
+	readonly max: string | undefined; // from ce ?? markup
 	readonly step: number; // from ce ?? markup
 
 	readonly error: string | undefined; // from ce
