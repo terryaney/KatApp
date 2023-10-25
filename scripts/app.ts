@@ -942,6 +942,7 @@ class KatApp implements IKatApp {
 					continue: "btn btn-primary"
 				},
 				showCancel: true,
+				allowKeyboardDismiss: true,
 				size: this.options.view != undefined ? "xl" : undefined,
 				scrollable: false,
 				calculateOnConfirm: false
@@ -959,8 +960,11 @@ class KatApp implements IKatApp {
 			(this.options.modalAppOptions.contentSelector != undefined ? `selector: ${this.options.modalAppOptions.contentSelector}` : "static content");
 		
 		const modal = $(
-			`<div v-scope class="modal fade kaModal" :data-bs-keyboard="application.options.modalAppOptions.labels.title != undefined" tabindex="-1" role="dialog" data-bs-backdrop="static" data-view-name="${viewName}">\
-                <div class="modal-dialog">\
+			`<div v-scope class="modal fade kaModal" tabindex="-1" role="dialog" data-bs-backdrop="static"
+				:data-bs-keyboard="application.options.modalAppOptions.labels.title != undefined && application.options.modalAppOptions.allowKeyboardDismiss != false"
+				data-view-name="${viewName}">\
+                
+				<div class="modal-dialog">\
                     <div class="modal-content" v-scope="{\
 							get hasInitializationError() { return application.state.errors.find( r => r.initialization ) != undefined; },\
 							get title() { return application.options.modalAppOptions.labels.title },\
@@ -968,13 +972,9 @@ class KatApp implements IKatApp {
 						}">\
 						<div v-if="uiBlocked" class="ui-blocker"></div>\
 						<div v-if="title != undefined || hasHeaderTemplate">\
-							<div v-if="hasInitializationError" class="modal-header invalid-content">\
+							<div :class="['modal-header', { 'invalid-content': hasInitializationError, 'valid-content': !hasInitializationError }">\
 								<h5 class="modal-title" v-html="title ?? ''"></h5>\
-								<button type="button" class="btn-close" aria-label="Close"></button>\
-							</div>\
-							<div v-if="!hasInitializationError" class="modal-header valid-content">\
-								<h5 class="modal-title" v-html="title"></h5>\
-								<button type="button" class="btn-close" aria-label="Close"></button>\
+								<button v-if="application.options.modalAppOptions.allowKeyboardDismiss != false" type="button" class="btn-close" aria-label="Close"></button>\
 							</div>\
 						</div>\
 						<div class="modal-body"></div>\
@@ -1095,9 +1095,11 @@ class KatApp implements IKatApp {
 			e.preventDefault();
 			options.cancelled!();
 		});
-		if (!hasCustomHeader) {
+
+		if (!hasCustomHeader && options.allowKeyboardDismiss != false) {
 			this.select(".modal-header.valid-content .btn-close").on("click.ka", async e => await closeButtonClickAsync(e) );
 		}
+
 		if (!hasCustomButtons) {
 			this.select('.modal-footer-buttons .continueButton').on("click.ka", async e => {
 				e.preventDefault();
@@ -1690,7 +1692,7 @@ class KatApp implements IKatApp {
 	public getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined {
 		if (key == undefined) return defaultValue;
 		
-		if (key.startsWith("{")) {
+		if (key.startsWith("{") && key.endsWith("}")) {
 			formatObject = new Function(`{return (${key as string})}`)();
 			key = formatObject!.key;
 		}

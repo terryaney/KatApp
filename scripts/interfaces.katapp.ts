@@ -343,10 +343,12 @@ interface IModalOptions {
 	};
 	size?: "xl" | "lg" | "md" | "sm";
 	scrollable?: boolean;
+
 	showCancel?: boolean;
+	allowKeyboardDismiss?: boolean;
+
 	buttonsTemplate?: string;
 	headerTemplate?: string;
-
 	inputs?: ICalculationInputs;
 }
 interface IModalAppOptions extends IModalOptions {
