@@ -972,7 +972,7 @@ class KatApp implements IKatApp {
 						}">\
 						<div v-if="uiBlocked" class="ui-blocker"></div>\
 						<div v-if="title != undefined || hasHeaderTemplate">\
-							<div :class="['modal-header', { 'invalid-content': hasInitializationError, 'valid-content': !hasInitializationError }">\
+							<div :class="['modal-header', { 'invalid-content': hasInitializationError, 'valid-content': !hasInitializationError }]">\
 								<h5 class="modal-title" v-html="title ?? ''"></h5>\
 								<button v-if="application.options.modalAppOptions.allowKeyboardDismiss != false" type="button" class="btn-close" aria-label="Close"></button>\
 							</div>\
