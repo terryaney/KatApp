@@ -220,9 +220,9 @@ class InputComponentBase extends TemplateBase {
 						input.addEventListener("keypress", (event: KeyboardEvent) => {
 							const target = event.target as HTMLInputElement;
 							const inputMask = mask(name);
-							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
+							const isNumber = inputMask != undefined && inputMask.indexOf("number") > -1;
 										
-							switch ( isMoney ? "money" : inputMask ) {
+							switch ( isNumber ? "number" : inputMask ) {
 								case "email":
 									{
 										if (event.key.match(/[A-Za-z0-9.@_-]/) === null) {
@@ -249,7 +249,7 @@ class InputComponentBase extends TemplateBase {
 										break;
 									}
 	
-								case "money":
+								case "number":
 									{
 										const allowNegative = inputMask!.startsWith("-");
 										const decimalPlacesString = inputMask!.substring(allowNegative ? 6 : 5);
@@ -258,7 +258,7 @@ class InputComponentBase extends TemplateBase {
 										const currencySeparator = ( Sys.CultureInfo.CurrentCulture as any ).numberFormat.CurrencyDecimalSeparator;
 										const negRegEx = allowNegative ? `\\-` : "";
 										const sepRegEx = decimalPlaces > 0 ? `\\${currencySeparator}` : "";
-										const moneyRegEx = new RegExp(`[0-9${negRegEx}${sepRegEx}]`, "g");
+										const numberRegEx = new RegExp(`[0-9${negRegEx}${sepRegEx}]`, "g");
 
 										const selectionStart = target.selectionStart;
 										const selectionEnd = target.selectionEnd;
@@ -266,7 +266,7 @@ class InputComponentBase extends TemplateBase {
 											? input.value.substring(0, selectionStart) + input.value.substring(selectionEnd)
 											: input.value;
 										
-										if (event.key.match(moneyRegEx) === null) {
+										if (event.key.match(numberRegEx) === null) {
 											event.preventDefault();
 										}
 										else if (event.key == currencySeparator && (testValue.indexOf(currencySeparator) > -1 || input.value == "")) {
@@ -346,9 +346,9 @@ class InputComponentBase extends TemplateBase {
 								return;
 							}
 
-							const isMoney = inputMask != undefined && inputMask.indexOf("money") > -1;
+							const isNumber = inputMask != undefined && inputMask.indexOf("number") > -1;
 										
-							switch ( isMoney ? "money" : inputMask ) {
+							switch ( isNumber ? "number" : inputMask ) {
 								case "email":
 									{
 										application.setInputValue(name, target.value = target.value.replace(kuEmailRegex, ""));
@@ -374,7 +374,7 @@ class InputComponentBase extends TemplateBase {
 										break;
 									}
 	
-								case "money":
+								case "number":
 									{
 										const allowNegative = inputMask!.startsWith("-");
 										const decimalPlacesString = inputMask!.substring(allowNegative ? 6 : 5);
