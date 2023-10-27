@@ -798,7 +798,8 @@ class KatApp implements IKatApp {
 				}
 
 				if (this.options.modalAppOptions?.headerTemplate != undefined) {
-					this.select(".modal-header.valid-content")
+					this.select(".modal-body")
+						.prev() // modal-header - no class to select since it is driven by :class="[]"
 						.attr("v-scope", "components.template({name: '" + this.options.modalAppOptions.headerTemplate + "'})")
 						.children().remove();
 				}
@@ -971,11 +972,10 @@ class KatApp implements IKatApp {
 							get hasHeaderTemplate() { return application.options.modalAppOptions.headerTemplate != undefined }\
 						}">\
 						<div v-if="uiBlocked" class="ui-blocker"></div>\
-						<div v-if="title != undefined || hasHeaderTemplate">\
-							<div :class="['modal-header', { 'invalid-content': hasInitializationError, 'valid-content': !hasInitializationError }]">\
-								<h5 class="modal-title" v-html="title ?? ''"></h5>\
-								<button v-if="application.options.modalAppOptions.allowKeyboardDismiss != false" type="button" class="btn-close" aria-label="Close"></button>\
-							</div>\
+						<div v-if="title != undefined || hasHeaderTemplate"
+							:class="['modal-header', { 'invalid-content': hasInitializationError, 'valid-content': !hasInitializationError }]">\
+							<h5 class="modal-title" v-html="title ?? ''"></h5>\
+							<button v-if="application.options.modalAppOptions.allowKeyboardDismiss != false" type="button" class="btn-close" aria-label="Close"></button>\
 						</div>\
 						<div class="modal-body"></div>\
                         <div class="modal-footer">\
