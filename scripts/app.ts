@@ -709,7 +709,7 @@ class KatApp implements IKatApp {
 
 			Utils.trace(this, "KatApp", "mountAsync", `CalcEngines configured`, TraceVerbosity.Detailed);
 
-			if (this.options.resourceStringsEndpoint != undefined) {
+			if (this.options.resourceStrings == undefined && this.options.resourceStringsEndpoint != undefined) {
 				const apiUrl = this.getApiUrl(this.options.resourceStringsEndpoint);
 
 				try {
@@ -720,7 +720,7 @@ class KatApp implements IKatApp {
 				}
 			}
 
-			if (this.options.manualResultsEndpoint != undefined) {
+			if (this.options.manualResults == undefined && this.options.manualResultsEndpoint != undefined) {
 				const apiUrl = this.getApiUrl(this.options.manualResultsEndpoint);
 
 				try {
@@ -1826,7 +1826,7 @@ class KatApp implements IKatApp {
 
 	// public so HelpTips can call when needed
 	public cloneOptions(includeManualResults: boolean): IKatAppOptions {
-		const propertiesToSkip = ["handlers", "view", "content", "modalAppOptions", "hostApplication"].concat(includeManualResults ? [] : ["manualResults"]);
+		const propertiesToSkip = ["handlers", "view", "content", "modalAppOptions", "hostApplication"].concat(includeManualResults ? [] : ["manualResults", "manualResultsEndpoint"]);
 		return Utils.clone<IKatAppOptions>( this.options, (k, v) => propertiesToSkip.indexOf(k) > -1 ? undefined : v );
 	}
 	
