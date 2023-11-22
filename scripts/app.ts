@@ -1905,7 +1905,7 @@ class KatApp implements IKatApp {
 			};
 
 			const modalAppOptions = Utils.extend<IKatAppOptions>(
-				( modalOptions.hostApplication as KatApp ).cloneOptions(options.content == undefined),
+				( modalOptions.hostApplication as KatApp ).cloneOptions(options.content == undefined || cloneHost !== false ),
 				modalOptions,
 				options.inputs != undefined ? { inputs: options.inputs } : undefined
 			);
