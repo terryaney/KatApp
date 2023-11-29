@@ -1709,9 +1709,11 @@ class KatApp implements IKatApp {
 			defaultRegionStrings?.[key] ??
 			defaultLanguageStrings?.[key] ??
 			defaultValue ??
-			key;
+			arguments.length == 3 ? defaultValue : key;
 		
-		const value = typeof resource == "object" ? resource.text : resource;
+		if (resource == undefined) return undefined;
+		
+		const value = typeof resource == "object" ? ( resource as { text: string } ).text : resource;
 		return String.formatTokens(value, ( formatObject?.keyValueObject as unknown as IStringIndexer<string> ) ?? formatObject ?? {} );
 	}
 
