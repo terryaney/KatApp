@@ -1709,7 +1709,7 @@ class KatApp implements IKatApp {
 			defaultRegionStrings?.[key] ??
 			defaultLanguageStrings?.[key] ??
 			defaultValue ??
-			arguments.length == 3 ? defaultValue : key;
+			( arguments.length == 3 ? defaultValue : key );
 		
 		if (resource == undefined) return undefined;
 		
