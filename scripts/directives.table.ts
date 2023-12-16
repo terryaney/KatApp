@@ -144,7 +144,7 @@
 							if (headerSpanCell != undefined) {
 								const col = document.createElement("div");
 								addClass(col, headerSpanCell.Class);
-								col.innerHTML = headerSpanCell.Value;
+								col.innerHTML = application.getLocalizedString(headerSpanCell.Value)!;
 								row.appendChild(col);
 							}
 							else if (span != "") {
@@ -153,7 +153,7 @@
 										.map(s => {
 											const spanCol = document.createElement("div");
 											addClass(spanCol, s.Class);
-											spanCol.innerHTML = s.Value;
+											spanCol.innerHTML = application.getLocalizedString(s.Value)!;
 											return spanCol;
 										})
 								);
@@ -162,7 +162,7 @@
 								tableColumns.forEach(c => {
 									const col = document.createElement("div");
 									addClass(col, `${getBootstrapColumnCss(c)} ${c.isTextColumn ? "text" : "value"} ${scope.name}-${c.name}`);
-									col.innerHTML = r[c.name] ?? "";
+									col.innerHTML = application.getLocalizedString(r[c.name]) ?? "";
 									row.append(col);
 								})
 							}
@@ -227,7 +227,7 @@
 							if (headerSpanCell != undefined) {
 								const col = document.createElement(elementName);
 								addClass(col, headerSpanCell.Class);
-								col.innerHTML = headerSpanCell.Value;
+								col.innerHTML = application.getLocalizedString(headerSpanCell.Value)!;
 								row.appendChild(col);
 							}
 							else if (span != "") {
@@ -237,7 +237,7 @@
 											const spanCol = document.createElement(elementName);
 											addClass(spanCol, s.Class);
 											spanCol.setAttribute("colspan", s.Span.toString());
-											spanCol.innerHTML = s.Value;
+											spanCol.innerHTML = application.getLocalizedString(s.Value)!;
 											return spanCol;
 										})
 								);
@@ -246,7 +246,7 @@
 								tableColumns.forEach(c => {
 									const col = document.createElement(elementName);
 									addClass(col, `${c.cssClass ?? ""} ${c.isTextColumn ? "text" : "value"} ${scope.name}-${c.name}`);
-									col.innerHTML = r[c.name] ?? "";
+									col.innerHTML = application.getLocalizedString(r[c.name]) ?? "";
 									row.append(col);
 								})
 							}

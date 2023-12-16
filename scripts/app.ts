@@ -2709,9 +2709,27 @@ class KatApp implements IKatApp {
 				addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
 			});
 
+			// Not sure if I need this.  Don't think I do, but leaving here in case I do need to
+			// preprocess v-ka-resource items.
+			/*
+			// Turn v-ka-resource with 'content as the key' into v-ka-resource="{ key: 'content', ...
+			container.querySelectorAll("[v-ka-resource]").forEach(directive => {
+				const resourceKeyRegex = /\{\s*key\s*:\s* /g; get rid of space between * and /
+				const exp = directive.getAttribute("v-ka-resource");
+				const needsKey = exp == null || (exp.startsWith("{") && !resourceKeyRegex.test(exp));
+
+				if (needsKey) {
+					if (exp == null) {
+						directive.setAttribute("v-ka-resource", `{ key: '${directive.innerHTML}' }`);
+					}
+				}
+				console.log("Needs key: " + directive.outerHTML);
+			});
+			*/
+		
 			// Turn v-ka-template="templateId, scope" into v-scope="components.template(templateId, scope)"
-			const needsReactiveForRE = /.*?name'?\s*:\s*(?<value>'?[\w\s\.]+'?)/;
 			container.querySelectorAll("[v-ka-template]").forEach(directive => {
+				const needsReactiveForRE = /.*?name'?\s*:\s*(?<value>'?[\w\s\.]+'?)/;
 				const exp = directive.getAttribute("v-ka-template")!;
 				const scope = exp.startsWith("{")
 					? exp

@@ -11,7 +11,9 @@
 
 				const key = model.key ?? ctx.el.innerHTML;
 				
-				ctx.el.innerHTML = application.getLocalizedString(key, model, defaultValue)!;
+				ctx.el.innerHTML = defaultValue != undefined
+					? application.getLocalizedString(key, model, defaultValue)!
+					: application.getLocalizedString(key, model)!;
 			});
 		};
 	}
