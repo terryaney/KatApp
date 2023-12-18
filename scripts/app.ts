@@ -951,9 +951,9 @@ class KatApp implements IKatApp {
 			this.options.modalAppOptions
 		);
 
-		const labelCancel = options.labels!.cancel;
+		const labelCancel = this.getLocalizedString(options.labels!.cancel);
 		const cssCancel = options.css!.cancel;
-		const labelContinue = options.labels!.continue;
+		const labelContinue = this.getLocalizedString(options.labels!.continue);
 		const cssContinue = options.css!.continue;
 
 		const viewName =
@@ -968,8 +968,8 @@ class KatApp implements IKatApp {
 				<div class="modal-dialog">\
                     <div class="modal-content" v-scope="{\
 							get hasInitializationError() { return application.state.errors.find( r => r.initialization ) != undefined; },\
-							get title() { return application.options.modalAppOptions.labels.title },\
-							get hasHeaderTemplate() { return application.options.modalAppOptions.headerTemplate != undefined }\
+							get title() { return application.getLocalizedString(application.options.modalAppOptions.labels.title); },\
+							get hasHeaderTemplate() { return application.options.modalAppOptions.headerTemplate != undefined; }\
 						}">\
 						<div v-if="uiBlocked" class="ui-blocker"></div>\
 						<div v-if="title != undefined || hasHeaderTemplate"
@@ -980,7 +980,7 @@ class KatApp implements IKatApp {
 						<div class="modal-body"></div>\
                         <div class="modal-footer">\
 							<div v-if="hasInitializationError" class="modal-invalid-footer-buttons text-center d-none">\
-								<button type="button" :class="[\'${cssContinue}\', \'continueButton\']">Close</button>\
+								<button type="button" :class="[\'${cssContinue}\', \'continueButton\']">${this.getLocalizedString("Close")}</button>\
 	                        </div>\
 							<div v-if="!hasInitializationError" class="modal-footer-buttons text-center d-none">\
 								<button v-if="application.options.modalAppOptions.showCancel" type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\

@@ -37,9 +37,7 @@
 				const seriesConfigurationRows = data.filter(r => r.category.startsWith("config-"));
 
 				// Key automatically added to container for identifying this chart
-				const highchartKey = ctx.el.getAttribute('data-highcharts-chart');
-				highchart = Highcharts.charts[highchartKey ?? -1];
-
+				const exists = (highchart = Highcharts.charts[ctx.el.getAttribute('data-highcharts-chart') ?? -1]) != undefined;
 				if (highchart !== undefined) {
 					highchart.destroy();
 					highchart = undefined;
@@ -71,6 +69,11 @@
 
 					try {
 						$(ctx.el).highcharts(chartOptions);
+						highchart = Highcharts.charts[ctx.el.getAttribute('data-highcharts-chart')!];
+						if (exists) {
+							// Screen probably not redrawing, so need to ensure it reflows into the proper height
+							($(ctx.el).highcharts() as HighchartsChartObject).reflow();
+						}		
 					} catch (error) {
 						Utils.trace(application, "DirectiveKaHighchart", "getDefinition", `Error during highchart creation.`, TraceVerbosity.None, ctx.exp, error);
 					}
