@@ -1263,13 +1263,16 @@ class KatApp implements IKatApp {
 					this.state.needsCalculation = false;
 					this.options.debug.traceVerbosity = this.nextCalculation.originalVerbosity;
 					this.nextCalculation = undefined;
+					return this.lastCalculation.results;
 				}
 				catch (error) {
-					this.addUnexpectedError(error);
+					if (!(error instanceof ApiError)) {
+						this.addUnexpectedError(error);
 
-					if (!isConfigureUICalculation) {
-						// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
-						Utils.trace(this, "KatApp", "calculateAsync", `Exception: ${(error instanceof Error ? error.message : error + "")}`, TraceVerbosity.None, error);
+						if (!isConfigureUICalculation) {
+							// TODO: Check exception.detail: result.startsWith("<!DOCTYPE") and show diff error?
+							Utils.trace(this, "KatApp", "calculateAsync", `Exception: ${(error instanceof Error ? error.message : error + "")}`, TraceVerbosity.None, error);
+						}
 					}
 
 					await this.triggerEventAsync("calculationErrors", "SubmitCalculation" + (isConfigureUICalculation ? ".ConfigureUI" : ""), error instanceof Error ? error : undefined);
@@ -2251,42 +2254,30 @@ class KatApp implements IKatApp {
 			});
 		});
 
-		try {
-			await this.processDataUpdateResultsAsync(results, calculationSubmitApiConfiguration);
-		} catch (error) {
-			await this.triggerEventAsync("calculationErrors", "ProcessDataUpdateResults", error instanceof Error ? error : undefined);
-		}
-		try {
-			this.processDocGenResults(results);
-		} catch (error) {
-			await this.triggerEventAsync("calculationErrors", "ProcessDocGenResults", error instanceof Error ? error : undefined);
-		}
+		await this.processDataUpdateResultsAsync(results, calculationSubmitApiConfiguration);
+		this.processDocGenResults(results);
+
 		Utils.trace(this, "KatApp", "processResultsAsync", `Complete: ${results.map(r => `${r._ka.calcEngineKey}.${r._ka.name}`).join(", ")}`, TraceVerbosity.Detailed);
 	}
 
 	private async processDataUpdateResultsAsync(results: IKaTabDef[], calculationSubmitApiConfiguration: ISubmitApiOptions | undefined): Promise<void> {
-		try {
-			const jwtPayload = {
-				DataTokens: [] as Array<{ Name: string; Token: string; }>
-			};
+		const jwtPayload = {
+			DataTokens: [] as Array<{ Name: string; Token: string; }>
+		};
 
-			results
-				.forEach(t => {
-					(t["jwt-data"] as ITabDefTable ?? [])
-						.filter(r => r["@id"] == "data-updates")
-						.forEach(r => {
-							jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
-						});
-				});
+		results
+			.forEach(t => {
+				(t["jwt-data"] as ITabDefTable ?? [])
+					.filter(r => r["@id"] == "data-updates")
+					.forEach(r => {
+						jwtPayload.DataTokens.push({ Name: r["@id"], Token: r["value"] });
+					});
+			});
 
-			if (jwtPayload.DataTokens.length > 0) {
-				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Start (${jwtPayload.DataTokens.length} jwt-data items)`, TraceVerbosity.Detailed);
-				await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload }, undefined, calculationSubmitApiConfiguration);
-				Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Complete`, TraceVerbosity.Detailed);
-			}
-		} catch (e) {
-			Utils.trace(this, "KatApp", "processResultsAsync", `Unhandled exception.`, TraceVerbosity.None, e);
-			throw e;
+		if (jwtPayload.DataTokens.length > 0) {
+			Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Start (${jwtPayload.DataTokens.length} jwt-data items)`, TraceVerbosity.Detailed);
+			await this.apiAsync("rble/jwtupdate", { apiParameters: jwtPayload }, undefined, calculationSubmitApiConfiguration);
+			Utils.trace(this, "KatApp", "processDataUpdateResultsAsync", `Complete`, TraceVerbosity.Detailed);
 		}
     }
 
@@ -2316,29 +2307,24 @@ class KatApp implements IKatApp {
 			fetch(`data:${type};base64,${base64}`).then(res => res.blob())
 		*/
 
-		try {
-			const docGenInstructions = results.flatMap(t => (t["api-actions"] as ITabDefTable ?? []).filter(r => r["action"] == "DocGen"));
+		const docGenInstructions = results.flatMap(t => (t["api-actions"] as ITabDefTable ?? []).filter(r => r["action"] == "DocGen"));
 
-			if (docGenInstructions.length > 0) {
-				Utils.trace(this, "KatApp", "processDocGenResults", `Start (${docGenInstructions.length} DocGen items)`, TraceVerbosity.Detailed);
+		if (docGenInstructions.length > 0) {
+			Utils.trace(this, "KatApp", "processDocGenResults", `Start (${docGenInstructions.length} DocGen items)`, TraceVerbosity.Detailed);
 
-				docGenInstructions.forEach(r => {
-					const fileName = r["file-name"];
-					if (r.exception != undefined) {
-						Utils.trace(this, "KatApp", "processDocGenResults", `DocGen Instruction Exception: ${fileName ?? 'File Not Availble'}, ${r.exception})`, TraceVerbosity.None);
-					}
-					else {
-						const base64 = r["content"];
-						const contentType = r["content-type"];
-						const blob = base64toBlob(base64, contentType);
-						this.downloadBlob(blob, fileName);
-					}
-				});
-				Utils.trace(this, "KatApp", "processDocGenResults", `Complete`, TraceVerbosity.Detailed);
-			}
-		} catch (e) {
-			Utils.trace(this, "KatApp", "processDocGenResults", `Unhandled exception.`, TraceVerbosity.None, e);
-			throw e;
+			docGenInstructions.forEach(r => {
+				const fileName = r["file-name"];
+				if (r.exception != undefined) {
+					Utils.trace(this, "KatApp", "processDocGenResults", `DocGen Instruction Exception: ${fileName ?? 'File Not Availble'}, ${r.exception})`, TraceVerbosity.None);
+				}
+				else {
+					const base64 = r["content"];
+					const contentType = r["content-type"];
+					const blob = base64toBlob(base64, contentType);
+					this.downloadBlob(blob, fileName);
+				}
+			});
+			Utils.trace(this, "KatApp", "processDocGenResults", `Complete`, TraceVerbosity.Detailed);
 		}
 	}
 
