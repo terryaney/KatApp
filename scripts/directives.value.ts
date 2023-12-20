@@ -35,7 +35,7 @@
 							model?.keyField ?? getSelector(3),
 							model?.ce ?? getSelector(4),
 							model?.tab ?? getSelector(5)
-						) ?? ctx.el.innerHTML
+						) ?? ( ctx.el as HTMLElement ).innerText
 					)!;
 			});
 		};
