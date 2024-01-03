@@ -1693,6 +1693,8 @@ class KatApp implements IKatApp {
 	}
 
 	public getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined {
+		key = key?.replaceAll("<<", "{{").replaceAll(">>", "}}");
+
 		if (key == undefined) return defaultValue;
 		
 		if (key.startsWith("{") && key.endsWith("}")) {
