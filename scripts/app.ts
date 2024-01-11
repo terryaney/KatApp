@@ -869,6 +869,7 @@ class KatApp implements IKatApp {
 			if (isModalApplication) {
 				const modalAppInitialized = await this.triggerEventAsync("modalAppInitialized") ?? true;
 				if (!modalAppInitialized) {
+					this.options.modalAppOptions!.promise.resolve({ confirmed: false, response: undefined, modalApp: this });
 					this.el.remove();
 					KatApp.remove(this);
 					this.options.hostApplication!.unblockUI();
