@@ -14,6 +14,8 @@
 				ctx.el.innerHTML = defaultValue != undefined
 					? application.getLocalizedString(key, model, defaultValue)!
 					: application.getLocalizedString(key, model)!;
+				
+				ctx.el.setAttribute("data-resource-key", key);
 			});
 		};
 	}
