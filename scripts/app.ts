@@ -104,7 +104,8 @@ class KatApp implements IKatApp {
 	public el: JQuery;
 	public traceStart: Date;
 	public traceLast: Date;
-
+	public missingResources: Array<string> = [];
+	
 	private applicationCss: string;
 	private vueApp?: PetiteVueApp;
 	private viewTemplates?: string[];
@@ -1709,18 +1710,27 @@ class KatApp implements IKatApp {
 		const cultureStrings = this.options.resourceStrings?.[currentCulture];
 		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
 
-		const resource =
+		const resourceString =
 			cultureStrings?.[key] ??
 			baseCultureStrings?.[key] ??
 			defaultRegionStrings?.[key] ??
-			defaultLanguageStrings?.[key] ??
+			defaultLanguageStrings?.[key];
+		
+		const resourceDefault =
 			defaultValue ??
 			( arguments.length == 3 ? defaultValue : key );
 		
+		const resource = resourceString ?? resourceDefault;
+
+		if (resourceString == undefined) {
+			this.missingResources.push(key);
+		}
+
 		if (resource == undefined) return undefined;
 		
 		const value = typeof resource == "object" ? ( resource as { text: string } ).text : resource;
-		return String.formatTokens(value, ( formatObject?.keyValueObject as unknown as IStringIndexer<string> ) ?? formatObject ?? {} );
+
+		return String.formatTokens(value, (formatObject?.keyValueObject as unknown as IStringIndexer<string>) ?? formatObject ?? {});
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {
@@ -2586,44 +2596,44 @@ class KatApp implements IKatApp {
 
 			// Fix v-ka-highchart 'short hand' of data or data.options string into a valid {} scope
 			container.querySelectorAll("[v-ka-highchart]").forEach(directive => {
-				let exp = directive.getAttribute("v-ka-highchart")!;
+				let scope = directive.getAttribute("v-ka-highchart")!;
 
-				if (!exp.startsWith("{")) {
+				if (!scope.startsWith("{")) {
 					// Using short hand of just the 'table names': 'data.options' (.options name is optional)
-					const chartParts = exp.split('.');
+					const chartParts = scope.split('.');
 					const data = chartParts[0];
 					const options = chartParts.length >= 2 ? chartParts[1] : chartParts[0];
-					exp = `{ data: '${data}', options: '${options}' }`;
+					scope = `{ data: '${data}', options: '${options}' }`;
 				}
 
-				directive.setAttribute("v-ka-highchart", exp);
-				inspectElement(directive, exp);
+				directive.setAttribute("v-ka-highchart", scope);
+				inspectElement(directive, scope);
 			});
 
 			// Fix v-ka-table 'short hand' of name string into a valid {} scope
 			container.querySelectorAll("[v-ka-table]").forEach(directive => {
-				let exp = directive.getAttribute("v-ka-table")!;
+				let scope = directive.getAttribute("v-ka-table")!;
 
-				if (!exp.startsWith("{")) {
+				if (!scope.startsWith("{")) {
 					// Using short hand of just the 'table name'
-					exp = `{ name: '${exp}' }`;
+					scope = `{ name: '${scope}' }`;
 				}
 
-				directive.setAttribute("v-ka-table", exp);
-				inspectElement(directive, exp);
+				directive.setAttribute("v-ka-table", scope);
+				inspectElement(directive, scope);
 			});
 
 			// Fix v-ka-navigate 'short hand' of view string into a valid {} scope
 			container.querySelectorAll("[v-ka-navigate]").forEach(directive => {
-				let exp = directive.getAttribute("v-ka-navigate")!;
+				let scope = directive.getAttribute("v-ka-navigate")!;
 
-				if (!exp.startsWith("{")) {
+				if (!scope.startsWith("{")) {
 					// Using short hand of just the 'table names': 'data.options' (.options name is optional)
-					exp = `{ view: '${exp}' }`;
+					scope = `{ view: '${scope}' }`;
 				}
 
-				directive.setAttribute("v-ka-navigate", exp);
-				inspectElement(directive, exp);
+				directive.setAttribute("v-ka-navigate", scope);
+				inspectElement(directive, scope);
 			});
 
 			// Turn v-ka-rbl-no-calc into ka-rbl-no-calc='true' (was .rbl-nocalc)
@@ -2808,12 +2818,12 @@ class KatApp implements IKatApp {
 
 				// Following items always last since they can be added
 				// to same element with other (more important) v-ka- elements
+				// that I want to inspect
 				container.querySelectorAll("[v-ka-value], [v-ka-attributes], [ka-inline], [v-html], [v-text]").forEach(directive => {
 					inspectElement(directive);
 				});
 
 				// TODO: Need @ and : attribute items and {{ }} syntax
-
 			}
 
 			// Recurse for every template without an ID (named templates will be processed next and moved to kaResources)
