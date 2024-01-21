@@ -51,7 +51,7 @@
 				// ceInputs are 'key="" key=""' string returned from CalcEngine, used to just put {inputs} into template markup and it dumped attribute
 				// if there, otherwise not, so parse them and assign as inputs
 				if (scope.ceInputs != undefined) {
-					const attrObject = Directives.getObjectFromAttributes(scope.ceInputs);
+					const attrObject = Utils.getObjectFromAttributes(scope.ceInputs);
 					for (const propertyName in attrObject) {
 						if (propertyName.startsWith("i") || /* legacy */ propertyName.startsWith("data-input-")) {
 							const inputName = propertyName.startsWith("i")

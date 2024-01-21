@@ -29,17 +29,4 @@ class Directives {
 			vueApp.directive(d.name, d.getDefinition(application));
 		});
 	}
-
-	public static getObjectFromAttributes(attributes: string): IStringIndexer<string> {
-		// https://stackoverflow.com/questions/30420491/javascript-regex-to-get-tag-attribute-value/48396506#48396506
-		const regex = new RegExp('[\\s\\r\\t\\n]*([a-z0-9\\-_]+)[\\s\\r\\t\\n]*=[\\s\\r\\t\\n]*([\'"])((?:\\\\\\2|(?!\\2).)*)\\2', 'ig');
-		const o: IStringIndexer<string> = {};
-		let match : RegExpExecArray | null = null;
-
-		while ((match = regex.exec(attributes))) {
-			o[match[1]] = match[3];
-		}
-
-		return o;
-	}
 }

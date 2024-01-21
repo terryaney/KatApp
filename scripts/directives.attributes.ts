@@ -5,7 +5,7 @@
 			const attributes: string = ctx.get();
 
 			if (attributes != undefined && attributes != "") {
-				const attrObject = Directives.getObjectFromAttributes(attributes);
+				const attrObject = Utils.getObjectFromAttributes(attributes);
 				for (const propertyName in attrObject) {
 					ctx.el.setAttribute(propertyName, attrObject[propertyName]);
 				}

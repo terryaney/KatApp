@@ -226,9 +226,10 @@ interface IState {
 
 	handlers?: IHandlers;
 
-	// Private...
 	_inspectors: IStringIndexer<number>;
 	_inspectorMounted: (el: Element, inspectorCommentId: string) => void;
+
+	// Private	
 	_domElementMounted: (el: HTMLElement) => void;
 	_templateItemMounted: (templateId: string, el: Element, scope?: unknown) => void;
 	_templateItemUnmounted: (templateId: string, el: Element, scope?: unknown) => void;

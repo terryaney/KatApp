@@ -1,6 +1,7 @@
 {
 	"explorer.fileNesting.patterns": {
 		"calculation.ts": "calculation.*.ts",
+		"components.ts": "components.*.ts",
 		"directives.ts": "directives.*.ts",
 		"interfaces.katapp.ts": "interfaces.katapp.*.ts"
 	}
