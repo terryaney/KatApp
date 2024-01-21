@@ -18,7 +18,7 @@
 			// elements with matching id and let it re-render the re-active elements
 
 			const inlineId = ctx.el.getAttribute("v-ka-id") ?? Utils.generateId();
-			ctx.el.classList.remove("ka-inspector-value");
+			ctx.el.classList.remove("ka-inspector-inline");
 
 			ctx.effect(() => {
 				// Need to call this to make effect() reactive, contains same expression that was in v-html
@@ -38,7 +38,7 @@
 				children.forEach(c => {
 					const render = c.cloneNode(true) as Element;
 					if (application.options.debug.showInspector) {
-						render.classList.add("ka-inspector-value")
+						render.classList.add("ka-inspector-inline")
 					}
 					render.setAttribute("v-ka-inline-id", inlineId);
 					ctx.el.before(render);

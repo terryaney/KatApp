@@ -42,6 +42,7 @@ interface IKatAppOptions extends IKatAppDefaultOptions {
 	userIdHash?: string; // User ID hashed to be used in different caching scenarios
 	environment?: string;
 	requestIP?: string;
+	currentCulture?: string;
 	currentUICulture?: string;
 
 	inputs?: ICalculationInputs;
@@ -226,9 +227,6 @@ interface IState {
 
 	handlers?: IHandlers;
 
-	_inspectors: IStringIndexer<number>;
-	_inspectorMounted: (el: Element, inspectorCommentId: string) => void;
-
 	// Private	
 	_domElementMounted: (el: HTMLElement) => void;
 	_templateItemMounted: (templateId: string, el: Element, scope?: unknown) => void;
@@ -292,6 +290,7 @@ interface ISubmitApiConfiguration {
 	adminAuthID: string | undefined;
 	currentPage: string;
 	requestIP: string;
+	currentCulture: string;
 	currentUICulture: string;
 	environment: string;
 	calcEngines: ISubmitCalculationCalcEngine[];

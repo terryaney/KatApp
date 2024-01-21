@@ -62,7 +62,7 @@
 			});
 	}
 
-	private processMarkup(container: Element | DocumentFragment) {
+	private checkVueSyntax(container: Element | DocumentFragment) {
 		let compileError = false;
 		container.querySelectorAll("[v-for][v-if]").forEach(directive => {
 			console.log(directive);
@@ -72,15 +72,11 @@
 			throw new Error("v-for and v-if on same element.  The v-for should be moved to a child <template v-for/> element.");
 		}
 
-		// Make sure v-ka-inline only present on template items, then move the 'v-html' source
-		// into the scope for v-ka-inline so it is reactive
+		// Make sure v-ka-inline only present on template items
 		container.querySelectorAll("[v-ka-inline]").forEach(directive => {
 			if (directive.tagName != "TEMPLATE" || !directive.hasAttribute("v-html")) {
 				console.log(directive);
 				compileError = true;
-			}
-			else {
-				directive.setAttribute("v-ka-inline", directive.getAttribute("v-html")!);
 			}
 		});
 		if (compileError) {
@@ -96,6 +92,10 @@
 		if (compileError) {
 			throw new Error("A v-if can not be a direct decendent of an inline <template/>.  Wrap the v-if element with a div.");
 		}
+	}
+
+	private processMarkup(container: Element | DocumentFragment) {
+		this.checkVueSyntax(container);
 
 		// Turn v-ka-input into v-scope="components.input({})"
 		container.querySelectorAll("[v-ka-input]").forEach(directive => {
@@ -103,8 +103,6 @@
 			if (!scope.startsWith("{")) {
 				scope = `{ name: '${scope}' }`;
 			}
-
-			this.inspectElement(directive, scope);
 
 			directive.removeAttribute("v-ka-input");
 			directive.setAttribute("v-scope", `components.input(${scope})`);
@@ -124,36 +122,47 @@
 				}
 			}
 		});
+		// Turn v-ka-input-group into v-scope="components.inputGroup({})"
+		container.querySelectorAll("[v-ka-input-group]").forEach(directive => {
+			const scope = directive.getAttribute("v-ka-input-group")!;
+
+			directive.removeAttribute("v-ka-input-group");
+			directive.setAttribute("v-scope", `components.inputGroup(${scope})`);
+		});
+
+
+		// Move the 'v-html' source into the scope for v-ka-inline so it is reactive
+		container.querySelectorAll("[v-ka-inline]").forEach(directive => {
+			directive.setAttribute("v-ka-inline", directive.getAttribute("v-html")!);
+		});
 
 		// Fix v-ka-highchart 'short hand' of data or data.options string into a valid {} scope
 		container.querySelectorAll("[v-ka-highchart]").forEach(directive => {
-			let scope = directive.getAttribute("v-ka-highchart")!;
+			const scope = directive.getAttribute("v-ka-highchart")!;
 
 			if (!scope.startsWith("{")) {
 				// Using short hand of just the 'table names': 'data.options' (.options name is optional)
 				const chartParts = scope.split('.');
 				const data = chartParts[0];
 				const options = chartParts.length >= 2 ? chartParts[1] : chartParts[0];
-				scope = `{ data: '${data}', options: '${options}' }`;
+				directive.setAttribute("v-ka-highchart", `{ data: '${data}', options: '${options}' }`);
 			}
-
-			directive.setAttribute("v-ka-highchart", scope);
-			this.inspectElement(directive, scope);
 		});
-
 		// Fix v-ka-table 'short hand' of name string into a valid {} scope
 		container.querySelectorAll("[v-ka-table]").forEach(directive => {
-			let scope = directive.getAttribute("v-ka-table")!;
-
+			const scope = directive.getAttribute("v-ka-table")!;
 			if (!scope.startsWith("{")) {
 				// Using short hand of just the 'table name'
-				scope = `{ name: '${scope}' }`;
+				directive.setAttribute("v-ka-table", `{ name: '${scope}' }`);
 			}
-
-			directive.setAttribute("v-ka-table", scope);
-			this.inspectElement(directive, scope);
 		});
-
+		// Fix v-ka-api 'short hand' of api into a valid {} scope
+		container.querySelectorAll("[v-ka-api]").forEach(directive => {
+			const scope = directive.getAttribute("v-ka-api")!;
+			if (!scope.startsWith("{")) {
+				directive.setAttribute("v-ka-api", `{ endpoint: '${scope}' }`);
+			}
+		});
 		// Fix v-ka-navigate 'short hand' of view string into a valid {} scope
 		container.querySelectorAll("[v-ka-navigate]").forEach(directive => {
 			let scope = directive.getAttribute("v-ka-navigate")!;
@@ -164,7 +173,6 @@
 			}
 
 			directive.setAttribute("v-ka-navigate", scope);
-			this.inspectElement(directive, scope);
 		});
 
 		// Turn v-ka-rbl-no-calc into ka-rbl-no-calc='true' (was .rbl-nocalc)
@@ -193,11 +201,9 @@
 				needsCalcText = "<i class='fa-solid fa-rotate-right'></i>&nbsp;Refresh";
 			}
 
+			directive.removeAttribute("v-ka-needs-calc");
 			directive.setAttribute("v-if", "!needsCalculation");
 
-			this.inspectElement(directive, `{ needsCalcText: '${needsCalcText}' }`, `Cloned element immediately following with v-if=needsCalculation`);
-
-			directive.removeAttribute("v-ka-needs-calc");
 
 			const refresh = directive.cloneNode(true) as Element;
 			for (const { name, value } of [...refresh.attributes]) {
@@ -211,16 +217,6 @@
 			directive.after(refresh);
 		});
 
-		// Turn v-ka-input-group into v-scope="components.inputGroup({})"
-		container.querySelectorAll("[v-ka-input-group]").forEach(directive => {
-			const scope = directive.getAttribute("v-ka-input-group")!;
-
-			this.inspectElement(directive, scope);
-
-			directive.removeAttribute("v-ka-input-group");
-			directive.setAttribute("v-scope", `components.inputGroup(${scope})`);
-		});
-
 		// Also automatically setup helptips again if the item is removed/added via v-if and the v-if contains tooltips (popup config is lost on remove)
 		// Used to occur inside template[id] processing right after mountInputs(); call, but I think this should happen all the time
 
@@ -230,11 +226,8 @@
 			// Only do the 'outer most if'...otherwise the 'container' context when doing getTipContent is wrong and the 'selector' isn't found
 			// UPDATE: Leaving condition in, but I didn't see any inputs with 'nested' v-if directives so not sure it is needed
 			// directive.parentElement?.closest("[v-if]") == undefined
-
 			this.addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
-			this.inspectElement(directive, `{ condition: ${directive.getAttribute("v-if")} }`);
 		});
-
 		container.querySelectorAll("[v-for], [v-else-if], [v-else]").forEach(directive => {
 			this.addMountAttribute(directive, "mounted", `_domElementMounted($el)`);
 		});
@@ -265,7 +258,6 @@
 				? exp
 				: `{ name: '${exp}' }`;
 
-			this.inspectElement(directive, scope);
 			directive.removeAttribute("v-ka-template");
 
 			const nameValue = needsReactiveForRE.exec(scope)?.groups!.value ?? ""
@@ -273,30 +265,29 @@
 
 			if (needsReactiveFor) {
 				/*
-					Need to change following:
-					<div v-ka-template="{ name: model.templateName, source: model.list }" class="mt-5 row"></div>
+				Need to change following:
+				<div v-ka-template="{ name: model.templateName, source: model.list }" class="mt-5 row"></div>
 
-					To:	
-					<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
-						<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
-					</template>
+				To:	
+				<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
+					<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
+				</template>
 
-					Needed loop on single item so that reactivity would kick in when it changed and render a new item
+				Needed loop on single item so that reactivity would kick in when it changed and render a new item
 
-					Tried to create via dom manipulation wasn't working.  I think the 'template' element screwed it up with the 'document fragment' created
-					before dom markup was 'really' loaded by browser and then resulted in double document fragment?  No idea, but outerHTML assignment worked.
+				Tried to create via dom manipulation wasn't working.  I think the 'template' element screwed it up with the 'document fragment' created
+				before dom markup was 'really' loaded by browser and then resulted in double document fragment?  No idea, but outerHTML assignment worked.
 
-					const reactiveFor: Element = document.createElement("template");
-					reactiveFor.setAttribute("v-for", `_reactive_template in [${scope}]`);
-					reactiveFor.setAttribute(":key", "_reactive_template.name");
-					directive.before(reactiveFor);
-					reactiveFor.appendChild(directive);
+				const reactiveFor: Element = document.createElement("template");
+				reactiveFor.setAttribute("v-for", `_reactive_template in [${scope}]`);
+				reactiveFor.setAttribute(":key", "_reactive_template.name");
+				directive.before(reactiveFor);
+				reactiveFor.appendChild(directive);
 
-					However, the end markup looks like this 🤪:
-					<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
-						<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
-						<template></template>
-					</template>
+				However, the end markup looks like this 🤪:
+				<template v-for="_reactive_template in [{ name: model.templateName, source: model.list }]" :key="_reactive_template.name">
+					<div v-scope="components.template({ name: _reactive_template.name, source: _reactive_template.source})" class="mt-5 row"></div>
+				</template>
 				*/
 
 				directive.setAttribute("v-scope", `components.template({ name: _reactive_template.name, source: _reactive_template.source})`);
@@ -307,100 +298,10 @@
 			}
 		});
 
-		if (this.showInspector) {
-			container.querySelectorAll("[v-ka-modal]").forEach(directive => {
-				const scope = directive.getAttribute("v-ka-modal");
-
-				this.inspectElement(directive, scope);
-			});
-			container.querySelectorAll("[v-ka-api]").forEach(directive => {
-				let scope = directive.getAttribute("v-ka-api")!;
-
-				if (!scope.startsWith("{")) {
-					scope = `{ endpoint: '${scope}' }`;
-				}
-
-				this.inspectElement(directive, scope);
-			});
-			container.querySelectorAll("[v-ka-app]").forEach(directive => {
-				let scope = directive.getAttribute("v-ka-app")!;
-
-				if (!scope.startsWith("{")) {
-					scope = `{ view: '${scope}' }`;
-				}
-
-				this.inspectElement(directive, scope);
-			});
-
-			container.querySelectorAll("[v-for]").forEach(directive => {
-				this.inspectElement(directive);
-			});
-
-			// Common Vue directives
-			container.querySelectorAll("[v-show]").forEach(directive => {
-				this.inspectElement(directive, `{ condition: ${directive.getAttribute("v-show")} }`);
-			});
-
-			container.querySelectorAll("[v-effect], [v-on]").forEach(directive => {
-				// No scope here b/c v-effect can be 'code eval' (not returning anything just 'doing' something - setting inner html)
-				// v-on - no scope either, just dump the original element markup
-				this.inspectElement(directive);
-			});
-
-			// Following items always last since they can be added
-			// to same element with other (more important) v-ka- elements
-			// that I want to inspect
-			container.querySelectorAll("[v-ka-value], [v-ka-attributes], [v-ka-inline], [v-html], [v-text]").forEach(directive => {
-				this.inspectElement(directive);
-			});
-
-			// TODO: Need @ and : attribute items and {{ }} syntax
-		}
-
 		// Recurse for every template without an ID (named templates will be processed next and moved to kaResources)
 		container.querySelectorAll<HTMLTemplateElement>("template:not([id])").forEach(template => {
 			this.processMarkup(template.content);
 		});
-	}
-
-	// Add mount event to dump comment with 'markup details'
-	private inspectElement(el: Element, scope?: string | null, details?: string) {
-		if (this.showInspector && !el.classList.contains("ka-inspector-value")) {
-			el.classList.add("ka-inspector-value");
-
-			const getBlockString = (blockEl: Element, blockScope: string | null | undefined): string => {
-				const attrs: IStringAnyIndexer = {};
-				Array.from(blockEl.attributes)
-					.filter(a => a.name != "ka-inspector-id")
-					.forEach(a => {
-						attrs[a.name] = a.value;
-					});
-
-				return `{ name: '${blockEl.tagName.toLowerCase()}', scope: ${blockScope?.replace(/"/g, '&quot;') ?? 'undefined' }, attributes: ${JSON.stringify(attrs)} }`;
-			}
-
-			const blocks: Array<string> = [];
-
-			const currentScope = el.hasAttribute("v-for")
-				? el.getAttribute("v-for")!.substring(el.getAttribute("v-for")!.indexOf(" in ") + 4)
-				: scope;
-
-			blocks.push(getBlockString(el, currentScope));
-
-			let ifEl = el.nextElementSibling;
-			while (ifEl != undefined && (ifEl.hasAttribute("v-else-if") || ifEl.hasAttribute("v-else"))) {
-				ifEl.classList.add("ka-inspector-value");
-				blocks.push(getBlockString(ifEl, ifEl.getAttribute("v-else-if") ) );
-				ifEl = ifEl.nextElementSibling;
-			}
-
-			const inspectorCommentId = Utils.generateId();
-			const inspectorScope = `{ inspectorTargetId: _inspectors[ '${inspectorCommentId}' ], details: ${details != undefined ? `\'${details}\'` : 'undefined'}, blocks: [${blocks.join(", ")}] }`;
-			const inspector: Element = document.createElement("template");
-			inspector.setAttribute("v-ka-inspector", inspectorScope);
-			el.before(inspector);
-			el.setAttribute("v-on:vue:mounted", `_inspectorMounted($el, '${inspectorCommentId}')`);
-		}
 	}
 
 	// Add mounted/unmounted attributes and safely keep any previously assigned values.

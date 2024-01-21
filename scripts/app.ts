@@ -158,7 +158,7 @@ class KatApp implements IKatApp {
 			defaultOptions,
 			options,
 			// for now, I want inspector disabled
-			{ debug: { showInspector: false } },
+			// { debug: { showInspector: false } }
 		);
 
 		const nc = this.nextCalculation;
@@ -206,7 +206,30 @@ class KatApp implements IKatApp {
 				"<style>\
 					ka-resources, [v-cloak], [ka-cloak] { display: none; }\
 					.kaModalInit { cursor: progress; }\
-					body.ka-inspector .ka-inspector-value { border: 1px solid #34495E; box-shadow: 5px 5px 5px 0px #41B883; }\
+					body.ka-inspector .ka-inspector-value { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-resource { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-on { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-bind { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-if { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-show { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-html { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-text { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-pre { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-for { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-scope { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-template { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-input, body.ka-inspector .ka-inspector-input-group { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-api { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-app { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-modal { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-attributes { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-highcharts { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-inline { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-navigate { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-table { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-rbl-no-calc, body.ka-inspector .ka-inspector-rbl-exclude { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-unmount-clears-inputs { border: 1px solid #34495E; }\
+					body.ka-inspector .ka-inspector-needs-calc { border: 1px solid #34495E; }\
 				</style>";
 
 			document.body.appendChild(kaResources);
@@ -400,64 +423,6 @@ class KatApp implements IKatApp {
 			components: {},
 
 			// Private
-			_inspectors: {},
-			_inspectorMounted: function (el, inspectorCommentId) {
-				/*
-				Problem: 
-				When something was inspected inside a template and that template was used in v-for, every render had a <template> created, but all had the same inspector id, so
-				each one kept finding the first rendered items 'comment' and updating it...so the comment was only visible on the first one and it had the last items information
-				applied.
-
-				Solution 1: 
-				In ka-inspector directive's ctx.effect, I tried to generate a *new* unique ID and find rendered element and change its ID, then let processing occur.
-				
-					Start:
-					<template>
-						<a v-ka-api="...">click</a>
-					<template>
-
-					After 'Compile'
-					<template>
-						<a v-ka-api="..." ka-inspector-id="unique1">click</a>
-					<template>
-
-					During ctx.effect (the ka-inspector scope had kaId = unique1)
-					uniqueInspectorId = uniqueInspectorId ?? Utils.generateId(); // create a unique Id if not already created for this 'rendered' element
-
-					// Find all rendered items with ka-inspector-id = (original) unique1 // was assuming I'd always only find one
-					document.querySelectorAll(`[ka-inspector-id='${kaId}']`).forEach(directive => {
-						// Change the value to new unique ID
-						directive.setAttribute("ka-inspector-id", uniqueInspectorId!);
-					});
-
-					kaId = uniqueInspectorId; // reassign and let rest of processing occur.
-
-				Failed: 
-				This didn't work because the 'first render' of an element, my document.querySelectorAll didn't return any hits...so ctx.effect() runs BEFORE the element is 
-				rendered.  But then the 'second' item rendered, would find the rendered element from the 'first item' and so on.  So each 'comment' was displaying information
-				from the 'next' item's scope.  And the last item would not have a comment since it hadn't been rendered yet.
-
-				Solution 2: 
-				During precompile, the scope for the v-ka-inspector injected for every element I'm inspecting has a reference to _inspectors[inspectorCommentId], 
-				so every time that value changes, the v-ka-inspector.effect() will trigger.  I also attach a mounted event on the element that will be inspected 
-				and that is the code running here.
-
-				During mount, I increment the count for this._inspectors[inspectorCommentId] (which will eventually retrigger .effect()).  
-				Additionally, I add a 'target-id' to the rendered v-ka-inspector element (the 'template' element found at el.previousElementSibling) 
-				and an 'id' to the rendered 'inspected element'.
-
-				During the ctx.effect() method, it only processes if the rendered v-ka-inspector element (ctx.el) has a ka-inspector-target-id attribute.  
-				If it has that attribute it finds the 'target' and injects the inspector comment.
-				*/
-
-				this._inspectors[inspectorCommentId] = (this._inspectors[inspectorCommentId] ?? 0) + 1;
-				const targetId = Utils.generateId();
-
-				// this is the 'element' with directives on it
-				el.setAttribute("ka-inspector-id", targetId);
-				// this is the 'template' that I injected during precompile
-				el.previousElementSibling!.setAttribute("ka-inspector-target-id", targetId);
-			},
 			_domElementMounted(el) {
 
 				// If still rendering the first time...then don't add any elements during the first render
@@ -1709,11 +1674,11 @@ class KatApp implements IKatApp {
 			key = formatObject!.key;
 		}
 		
-		const currentCulture = this.options.currentUICulture ?? "en-us";
+		const currentUICulture = this.options.currentUICulture ?? "en-us";
 		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
 		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
-		const cultureStrings = this.options.resourceStrings?.[currentCulture];
-		const baseCultureStrings = this.options.resourceStrings?.[currentCulture.split("-")[0]];
+		const cultureStrings = this.options.resourceStrings?.[currentUICulture];
+		const baseCultureStrings = this.options.resourceStrings?.[currentUICulture.split("-")[0]];
 
 		const resourceString =
 			cultureStrings?.[key] ??
@@ -1994,6 +1959,7 @@ class KatApp implements IKatApp {
 			testCE: currentOptions.debug?.useTestCalcEngine ?? false,
 			currentPage: currentOptions.currentPage ?? "KatApp:" + (currentOptions.view ?? "UnknownView"),
 			requestIP: currentOptions.requestIP ?? "1.1.1.1",
+			currentCulture: currentOptions.currentCulture ?? "en-US",
 			currentUICulture: currentOptions.currentUICulture ?? "en-US",
 			environment: currentOptions.environment ?? "EW.PROD",
 			// RefreshCalcEngine: this.nextCalculation.expireCache || (currentOptions.debug?.refreshCalcEngine ?? false),
