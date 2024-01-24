@@ -4,7 +4,7 @@ FILE_TO_COPY="README.md" # replace with the file you want to copy
 NEW_FILE_NAME="KatApp.md" # replace with the new name you want for the file
 
 # Set the path to the destination repository and branch name
-DEST_REPO_PATH="/c/BTR/Documentation/Nexgen"
+DEST_REPO_PATH="/c/BTR/Documentation/Camelot"
 DEST_BRANCH="main"
 
 # Get the name of the current branch and commit hash
@@ -27,7 +27,7 @@ if [[ $CURRENT_BRANCH == "main" && -f $FILE_TO_COPY ]]; then
 
   # Stage and commit the copied file with the new filename
   git add "$NEW_FILE_NAME"
-  git commit -m "Automatically updated file $NEW_FILE_NAME from main:Documentation.Nexgen, commit $CURRENT_COMMIT"
+  git commit -m "Automatically updated file $NEW_FILE_NAME from main:Documentation.Camelot, commit $CURRENT_COMMIT"
 
   # Push the commit to the destination repository
   git push origin "$DEST_BRANCH"
