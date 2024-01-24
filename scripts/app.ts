@@ -105,6 +105,7 @@ class KatApp implements IKatApp {
 	public traceStart: Date;
 	public traceLast: Date;
 	public missingResources: Array<string> = [];
+	public missingLanguageResources: Array<string> = [];
 	
 	private applicationCss: string;
 	private vueApp?: PetiteVueApp;
@@ -203,35 +204,37 @@ class KatApp implements IKatApp {
 			const kaResources = document.createElement("ka-resources");
 
 			kaResources.innerHTML =
-				"<style>\
-					ka-resources, [v-cloak], [ka-cloak] { display: none; }\
-					.kaModalInit { cursor: progress; }\
-					body.ka-inspector .ka-inspector-value { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-resource { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-on { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-bind { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-if { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-show { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-html { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-text { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-pre { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-for { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-scope { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-template { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-input, body.ka-inspector .ka-inspector-input-group { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-api { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-app { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-modal { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-attributes { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-highcharts { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-inline { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-navigate { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-table { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-rbl-no-calc, body.ka-inspector .ka-inspector-rbl-exclude { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-unmount-clears-inputs { border: 1px solid #34495E; }\
-					body.ka-inspector .ka-inspector-needs-calc { border: 1px solid #34495E; }\
-				</style>";
-
+"<style>\
+	ka-resources, [v-cloak], [ka-cloak] { display: none; }\r\n\
+	.kaModalInit { cursor: progress; }\r\n\
+	body.ka-inspector-value .ka-inspector-value { border: 2px dashed #78aff6; }\r\n\
+	body.ka-inspector-api .ka-inspector-api { border: 2px dotted #785900; }\r\n\
+	body.ka-inspector-app .ka-inspector-app { border: 2px dotted #785900; }\r\n\
+	body.ka-inspector-modal .ka-inspector-modal { border: 2px dotted #785900; }\r\n\
+	body.ka-inspector-navigate .ka-inspector-navigate { border: 2px dotted #785900; }\r\n\
+	body.ka-inspector-highcharts .ka-inspector-highcharts { border: 2px dotted #087849; }\r\n\
+	body.ka-inspector-attributes .ka-inspector-attributes { border: 2px dashed #34495E; }\r\n\
+	body.ka-inspector-inline .ka-inspector-inline { border: 2px dashed #fcce00; }\r\n\
+	body.ka-inspector-table .ka-inspector-table { border: 2px dotted #444; }\r\n\
+	body.ka-inspector-rbl-no-calc .ka-inspector-rbl-no-calc, body.ka-inspector-rbl-exclude .ka-inspector-rbl-exclude { border: 2px dotted #f93b1d; }\r\n\
+	body.ka-inspector-unmount-clears-inputs .ka-inspector-unmount-clears-inputs { border: 2px dotted #f93b1d; }\r\n\
+	body.ka-inspector-needs-calc .ka-inspector-needs-calc { border: 2px dotted #f93b1d; }\r\n\
+	body.ka-inspector-template .ka-inspector-template { border: 2px dotted #10a84a; }\r\n\
+	body.ka-inspector-input .ka-inspector-input, body.ka-inspector-input-group .ka-inspector-input-group { border: 2px dotted #770519; }\r\n\
+	body.ka-inspector-on .ka-inspector-on { border: 2px dotted #ff9e76; }\r\n\
+	body.ka-inspector-bind .ka-inspector-bind { border: 2px dotted #78aff6; }\r\n\
+	body.ka-inspector-html .ka-inspector-html { border: 2px dashed #b6de29; }\r\n\
+	body.ka-inspector-text .ka-inspector-text { border: 2px dashed #b6de29; }\r\n\
+	body.ka-inspector-pre .ka-inspector-pre { border: 2px dotted #f93b1d; }\r\n\
+	body.ka-inspector-scope .ka-inspector-scope { border: 2px dotted #57625a; }\r\n\
+	body.ka-inspector-for .ka-inspector-for { border: 2px dotted #f93b1d; }\r\n\
+	body.ka-inspector-if .ka-inspector-if { border: 2px dotted #b232c0; }\r\n\
+	body.ka-inspector-show .ka-inspector-show { border: 2px dotted #b232c0; }\r\n\
+	body.ka-inspector-resource .ka-inspector-resource { border: 3px dashed #2067b3; }\r\n\
+	body.ka-inspector-resource .ka-inspector-resource.missing { border: 3px dashed #f93b1d; }\r\n\
+	body.ka-inspector-resource .ka-inspector-resource.missing-culture { border: 3px dashed #10a84a; }\r\n\
+</style>";
+		
 			document.body.appendChild(kaResources);
 		}
 
@@ -689,6 +692,17 @@ class KatApp implements IKatApp {
 				} catch (e) {
 					Utils.trace(this, "KatApp", "mountAsync", `Error downloading resourceStrings ${this.options.resourceStringsEndpoint}`, TraceVerbosity.None, e);
 				}
+
+				if (this.options.debug.debugResourcesDomain) {
+					const currentOptions = this.options as IKatAppRepositoryOptions;
+					currentOptions.useLocalRepository = await Utils.checkLocalServerAsync(this.options);
+					if (currentOptions.useLocalRepository) {
+						const devResourceStrings = await Utils.downloadLocalServerAsync(currentOptions.debug.debugResourcesDomain!, "/js/dev.ResourceStrings.json");
+						if (devResourceStrings != undefined) {
+							this.options.resourceStrings = Utils.extend(this.options.resourceStrings ?? {}, devResourceStrings);
+						}
+					}
+				}
 			}
 
 			if (this.options.manualResults == undefined && this.options.manualResultsEndpoint != undefined) {
@@ -816,7 +830,75 @@ class KatApp implements IKatApp {
 					.off("keydown.ka")
 					.on("keydown.ka", function (e) {
 						if (e.ctrlKey && e.shiftKey) {
-							document.body.classList.toggle("ka-inspector");
+							if (document.body.classList.contains("ka-inspector")) {
+								Array.from(document.body.classList).forEach(className => {
+									if (className.startsWith('ka-inspector')) {
+										document.body.classList.remove(className);
+									}
+								});
+							}
+							else {
+								const inspectorMappings = [
+									{ name: "resource", description: "v-ka-resource" },
+									{ name: "value", description: "v-ka-value" },
+									{ name: "template", description: "v-ka-template" },
+
+									{ name: "for", description: "v-for" },
+									{ name: "if", description: "v-if, v-else-if, v-else" },
+									{ name: "show", description: "v-show" },
+
+									{ name: "on", description: "v-on:event=, @event=" },
+									{ name: "bind", description: "v-bind:attribute=, :attribute=, v-bind={ attribute: }" },
+									{ name: "html", description: "v-html" },
+									{ name: "text", description: "v-text, {{ }}" },
+									{ name: "scope", description: "v-ka-scope" },
+
+									{ name: "navigate", description: "v-ka-navigate" },
+									{ name: "app", description: "v-ka-app" },
+									{ name: "api", description: "v-ka-api" },
+									{ name: "modal", description: "v-ka-modal" },
+									{ name: "input", description: "v-ka-input" },
+									{ name: "input-group", description: "v-ka-input-group" },
+
+									{ name: "no-calc", description: "v-ka-rbl-no-calc", class: "rbl-no-calc" },
+									{ name: "exlude", description: "v-ka-rbl-exclude", class: "rbl-exclude" },
+									{ name: "unmount", description: "v-ka-unmount-clears-inputs", class: "unmount-clears-inputs" },
+									{ name: "needs-calc", description: "v-ka-needs-calc" },
+
+									{ name: "pre", description: "v-ka-pre" },
+									{ name: "highcharts", description: "v-ka-highcharts" },
+									{ name: "attributes", description: "v-ka-attributes" },
+									{ name: "inline", description: "v-ka-inline" },
+									{ name: "table", description: "v-ka-table" },
+								]
+
+								const getInspectorOptions = () => {
+									const promptMessage =
+									`What do you want to inspect?\r\n\r\n\
+Enter a comma delimitted list of names or numbers.\r\n\r\n\
+Type 'help' to see available options displayed in the console.`;
+									return prompt(promptMessage, "resource,value,modal,template,html,text");
+								};
+								const inspectorOptions = inspectorMappings.map((m, i) => `${i}. ${m.name} - ${m.description}`).join("\r\n");
+								
+								let response = getInspectorOptions();
+
+								if (response == "help") {
+									console.log(inspectorOptions);
+									response = getInspectorOptions();
+								}
+
+								if (response) {
+									const options = response.split(",")
+										.map(r => r.trim())
+										.map(r => isNaN(+r)
+											? inspectorMappings.find(m => m.name == r)
+											: ( +r < inspectorMappings.length ? inspectorMappings[+r] : undefined )
+										);
+
+									document.body.classList.add('ka-inspector', ...options.filter(o => o != undefined).map(o => `ka-inspector-${o!.class ?? o!.name}`));
+								}
+							}
 						}
 					});
 			}
@@ -1664,7 +1746,33 @@ class KatApp implements IKatApp {
 		}) as JQuery<T>;
 	}
 
+	private getResourceString(key: string): string | undefined {
+		const currentUICulture = this.options.currentUICulture ?? "en-us";
+		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
+		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
+		const cultureStrings = this.options.resourceStrings?.[currentUICulture];
+		const baseCultureStrings = this.options.resourceStrings?.[currentUICulture.split("-")[0]];
+
+		const cultureResource =
+			cultureStrings?.[key] ??
+			baseCultureStrings?.[key];
+		const resource =
+			cultureResource ??
+			defaultRegionStrings?.[key] ??
+			defaultLanguageStrings?.[key];
+
+		if (resource == undefined) {
+			this.missingResources.push(key);
+		}
+		else if (cultureResource == undefined) {
+			this.missingLanguageResources.push(key);
+		}
+	
+		return typeof resource == "object" ? ( resource as { text: string } ).text : resource;;
+	}
+	
 	public getLocalizedString(key: string | undefined, formatObject?: IStringIndexer<string>, defaultValue?: string): string | undefined {
+		// OBSOLETE ?? - Would like to remove this...see if there are ever any << >> left in project after resource strings are implemented
 		key = key?.replaceAll("<<", "{{").replaceAll(">>", "}}");
 
 		if (key == undefined) return defaultValue;
@@ -1674,33 +1782,47 @@ class KatApp implements IKatApp {
 			key = formatObject!.key;
 		}
 		
-		const currentUICulture = this.options.currentUICulture ?? "en-us";
-		const defaultRegionStrings = this.options.resourceStrings?.["en-us"];
-		const defaultLanguageStrings = this.options.resourceStrings?.["en"];
-		const cultureStrings = this.options.resourceStrings?.[currentUICulture];
-		const baseCultureStrings = this.options.resourceStrings?.[currentUICulture.split("-")[0]];
+		const hasFormatObject = formatObject != null && Object.keys(formatObject).some(k => k != "key");
 
-		const resourceString =
-			cultureStrings?.[key] ??
-			baseCultureStrings?.[key] ??
-			defaultRegionStrings?.[key] ??
-			defaultLanguageStrings?.[key];
+		let resourceString = this.getResourceString(key);
+		const resourceDefault = ( arguments.length == 3 ? defaultValue : key );
 		
-		const resourceDefault =
-			defaultValue ??
-			( arguments.length == 3 ? defaultValue : key );
+		if (resourceString == undefined && defaultValue == undefined && key.indexOf("^") > -1) {
+			const keyParts = key.split("^");
+			const templateString = this.getResourceString(keyParts[0]) ?? keyParts[0];
+			const templateArgs: Array<string | Date | Number> = keyParts.slice(1);
+
+			const regex = /\{(\d+):([^{}]+)\}/g;
+			const dateRegex = /\d{4}-\d{2}-\d{2}(?:T.*)?/;
+			const numberRegex = /^-?\d+(\.\d+)?$/;
+			const matches = templateString.matchAll(regex);
+			
+			for (const match of matches) {
+				const index = +match[1];
+				
+				const arg = templateArgs[index] as string;
+				const date = dateRegex.test(arg) ? new Date(arg) : undefined;
+				
+				if (date != undefined && !isNaN(date.getTime())) {
+					templateArgs[index] = date;
+				} else if ( numberRegex.test(arg) ) {
+					const number = parseFloat(arg);
+					if (!isNaN(number)) {
+						templateArgs[index] = number;
+					}
+				}
+			}
+			
+            resourceString = String.localeFormat(templateString, templateArgs);
+		}
 		
 		const resource = resourceString ?? resourceDefault;
 
-		if (resourceString == undefined) {
-			this.missingResources.push(key);
-		}
-
 		if (resource == undefined) return undefined;
 		
-		const value = typeof resource == "object" ? ( resource as { text: string } ).text : resource;
-
-		return String.formatTokens(value, (formatObject?.keyValueObject as unknown as IStringIndexer<string>) ?? formatObject ?? {});
+		return hasFormatObject
+			? String.formatTokens(resource, (formatObject?.keyValueObject as unknown as IStringIndexer<string>) ?? formatObject)
+			: resource;
 	}
 
 	public getTemplateContent(name: string): DocumentFragment {

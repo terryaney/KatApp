@@ -129,4 +129,25 @@
 			}
 		}
 	}
+
+	public static async checkLocalServerAsync(currentOptions: IKatAppRepositoryOptions): Promise<boolean> {
+		return ( await this.downloadLocalServerAsync(currentOptions.debug.debugResourcesDomain!, "/js/ping.js") ) != undefined;
+	};
+
+	public static async downloadLocalServerAsync(debugResourcesDomain: string, relativePath: string ): Promise<any | undefined> {
+		const url = "https://" + debugResourcesDomain + relativePath;
+		try {
+			return await $.ajax({
+				converters: {
+					'text script': function (text: string): string {
+						return text;
+					}
+				},
+				url: url.substring(0, 4) + url.substring(5),
+				timeout: 1000,
+			});
+		} catch (error) {
+			return undefined;
+		}
+	};
 }

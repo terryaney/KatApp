@@ -12,7 +12,7 @@
 		const currentOptions = options as IKatAppRepositoryOptions;
 
 		const useLocalWebServer = currentOptions.debug.debugResourcesDomain != undefined &&
-			(currentOptions.useLocalRepository ?? (currentOptions.useLocalRepository = await this.checkLocalServerAsync(currentOptions)));
+			(currentOptions.useLocalRepository ?? (currentOptions.useLocalRepository = await Utils.checkLocalServerAsync(currentOptions)));
 
 		var resourceResults = await Promise.allSettled(
 			resourceArray.map(resourceKey => {
@@ -110,25 +110,6 @@
 		this.resourceRequests[resourceKey].forEach(c => c());
 		delete this.resourceRequests[resourceKey];
 	}
-
-	private static async checkLocalServerAsync(currentOptions: IKatAppRepositoryOptions): Promise<boolean> {
-		const url = "https://" + currentOptions.debug.debugResourcesDomain + "/js/ping.js";
-		try {
-			await $.ajax({
-				converters: {
-					'text script': function (text: string): string {
-						return text;
-					}
-				},
-				url: url.substring(0, 4) + url.substring(5),
-				timeout: 1000,
-			});
-
-			return true;
-		} catch (error) {
-			return false;
-		}
-	};
 
 	private static async downloadResourceAsync(url: string, tryLocalWebServer: boolean): Promise<{ data?: string, errorMessage?: string }> {
 		const requestHeaders: IStringAnyIndexer = {};

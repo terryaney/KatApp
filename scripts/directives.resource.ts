@@ -16,6 +16,18 @@
 					: application.getLocalizedString(key, model)!;
 				
 				ctx.el.setAttribute("data-resource-key", key);
+				if (application.missingResources.findIndex(x => x == key) != -1) {
+					ctx.el.classList.add("missing");
+				}
+				else {
+					ctx.el.classList.remove("missing");
+				}
+				if (application.missingLanguageResources.findIndex(x => x == key) != -1) {
+					ctx.el.classList.add("missing-culture");
+				}
+				else {
+					ctx.el.classList.remove("missing-culture");
+				}
 			});
 		};
 	}

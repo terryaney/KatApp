@@ -8,8 +8,6 @@
 class Directives {
 	public static initializeCoreDirectives(vueApp: PetiteVueApp, application: KatApp): void {
 		[
-			new DirectiveKaInspector(),
-
 			new DirectiveKaAttributes(),
 			new DirectiveKaInline(),
 			new DirectiveKaResource(),
