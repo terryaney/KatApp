@@ -228,7 +228,8 @@ class KatApp implements IKatApp {
 	body.ka-inspector-pre .ka-inspector-pre { border: 2px dotted #f93b1d; }\r\n\
 	body.ka-inspector-scope .ka-inspector-scope { border: 2px dotted #57625a; }\r\n\
 	body.ka-inspector-for .ka-inspector-for { border: 2px dotted #f93b1d; }\r\n\
-	body.ka-inspector-if .ka-inspector-if { border: 2px dotted #b232c0; }\r\n\
+	body .ka-inspector-if-hidden { display: none; }\r\n\
+	body.ka-inspector-if .ka-inspector-if, body.ka-inspector-if .ka-inspector-if-hidden { border: 2px dotted #b232c0; display: unset; }\r\n\
 	body.ka-inspector-show .ka-inspector-show { border: 2px dotted #b232c0; }\r\n\
 	body.ka-inspector-resource .ka-inspector-resource { border: 3px dashed #2067b3; }\r\n\
 	body.ka-inspector-resource .ka-inspector-resource.missing { border: 3px dashed #f93b1d; }\r\n\

@@ -296,11 +296,12 @@
 		// Add a !exp for v-show when inspecting so can see it
 		if (this.showInspector) {
 			container.querySelectorAll("[v-if], [v-show]").forEach(directive => {
-				if (directive.classList.contains("ka-needs-calc")) {
+				const condition = directive.getAttribute("v-if") ?? directive.getAttribute("v-show")!;
+				if (directive.classList.contains("ka-needs-calc") || ["uiBlocked", "!uiBlocked"].indexOf(condition) != -1 ) {
 					return;
 				}
 
-				const conditions = [directive.getAttribute("v-if") ?? directive.getAttribute("v-show")];
+				const conditions = [condition];
 				const isIf = directive.hasAttribute("v-if");
 				let createClone = true;
 
@@ -328,7 +329,7 @@
 					}
 					opposite.innerHTML = `<i class='fa-solid fa-eye'></i> <!-- Inspector: next ${isIf ? "v-if/v-else-if" : "v-show"} hidden -->`;
 					opposite.setAttribute("v-if", conditions.map(c => `!(${c})`).join(" && "));
-					opposite.classList.add("v-opposite");
+					opposite.classList.add("v-opposite", "ka-inspector-if-hidden");
 					directive.before(opposite);
 				}
 			});
@@ -436,7 +437,7 @@
 					}					
 					else if (
 						!(name == "v-scope" && (value.startsWith("components.template") || value.startsWith("components.input" /* Group as well */ ))) &&
-						!(name == "v-if" && el.classList.contains("ka-needs-calc")) &&
+						!(name == "v-if" && (el.classList.contains("ka-needs-calc") || value == "uiBlocked" || value == "!uiBlocked")) &&
 						!(name == "v-for" && value.startsWith("_reactive_template")) &&
 						!(name.startsWith("v-on:vue:mounted") && ["_domElementMounted", "inputMounted", "_templateItemMounted"].some(exp => value.startsWith(exp))) &&
 						!(name.startsWith("v-on:vue:unmounted") && ["inputUnmounted", "_templateItemUnmounted"].some(exp => value.startsWith(exp)))
