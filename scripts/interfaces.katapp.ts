@@ -442,6 +442,11 @@ interface ICalculationResponseException {
 
 
 // Directive Options
+interface IKaResourceModel {
+	key?: string;
+	templateArguments?: Array<string | Date | number>;
+}
+
 interface IKaNavigateModel {
 	view: string;
 	confirm?: IModalOptions;

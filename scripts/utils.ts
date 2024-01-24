@@ -134,7 +134,7 @@
 		return ( await this.downloadLocalServerAsync(currentOptions.debug.debugResourcesDomain!, "/js/ping.js") ) != undefined;
 	};
 
-	public static async downloadLocalServerAsync(debugResourcesDomain: string, relativePath: string ): Promise<any | undefined> {
+	public static async downloadLocalServerAsync(debugResourcesDomain: string, relativePath: string, secure?: boolean ): Promise<any | undefined> {
 		const url = "https://" + debugResourcesDomain + relativePath;
 		try {
 			return await $.ajax({
@@ -143,11 +143,11 @@
 						return text;
 					}
 				},
-				url: url.substring(0, 4) + url.substring(5),
+				url: !secure ? url.substring(0, 4) + url.substring(5) : url,
 				timeout: 1000,
 			});
 		} catch (error) {
-			return undefined;
+			return await this.downloadLocalServerAsync(debugResourcesDomain, relativePath, true);
 		}
 	};
 }
