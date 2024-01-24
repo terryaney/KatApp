@@ -1814,7 +1814,7 @@ Type 'help' to see available options displayed in the console.`;
 				}
 			}
 			
-            resourceString = String.localeFormat(templateString, templateArgs);
+            resourceString = String.localeFormat(templateString, ...templateArgs);
 		}
 		
 		const resource = resourceString ?? resourceDefault;
