@@ -147,7 +147,9 @@
 				timeout: 1000,
 			});
 		} catch (error) {
-			return await this.downloadLocalServerAsync(debugResourcesDomain, relativePath, true);
+			return !secure
+				? await this.downloadLocalServerAsync(debugResourcesDomain, relativePath, true)
+				: undefined;
 		}
 	};
 }
