@@ -5198,6 +5198,8 @@ Configure two CalcEngines with different tabs to run in the pipeline before the 
 
 # Upcoming Documentation
 
+Are these still valid?
+
 1. Document custom 'view model' and how it is passed in...sample with doc center 'showDownload'
 1. Original Docs: See [calculate With Different CalcEngine](#calculate-With-Different-CalcEngine) for information about running secondary calculations via javascript and without requiring configuration up front.
 1. Section about how 'modals work' and different ways to call them and work with them (see cheatsheet)
