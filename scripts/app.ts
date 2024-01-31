@@ -141,7 +141,7 @@ class KatApp implements IKatApp {
 			inputCaching: false,
 			debug: {
 				traceVerbosity: Utils.pageParameters["tracekatapp"] === "1" ? TraceVerbosity.Diagnostic : TraceVerbosity.None,
-				showInspector: Utils.pageParameters["showinspector"] === "1" || Utils.pageParameters["localserver"] != undefined,
+				showInspector: Utils.pageParameters["showinspector"] ?? ( Utils.pageParameters["localserver"] != undefined ? "1" : "0" ),
 				// refreshCalcEngine: Utils.pageParameters["expireCE"] === "1",
 				useTestCalcEngine: Utils.pageParameters["test"] === "1",
 				useTestView: Utils.pageParameters["testview"] === "1",
@@ -159,7 +159,7 @@ class KatApp implements IKatApp {
 			defaultOptions,
 			options,
 			// for now, I want inspector disabled
-			// { debug: { showInspector: false } }
+			// { debug: { showInspector: "0" } }
 		);
 
 		const nc = this.nextCalculation;
@@ -826,83 +826,7 @@ class KatApp implements IKatApp {
 				await this.processResultsAsync(manualResultTabDefs, undefined);
 			}
 
-			if (this.options.debug.showInspector) {
-				$(document.body)
-					.off("keydown.ka")
-					.on("keydown.ka", function (e) {
-						if (e.ctrlKey && e.shiftKey) {
-							if (document.body.classList.contains("ka-inspector")) {
-								Array.from(document.body.classList).forEach(className => {
-									if (className.startsWith('ka-inspector')) {
-										document.body.classList.remove(className);
-									}
-								});
-							}
-							else {
-								const inspectorMappings = [
-									{ name: "resource", description: "v-ka-resource" },
-									{ name: "value", description: "v-ka-value" },
-									{ name: "template", description: "v-ka-template" },
-
-									{ name: "for", description: "v-for" },
-									{ name: "if", description: "v-if, v-else-if, v-else" },
-									{ name: "show", description: "v-show" },
-
-									{ name: "on", description: "v-on:event=, @event=" },
-									{ name: "bind", description: "v-bind:attribute=, :attribute=, v-bind={ attribute: }" },
-									{ name: "html", description: "v-html" },
-									{ name: "text", description: "v-text, {{ }}" },
-									{ name: "scope", description: "v-ka-scope" },
-
-									{ name: "navigate", description: "v-ka-navigate" },
-									{ name: "app", description: "v-ka-app" },
-									{ name: "api", description: "v-ka-api" },
-									{ name: "modal", description: "v-ka-modal" },
-									{ name: "input", description: "v-ka-input" },
-									{ name: "input-group", description: "v-ka-input-group" },
-
-									{ name: "no-calc", description: "v-ka-rbl-no-calc", class: "rbl-no-calc" },
-									{ name: "exlude", description: "v-ka-rbl-exclude", class: "rbl-exclude" },
-									{ name: "unmount", description: "v-ka-unmount-clears-inputs", class: "unmount-clears-inputs" },
-									{ name: "needs-calc", description: "v-ka-needs-calc" },
-
-									{ name: "pre", description: "v-ka-pre" },
-									{ name: "highcharts", description: "v-ka-highcharts" },
-									{ name: "attributes", description: "v-ka-attributes" },
-									{ name: "inline", description: "v-ka-inline" },
-									{ name: "table", description: "v-ka-table" },
-								]
-
-								const getInspectorOptions = () => {
-									const promptMessage =
-									`What do you want to inspect?\r\n\r\n\
-Enter a comma delimitted list of names or numbers.\r\n\r\n\
-Type 'help' to see available options displayed in the console.`;
-									return prompt(promptMessage, "resource,value,modal,template,html,text");
-								};
-								const inspectorOptions = inspectorMappings.map((m, i) => `${i}. ${m.name} - ${m.description}`).join("\r\n");
-								
-								let response = getInspectorOptions();
-
-								if (response == "help") {
-									console.log(inspectorOptions);
-									response = getInspectorOptions();
-								}
-
-								if (response) {
-									const options = response.split(",")
-										.map(r => r.trim())
-										.map(r => isNaN(+r)
-											? inspectorMappings.find(m => m.name == r)
-											: ( +r < inspectorMappings.length ? inspectorMappings[+r] : undefined )
-										);
-
-									document.body.classList.add('ka-inspector', ...options.filter(o => o != undefined).map(o => `ka-inspector-${o!.class ?? o!.name}`));
-								}
-							}
-						}
-					});
-			}
+			this.initializeInspector();
 
 			const isConfigureUICalculation = this.calcEngines.filter(c => c.allowConfigureUi && c.enabled && !c.manualResult).length > 0;
 
@@ -982,6 +906,90 @@ Type 'help' to see available options displayed in the console.`;
 		}
 		finally {
 			Utils.trace(this, "KatApp", "mountAsync", `Complete`, TraceVerbosity.Detailed);
+		}
+	}
+	
+	private initializeInspector() {
+		if (this.options.debug.showInspector != "0" ) {
+			$(document.body)
+				.off("keydown.ka")
+				.on("keydown.ka", function (e) {
+					if (e.ctrlKey && e.shiftKey) {
+						if (document.body.classList.contains("ka-inspector")) {
+							Array.from(document.body.classList).forEach(className => {
+								if (className.startsWith('ka-inspector')) {
+									document.body.classList.remove(className);
+								}
+							});
+						}
+						else {
+							const inspectorMappings = [
+								{ name: "resource", description: "v-ka-resource" },
+								{ name: "value", description: "v-ka-value" },
+								{ name: "template", description: "v-ka-template" },
+
+								{ name: "for", description: "v-for" },
+								{ name: "if", description: "v-if, v-else-if, v-else" },
+								{ name: "show", description: "v-show" },
+
+								{ name: "on", description: "v-on:event=, @event=" },
+								{ name: "bind", description: "v-bind:attribute=, :attribute=, v-bind={ attribute: }" },
+								{ name: "html", description: "v-html" },
+								{ name: "text", description: "v-text, {{ }}" },
+								{ name: "scope", description: "v-scope" },
+
+								{ name: "navigate", description: "v-ka-navigate" },
+								{ name: "app", description: "v-ka-app" },
+								{ name: "api", description: "v-ka-api" },
+								{ name: "modal", description: "v-ka-modal" },
+								{ name: "input", description: "v-ka-input" },
+								{ name: "input-group", description: "v-ka-input-group" },
+
+								{ name: "no-calc", description: "v-ka-rbl-no-calc", class: "rbl-no-calc" },
+								{ name: "exlude", description: "v-ka-rbl-exclude", class: "rbl-exclude" },
+								{ name: "unmount", description: "v-ka-unmount-clears-inputs", class: "unmount-clears-inputs" },
+								{ name: "needs-calc", description: "v-ka-needs-calc" },
+
+								{ name: "pre", description: "v-pre" },
+								{ name: "highcharts", description: "v-ka-highcharts" },
+								{ name: "attributes", description: "v-ka-attributes" },
+								{ name: "inline", description: "v-ka-inline" },
+								{ name: "table", description: "v-ka-table" },
+							]
+
+							const getInspectorOptions = () => {
+								const promptMessage =
+									`What do you want to inspect?\r\n\r\n\
+Enter a comma delimitted list of names or numbers.\r\n\r\n\
+Type 'help' to see available options displayed in the console.`;
+								
+								var defaultOptions = (Utils.pageParameters["showinspector"] ?? "1") != "1"
+									? Utils.pageParameters["showinspector"]
+									: "resource,value,modal,template,html,text";
+								return prompt(promptMessage, defaultOptions);
+							};
+							const inspectorOptions = inspectorMappings.map((m, i) => `${i}. ${m.name} - ${m.description}`).join("\r\n");
+							
+							let response = getInspectorOptions();
+
+							if (response == "help") {
+								console.log(inspectorOptions);
+								response = getInspectorOptions();
+							}
+
+							if (response) {
+								const options = response.split(",")
+									.map(r => r.trim())
+									.map(r => isNaN(+r)
+										? inspectorMappings.find(m => m.name == r)
+										: (+r < inspectorMappings.length ? inspectorMappings[+r] : undefined)
+									);
+
+								document.body.classList.add('ka-inspector', ...options.filter(o => o != undefined).map(o => `ka-inspector-${o!.class ?? o!.name}`));
+							}
+						}
+					}
+				});
 		}
 	}
 

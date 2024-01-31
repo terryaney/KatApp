@@ -37,7 +37,7 @@
 
 				children.forEach(c => {
 					const render = c.cloneNode(true) as Element;
-					if (application.options.debug.showInspector) {
+					if (application.options.debug.showInspector != "0") {
 						render.classList.add("ka-inspector-inline")
 					}
 					render.setAttribute("v-ka-inline-id", inlineId);

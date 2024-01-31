@@ -3,7 +3,7 @@
 	private applicationId: string;
 
 	constructor(application: KatApp) {
-		this.showInspector = application.options.debug.showInspector;
+		this.showInspector = application.options.debug.showInspector != "0";
 		this.applicationId = application.id;
 	}
 

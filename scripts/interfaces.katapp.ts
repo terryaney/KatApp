@@ -21,7 +21,7 @@ interface IKatAppDefaultOptions {
 		// refreshCalcEngine: boolean; // expireCE=1 querystring
 		useTestCalcEngine: boolean; // test=1 querystring
 		useTestView: boolean; // testView=1 querystring
-		showInspector: boolean; // showInspector=1 querystring
+		showInspector: string; // showInspector=1 querystring
 		debugResourcesDomain?: string; // localserver=localhost:8887 querystring
 	};
 
