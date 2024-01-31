@@ -3521,7 +3521,7 @@ Property | Type | Description
 
 ## IKatAppDebugOptions
 
-Optional debugging options that can be used during the development of a KatApp's Kaml View or CalcEngine.
+Optional debugging options that can be used during the development of a KatApp's Kaml View or CalcEngine. 
 
 Property | Type | Description
 ---|---|---
