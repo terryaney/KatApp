@@ -144,7 +144,9 @@ class InputComponent extends InputComponentBase {
 			get error() { return /* props.isError?.(base) ?? */ base.error; },
 			get warning() { return base.warning; },
 			get list() {
-				const table = getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab);
+				const table = props.list == undefined
+					? getInputCeValue("list") ?? application.state.rbl.value("rbl-listcontrol", name, "table", undefined, calcEngine, tab)
+					: undefined;
 				const list = table != undefined
 					? application.state.rbl.source<IKaInputModelListRow>(table, calcEngine, tab)
 					: props.list ?? [];
