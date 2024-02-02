@@ -297,13 +297,16 @@
 		if (this.showInspector) {
 			container.querySelectorAll("[v-if], [v-show]").forEach(directive => {
 				const condition = directive.getAttribute("v-if") ?? directive.getAttribute("v-show")!;
+
+				// ka-needs-calc automatically puts 'opposite' condition in there, so not needed
+				// Also, if condition is uiBlocked or !uiBlocked it is just a UI blocker, and don't really care about that either
 				if (directive.classList.contains("ka-needs-calc") || ["uiBlocked", "!uiBlocked"].indexOf(condition) != -1 ) {
 					return;
 				}
 
 				const conditions = [condition];
 				const isIf = directive.hasAttribute("v-if");
-				let createClone = true;
+				let createInspectorIndicator = true;
 
 				if (isIf) {
 					let ifElement = directive;
@@ -311,7 +314,7 @@
 						ifElement = ifElement.nextElementSibling!;
 
 						if (ifElement.hasAttribute("v-else")) {
-							createClone = false;
+							createInspectorIndicator = false;
 						}
 						else {
 							conditions.push(ifElement.getAttribute("v-else-if")!);
@@ -319,18 +322,18 @@
 					};
 				}
 
-				if (createClone) {
-					const opposite = directive.cloneNode(false) as Element;
-			
-					for (const { name, value } of [...opposite.attributes]) {
-						if (!name.startsWith(":class") && !name.startsWith("class")) {
-							opposite.attributes.removeNamedItem(name);
-						}
-					}
-					opposite.innerHTML = `<i class='fa-solid fa-eye'></i> <!-- Inspector: next ${isIf ? "v-if/v-else-if" : "v-show"} hidden -->`;
-					opposite.setAttribute("v-if", conditions.map(c => `!(${c})`).join(" && "));
-					opposite.classList.add("v-opposite", "ka-inspector-if-hidden");
-					directive.before(opposite);
+				if (createInspectorIndicator) {
+					const inspectorIndicator = document.createElement("div");
+					const tagTitle = conditions.length > 1 ? "v-if/v-else-if" : isIf ? "v-if" : "v-show";
+					const expressionTitle = conditions.length > 1 ? "all following expression(s) evaluated to false:" : "the following expression evaluated to false:";
+                    inspectorIndicator.innerHTML = `<i class='fa-solid fa-eye'></i>\r\n\
+<!--\r\n\
+Inspector: ${tagTitle} hidden, ${expressionTitle}\r\n\
+${conditions.map(c => `\t${c}`).join("\r\n")}\r\n\
+-->`;
+					inspectorIndicator.setAttribute("v-if", `!(${conditions.join(" && ")})`);
+					inspectorIndicator.classList.add("v-opposite", isIf ? "ka-inspector-if-hidden" : "ka-inspector-show-hidden");
+					directive.before(inspectorIndicator);
 				}
 			});
 		}
@@ -431,13 +434,9 @@
 					else if (["v-else-if", "v-else"].indexOf(name) != -1) {
 						addClass("ka-inspector-if", name, value);
 					}
-					else if (el.classList.contains("v-opposite") ) {
-						el.classList.remove("v-opposite");
-						el.classList.add(`ka-inspector-${name.substring(2)}`);
-					}					
 					else if (
 						!(name == "v-scope" && (value.startsWith("components.template") || value.startsWith("components.input" /* Group as well */ ))) &&
-						!(name == "v-if" && (el.classList.contains("ka-needs-calc") || value == "uiBlocked" || value == "!uiBlocked")) &&
+						!(name == "v-if" && (["ka-needs-calc", "ka-inspector-if-hidden", "ka-inspector-show-hidden"].some( c => el.classList.contains(c) ) || ["uiBlocked", "!uiBlocked"].indexOf(value) > -1)) &&
 						!(name == "v-for" && value.startsWith("_reactive_template")) &&
 						!(name.startsWith("v-on:vue:mounted") && ["_domElementMounted", "inputMounted", "_templateItemMounted"].some(exp => value.startsWith(exp))) &&
 						!(name.startsWith("v-on:vue:unmounted") && ["inputUnmounted", "_templateItemUnmounted"].some(exp => value.startsWith(exp)))
