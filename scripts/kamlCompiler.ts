@@ -306,9 +306,10 @@
 
 				const conditions = [condition];
 				const isIf = directive.hasAttribute("v-if");
-				let createInspectorIndicator = true;
+				// Unable to create 'opposite' condition if on a v-for b/c my element is 'before' v-for without access to scope
+				let createInspectorIndicator = !directive.hasAttribute("v-for");
 
-				if (isIf) {
+				if (createInspectorIndicator && isIf) {
 					let ifElement = directive;
 					while (["v-else-if", "v-else"].some(a => ifElement.nextElementSibling?.hasAttribute(a))) {
 						ifElement = ifElement.nextElementSibling!;
