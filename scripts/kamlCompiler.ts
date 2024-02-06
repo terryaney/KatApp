@@ -332,7 +332,10 @@
 Inspector: ${tagTitle} hidden, ${expressionTitle}\r\n\
 ${conditions.map(c => `\t${c}`).join("\r\n")}\r\n\
 -->`;
-					inspectorIndicator.setAttribute("v-if", `!(${conditions.join(" && ")})`);
+					
+					// If directive is v-show, have to use that as well b/c v-show is permitted as immediate child of <template v-for/>
+					// but v-if is not (causes problem).
+					inspectorIndicator.setAttribute(isIf ? "v-if" : "v-show", `!(${conditions.join(" && ")})`);
 					inspectorIndicator.classList.add("v-opposite", isIf ? "ka-inspector-if-hidden" : "ka-inspector-show-hidden");
 					directive.before(inspectorIndicator);
 				}
