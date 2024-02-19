@@ -16,7 +16,7 @@ The KatApp framework is an orchestrator of two other well established frameworks
 - [RBLe Framework](#rble-framework)
 - [Upcoming Documentation](#upcoming-documentation)
 
-@@ Setting Up Developer Environment
+## Setting Up Developer Environment
 
 Create node.js Application to run application locally
 
