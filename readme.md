@@ -4,6 +4,7 @@ The KatApp framework is an orchestrator of two other well established frameworks
 
 > `petite-vue` is an alternative distribution of Vue optimized for progressive enhancement. It provides the same template syntax and reactivity mental model as standard Vue. However, it is specifically optimized for "sprinkling" a small amount of interactions on an existing HTML page rendered by a server framework.
 
+- [Setting Up Developer Environment](#setting-up-developer-environment)
 - [KatApp Framework](#katapp-framework)
 - [Initializing and Configuring a KatApp](#initializing-and-configuring-a-katapp)
 - [Kaml View Specifications](#kaml-view-specifications)
@@ -14,6 +15,24 @@ The KatApp framework is an orchestrator of two other well established frameworks
 - [KatApp API](#katapp-api)
 - [RBLe Framework](#rble-framework)
 - [Upcoming Documentation](#upcoming-documentation)
+
+@@ Setting Up Developer Environment
+
+Create node.js Application to run application locally
+
+1. Clone repository and open the folder in Visual Studio Code
+1. Download Node.js from https://nodejs.org/en/download/ (one time to get *npm* installed)
+1. `npm i -g typescript` (one time to get tsc compiler installed)
+1. `npm i -g nodemon` (one time to get nodemon debugger/watcher installed)
+1. `npm i --save-dev typescript@latest` - Add `node_modules` *this* directory and update package.json file.
+1. `npm i --save-dev @types/jquery`
+1. `npm i --save-dev eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser`
+1. `npm i --save-dev express`
+1. `npm i --save-dev @types/express`
+1. `npm i --save-dev @types/microsoft-ajax`
+1. `npm i --save-dev @types/nouislider`
+1. `npm i --save-dev @types/bootstrap@3.4.0`
+1. Should be able to `tsc --build` now and hit site or use the preferred `task ts` task to generate `tsc` output, `*.d.ts` file, and minified `*.js` file.
 
 ## Definitions
 
