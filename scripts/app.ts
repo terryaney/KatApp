@@ -983,7 +983,7 @@ Type 'help' to see available options displayed in the console.`;
 								const options = response.split(",")
 									.map(r => r.trim())
 									.map(r => isNaN(+r)
-										? inspectorMappings.find(m => m.name == r)
+										? inspectorMappings.find(m => m.name == r) ?? { class: `ka-inspector-${r}` }
 										: (+r < inspectorMappings.length ? inspectorMappings[+r] : undefined)
 									);
 
