@@ -1016,9 +1016,11 @@ Type 'help' to see available options displayed in the console.`;
 			this.options.modalAppOptions
 		);
 
-		const labelCancel = this.getLocalizedString(options.labels!.cancel);
+		options.labels!.title = this.getLocalizedString(options.labels!.title);
+		options.labels!.continue = this.getLocalizedString(options.labels!.continue);
+		options.labels!.cancel = this.getLocalizedString(options.labels!.cancel);
+
 		const cssCancel = options.css!.cancel;
-		const labelContinue = this.getLocalizedString(options.labels!.continue);
 		const cssContinue = options.css!.continue;
 
 		const viewName =
@@ -1048,8 +1050,8 @@ Type 'help' to see available options displayed in the console.`;
 								<button type="button" :class="[\'${cssContinue}\', \'continueButton\']">${this.getLocalizedString("Close")}</button>\
 	                        </div>\
 							<div v-if="!hasInitializationError" class="modal-footer-buttons text-center d-none">\
-								<button v-if="application.options.modalAppOptions.showCancel" type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${labelCancel}</button>\
-								<button type="button" :class="[\'${cssContinue}\', \'continueButton\', { disabled: uiBlocked}]">${labelContinue}</button>\
+								<button v-if="application.options.modalAppOptions.showCancel" type="button" :class="[\'${cssCancel}\', \'cancelButton\', { disabled: uiBlocked}]" aria-hidden="true">${options.labels!.cancel}</button>\
+								<button type="button" :class="[\'${cssContinue}\', \'continueButton\', { disabled: uiBlocked}]">${options.labels!.continue}</button>\
 	                        </div>\
                         </div>\
                     </div>\
