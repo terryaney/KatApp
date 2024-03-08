@@ -29,15 +29,35 @@
 		String.formatTokens = function (template, parameters): string {
 			// String.formatTokens( "{{greeting}} {{who}}!", {greeting: "Hello", who: "world"} )
 			return template.replace(/{{([^}]+)}}/g, function (match, token) {
-				const valueType = typeof parameters[token];
+				const tokenParts = token.split(":");
+				const tokenName = tokenParts[0];
+				const tokenFormat = tokenParts.length == 2 ? tokenParts[1] : undefined;
+				
+				const valueType = typeof parameters[tokenName];
 
 				// If class/width/other RBLe custom columns were used, their values
 				// would be assigned as attributes, so a #text property on the object would
 				// exist, and that is probably what they want.
-				let jsonValue = valueType == "object"
-					? parameters[token]["#text"] ?? parameters[token]
-					: parameters[token];
+				let tokenValue = valueType == "object"
+					? parameters[tokenName]["#text"] ?? parameters[tokenName]
+					: parameters[tokenName];
 
+				if (tokenFormat != undefined) {
+					const dateRegex = /\d{4}-\d{2}-\d{2}(?:T.*)?/;
+					const numberRegex = /^-?\d+(\.\d+)?$/;
+
+					const date = dateRegex.test(tokenValue) ? new Date(tokenValue) : undefined;
+				
+					if (date != undefined && !isNaN(date.getTime())) {
+						tokenValue = String.localeFormat(`{0:${tokenFormat}}`, date);
+					} else if ( numberRegex.test(tokenValue) ) {
+						const number = parseFloat(tokenValue);
+						if (!isNaN(number)) {
+							tokenValue = String.localeFormat(`{0:${tokenFormat}}`, number);
+						}
+					}					
+				}
+		
 				// https://stackoverflow.com/a/6024772/166231 - first attempt
 				// https://stackoverflow.com/a/13418900/166231
 				// Tested this again and was getting $$ in results...seems I don't need to do this replacement since
@@ -53,7 +73,7 @@
 				// https://stackoverflow.com/a/6024692/166231
 				// that = that.replace(re, function() { return json[propertyName]; });
 
-				return jsonValue ?? `{{${token}}}`;
+				return tokenValue ?? `{{${token}}}`;
 			});
 		};
 	}

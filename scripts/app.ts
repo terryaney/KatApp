@@ -1800,6 +1800,7 @@ Type 'help' to see available options displayed in the console.`;
 		let resourceString = this.getResourceString(key);
 		const resourceDefault = ( arguments.length == 3 ? defaultValue : key );
 		
+		// Support for strings/keys in format of template^arg1^arg2^arg3 where template has {0}, {1} and {2} placeholders
 		if (resourceString == undefined && defaultValue == undefined && key.indexOf("^") > -1) {
 			const keyParts = key.split("^");
 			const templateString = this.getResourceString(keyParts[0]) ?? keyParts[0];
