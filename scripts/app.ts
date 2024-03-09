@@ -1807,7 +1807,7 @@ Type 'help' to see available options displayed in the console.`;
 			const templateArgs: Array<string | Date | Number> = keyParts.slice(1);
 
 			const regex = /\{(\d+):([^{}]+)\}/g;
-			const dateRegex = /\d{4}-\d{2}-\d{2}(?:T.*)?/;
+			const dateRegex = /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})(?:T.*)?/;
 			const numberRegex = /^-?\d+(\.\d+)?$/;
 			const matches = templateString.matchAll(regex);
 			
@@ -1815,16 +1815,16 @@ Type 'help' to see available options displayed in the console.`;
 				const index = +match[1];
 				
 				const arg = templateArgs[index] as string;
-				const date = dateRegex.test(arg) ? new Date(arg) : undefined;
-				
-				if (date != undefined && !isNaN(date.getTime())) {
-					templateArgs[index] = date;
-				} else if ( numberRegex.test(arg) ) {
-					const number = parseFloat(arg);
-					if (!isNaN(number)) {
-						templateArgs[index] = number;
-					}
+				const dateMatch = arg.match(dateRegex);
+				if (dateMatch != undefined) {
+					templateArgs[index] = new Date(parseInt(dateMatch.groups!.year), parseInt(dateMatch.groups!.month) - 1, parseInt(dateMatch.groups!.day));
 				}
+                else if (numberRegex.test(arg)) {
+                    const number = parseFloat(arg);
+                    if (!isNaN(number)) {
+                        templateArgs[index] = number;
+                    }
+                }
 			}
 			
             resourceString = String.localeFormat(templateString, ...templateArgs);

@@ -42,20 +42,19 @@
 					? parameters[tokenName]["#text"] ?? parameters[tokenName]
 					: parameters[tokenName];
 
-				if (tokenFormat != undefined) {
-					const dateRegex = /\d{4}-\d{2}-\d{2}(?:T.*)?/;
-					const numberRegex = /^-?\d+(\.\d+)?$/;
-
-					const date = dateRegex.test(tokenValue) ? new Date(tokenValue) : undefined;
-				
-					if (date != undefined && !isNaN(date.getTime())) {
-						tokenValue = String.localeFormat(`{0:${tokenFormat}}`, date);
-					} else if ( numberRegex.test(tokenValue) ) {
-						const number = parseFloat(tokenValue);
-						if (!isNaN(number)) {
-							tokenValue = String.localeFormat(`{0:${tokenFormat}}`, number);
-						}
-					}					
+				if (tokenValue != undefined && tokenFormat != undefined) {
+                    const numberRegex = /^-?\d+(\.\d+)?$/;
+					const dateRegex = /(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})(?:T.*)?/;
+                    const dateMatch = tokenValue.match(dateRegex);
+                    if (dateMatch != undefined) {
+                        tokenValue = String.localeFormat(`{0:${tokenFormat}}`, new Date(parseInt(dateMatch.groups.year), parseInt(dateMatch.groups.month) - 1, parseInt(dateMatch.groups.day)));
+                    }
+                    else if (numberRegex.test(tokenValue)) {
+                        const number = parseFloat(tokenValue);
+                        if (!isNaN(number)) {
+                            tokenValue = String.localeFormat(`{0:${tokenFormat}}`, number);
+                        }
+                    }
 				}
 		
 				// https://stackoverflow.com/a/6024772/166231 - first attempt
